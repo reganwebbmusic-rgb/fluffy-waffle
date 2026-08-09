@@ -20,13 +20,14 @@ private data to themselves, and stop anonymous deletion of requests.
 ```json
 {
   "rules": {
-    // Public request inbox: anyone can read (the app polls it) and create,
-    // but only the database owner (you) can edit or delete existing entries.
+    // Public request inbox: anyone can READ (the app polls it) and CREATE a
+    // new request (the audience isn't signed in), but only signed-in users
+    // (you) can modify or delete existing entries.
     "requests": {
       ".read": true,
       ".write": false,
       "$requestId": {
-        ".write": "auth != null"
+        ".write": "auth != null || !data.exists()"
       }
     },
 
