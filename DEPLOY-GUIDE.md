@@ -59,6 +59,30 @@ Spark plan is enough for a gigging musician.
 
 ---
 
+## 1c. Pro sales — free vs paid (£10 one-time)
+
+The app has a built-in free/pro split (Free: 30-song pool; Pro: 300-song pool +
+gig archive). Buyers pay once, you approve, the code is delivered to their app.
+
+1. **Stripe** → **Payment links** → **Create payment link** → amount **£10**
+   (one-time) → copy the link.
+2. In `setlist-builder.html`, set:
+   ```js
+   var PRO_LINK = "https://buy.stripe.com/YOUR_LINK"; // the £10 payment link
+   var SELLER_UID = "your-uid";                       // from your request link (?m=...)
+   ```
+3. Re-publish the Firebase rules (`FIREBASE-RULES.md`) — the `orders` node is new.
+4. **Buyers**: pay on the link → open the app → Tools → Setlist Pro → enter the
+   email they paid with → "I've paid — get my code".
+5. **You**: Tools → Setlist Pro → check the payment arrived in Stripe for that
+   email → tap **Approve** → the code is delivered to their app automatically
+   (you can also copy it to email them if they're not in-app).
+
+Notes: the code is stored on the buyer's device (works offline). Any client-side
+unlock can be cracked by a determined user — fine for a £10 musician tool.
+
+---
+
 ## 2. Choose a path
 
 | Path | Tools needed | Best if… |

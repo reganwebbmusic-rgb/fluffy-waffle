@@ -37,6 +37,18 @@ private data to themselves, and stop anonymous deletion of requests.
       ".write": false
     },
 
+    // Pro unlocks: buyers create a pending order (no login), the owner
+    // (signed in) approves it, and the code is delivered to the buyer's app.
+    // Anyone can READ (buyers poll for their code), only signed-in users can
+    // change an order (approve/deny), and anyone can CREATE a new one.
+    "orders": {
+      ".read": true,
+      ".write": false,
+      "$orderId": {
+        ".write": "auth != null || !data.exists()"
+      }
+    },
+
     // Each musician's data is only readable/writable by themselves,
     // except their request inbox: the audience can CREATE new requests
     // (the request link carries ?m=<uid>), but only the musician can

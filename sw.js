@@ -3,7 +3,7 @@
    app always reflects the latest deploy; cache-first for static assets.
    Bump CACHE when you change icons/manifest so old entries get purged. */
 const CACHE = "setbook-v2";
-const STATIC = ["./setlist-builder.html", "./requests.html", "./index.html", "./manifest.webmanifest", "./icon.svg", "./apple-touch-icon.png"];
+const STATIC = ["./setlist-builder.html", "./requests.html", "./index.html", "./extra-songs.json", "./manifest.webmanifest", "./icon.svg", "./apple-touch-icon.png"];
 
 self.addEventListener("install", function (event) {
   event.waitUntil(
