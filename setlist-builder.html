@@ -919,12 +919,12 @@
   var editRefs = {}; // DOM refs for live auto-fill (not serialized)
   var play = null;   // play-mode state (not serialized)
   var HOSTED = typeof location !== "undefined" && location.protocol !== "file:";
-  var REQUESTS_PAGE_URL = "https://toolgig.netlify.app/requests.html";
+  var REQUESTS_PAGE_URL = "https://reganwebbmusic-rgb.github.io/fluffy-waffle/requests.html";
   var API_BASE = ""; // native app build: set to "https://yoursite.netlify.app" (empty = same-origin web)
   // Live requests backend. EITHER:
   //  - Firebase (works on Netlify Drop, no functions): set to "https://yourproject-default-rtdb.firebaseio.com"
   //  - Netlify functions (GitHub/CLI deploy): leave empty, functions at /.netlify/functions/requests
-  var REQUESTS_DB_URL = "";
+  var REQUESTS_DB_URL = "https://toolgig-663e4-default-rtdb.firebaseio.com";
   var poolRecs = [];
   var ugResults = [];
   var ugNote = "";
