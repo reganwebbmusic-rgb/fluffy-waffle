@@ -1,51 +1,77 @@
-// Netlify Function: live audience song requests (store: Netlify Blobs).
-// GET  /.netlify/functions/requests        -> list of requests (JSON array)
-// POST /.netlify/functions/requests        -> add { song, artist, note }
-const { getStore } = require("@netlify/blobs");
-
-const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type"
-};
-const jsonHeaders = { ...cors, "Content-Type": "application/json" };
-
-exports.handler = async function (event) {
-  if (event.httpMethod === "OPTIONS") {
-    return { statusCode: 204, headers: cors, body: "" };
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1c2b3a">
+<title>Request a Song</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: #1c2b3a; color: #fff; min-height: 100vh; display: flex; align-items: center; justify-content: center;
   }
-  try {
-    const store = getStore({ name: "requests" });
-
-    if (event.httpMethod === "GET") {
-      const raw = await store.get("requests");
-      return { statusCode: 200, headers: jsonHeaders, body: raw || "[]" };
-    }
-
-    if (event.httpMethod === "POST") {
-      let body = {};
-      try { body = JSON.parse(event.body || "{}"); } catch (e) { body = {}; }
-      const song = String(body.song || "").trim().slice(0, 80);
-      const artist = String(body.artist || "").trim().slice(0, 80);
-      const note = String(body.note || "").trim().slice(0, 200);
-      if (!song) return { statusCode: 400, headers: jsonHeaders, body: JSON.stringify({ error: "song required" }) };
-      const raw = await store.get("requests");
-      const list = raw ? JSON.parse(raw) : [];
-      const now = Date.now();
-      list.push({
-        id: now + "-" + Math.random().toString(36).slice(2, 7),
-        song: song,
-        artist: artist,
-        note: note,
-        ts: now
-      });
-      const trimmed = list.slice(-100);
-      await store.set("requests", JSON.stringify(trimmed));
-      return { statusCode: 200, headers: jsonHeaders, body: JSON.stringify(trimmed) };
-    }
-
-    return { statusCode: 405, headers: cors, body: "method not allowed" };
-  } catch (e) {
-    return { statusCode: 500, headers: jsonHeaders, body: JSON.stringify({ error: String(e) }) };
+  main { width: 100%; max-width: 460px; padding: 32px 24px; text-align: center; }
+  h1 { font-size: 34px; margin: 0 0 6px; letter-spacing: -0.5px; }
+  p.sub { color: #9fb0c0; margin: 0 0 28px; font-size: 15px; }
+  input {
+    width: 100%; font-size: 17px; padding: 14px 16px; margin-bottom: 12px;
+    border: 1px solid #3a4d5f; border-radius: 12px; background: #243747; color: #fff; font-family: inherit;
   }
-};
+  input::placeholder { color: #7c8fa1; }
+  button {
+    width: 100%; font-size: 18px; font-weight: 600; padding: 15px; margin-top: 6px;
+    border: 0; border-radius: 12px; background: #4da3ff; color: #0f1a24; cursor: pointer; font-family: inherit;
+  }
+  button:disabled { opacity: .6; }
+  #msg { margin-top: 16px; font-size: 15px; color: #9fd8a8; min-height: 22px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Request a Song</h1>
+  <p class="sub">At tonight's gig — your shout could be our next tune.</p>
+  <input id="song" placeholder="Song title *" autocomplete="off">
+  <input id="artist" placeholder="Artist (optional)" autocomplete="off">
+  <input id="note" placeholder="Dedication? (optional)" autocomplete="off">
+  <button id="send" type="button">Send request</button>
+  <div id="msg"></div>
+</main>
+<script>
+  // Backend: set FIREBASE_URL when using Netlify Drop (no functions):
+  //   "https://yourproject-default-rtdb.firebaseio.com"
+  // Leave empty to use the Netlify function at /.netlify/functions/requests.
+  var FIREBASE_URL = "";
+  var ENDPOINT = "/.netlify/functions/requests";
+  var sendBtn = document.getElementById("send");
+  sendBtn.addEventListener("click", function () {
+    var song = document.getElementById("song").value.trim();
+    var msg = document.getElementById("msg");
+    if (!song) { msg.textContent = "Type a song first!"; return; }
+    sendBtn.disabled = true;
+    msg.textContent = "Sending…";
+    var payload = {
+      song: song,
+      artist: document.getElementById("artist").value.trim(),
+      note: document.getElementById("note").value.trim(),
+      ts: Date.now()
+    };
+    var url = FIREBASE_URL ? FIREBASE_URL + "/requests.json" : ENDPOINT;
+    var opts = FIREBASE_URL
+      ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }
+      : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ song: payload.song, artist: payload.artist, note: payload.note }) };
+    fetch(url, opts).then(function (res) {
+      if (!res.ok) throw new Error("bad status");
+      msg.textContent = "Got it — thanks! We'll see what we can do.";
+      document.getElementById("song").value = "";
+      document.getElementById("artist").value = "";
+      document.getElementById("note").value = "";
+    }).catch(function () {
+      msg.textContent = "Something went wrong — try again.";
+    }).then(function () {
+      sendBtn.disabled = false;
+    });
+  });
+</script>
+</body>
+</html>
