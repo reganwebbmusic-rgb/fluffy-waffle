@@ -8,6 +8,7 @@ const cors = {
   "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type"
 };
+const jsonHeaders = { ...cors, "Content-Type": "application/json" };
 
 exports.handler = async function (event) {
   if (event.httpMethod === "OPTIONS") {
@@ -15,7 +16,6 @@ exports.handler = async function (event) {
   }
   try {
     const store = getStore({ name: "requests" });
-    const jsonHeaders = { ...cors, "Content-Type": "application/json" };
 
     if (event.httpMethod === "GET") {
       const raw = await store.get("requests");
