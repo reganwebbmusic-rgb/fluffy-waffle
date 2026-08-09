@@ -4,6 +4,10 @@ Yes, the app can go on the Apple App Store and Google Play. It's a real but
 bounded job: wrap the web app with **Capacitor** (free, industry standard),
 build it in Xcode / Android Studio, and submit. This guide has everything.
 
+> **Note:** the `capacitor/` scaffold referenced below is **not included in
+> this repo** — it was planned for the app-store path but never added. The
+> PWA route in section 6 works today with zero extra files.
+
 ---
 
 ## 1. The honest picture

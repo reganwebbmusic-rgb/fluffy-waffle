@@ -50,10 +50,14 @@
     if (!song) { msg.textContent = "Type a song first!"; return; }
     sendBtn.disabled = true;
     msg.textContent = "Sending…";
+    // cap lengths client-side to match the server-side limits (80/80/200)
+    song = song.slice(0, 80);
+    var artist = document.getElementById("artist").value.trim().slice(0, 80);
+    var note = document.getElementById("note").value.trim().slice(0, 200);
     var payload = {
       song: song,
-      artist: document.getElementById("artist").value.trim(),
-      note: document.getElementById("note").value.trim(),
+      artist: artist,
+      note: note,
       ts: Date.now()
     };
     var url = FIREBASE_URL ? FIREBASE_URL + "/requests.json" : ENDPOINT;

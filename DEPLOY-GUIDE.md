@@ -19,6 +19,7 @@ your-folder/
 ├── sw.js                     <- offline service worker
 ├── icon.svg                  <- app icon
 ├── apple-touch-icon.png      <- iOS icon
+├── firebase-config.js        <- your Firebase Web API key (see "v2 setup" below)
 ├── netlify.toml              <- tells Netlify where the functions are
 ├── package.json              <- declares @netlify/blobs dependency
 └── netlify/
@@ -29,6 +30,31 @@ your-folder/
 
 > **Important:** Netlify Drop (drag-and-drop) does **NOT** run serverless functions.
 > Use one of the two paths below. Both are free.
+
+---
+
+## 1b. v2 setup — enable musician accounts (optional but recommended)
+
+Accounts, cloud sync and live requests need a Firebase project. The free
+Spark plan is enough for a gigging musician.
+
+1. [Firebase Console](https://console.firebase.google.com) → **Add project**
+   (free) → **Build → Realtime Database** → **Create database** (start in
+   test mode, then tighten rules — see `FIREBASE-RULES.md` in this repo).
+2. **Build → Authentication → Sign-in method** → enable **Email/Password** →
+   Save. (Without this, the app's sign-in/sign-up returns
+   `CONFIGURATION_NOT_FOUND` and accounts won't work.)
+3. **Project settings → General** → copy the **Web API key**.
+4. Create `firebase-config.js` in your project folder (a template is included
+   in the repo):
+   ```js
+   var FIREBASE_API_KEY = "YOUR_KEY_HERE";
+   ```
+5. In `setlist-builder.html`, set `REQUESTS_DB_URL` (near the top of the
+   `<script>`) to your Firebase URL, e.g.
+   `https://yourproject-default-rtdb.firebaseio.com`.
+6. Deploy. No key = the app still works, but offline-only (accounts, cloud
+   sync and live requests are disabled).
 
 ---
 

@@ -317,7 +317,11 @@
 <script src="firebase-config.js"></script>
 <script>
 (function () {
+  // Firebase key comes from firebase-config.js (see DEPLOY-GUIDE.md "v2 setup").
+  // Fall back to "" so the app still boots if that file is missing (e.g. fresh clone).
+  var FIREBASE_API_KEY = window.FIREBASE_API_KEY || "";
   var POOL = 30;
+  var SET_SLOTS = 12; // slots per set block (SET_A_LEN / SET_B_LEN total 45 min each)
   var SET_A_LEN = [4, 4, 3, 4, 3, 4, 4, 3, 4, 4, 4, 4];
   var SET_B_LEN = [4, 4, 4, 3, 4, 4, 3, 4, 4, 4, 3, 4];
   var SET_A_ENG = [5, 5, 4, 5, 3, 5, 3, 4, 5, 4, 5, 5];
@@ -2166,7 +2170,7 @@
     syncSongbook();
     if (cloudOn()) {
       if (pushTimer) clearTimeout(pushTimer);
-      pushTimer = setTimeout(pushCloud, 800);
+      pushTimer = setTimeout(function () { pushCloud().catch(function () {}); }, 800); // autosave: stay silent
     }
   }
 
@@ -2185,6 +2189,9 @@
   var HOSTED = typeof location !== "undefined" && location.protocol !== "file:";
   var REQUESTS_PAGE_URL = "https://reganwebbmusic-rgb.github.io/fluffy-waffle/requests.html";
   var API_BASE = ""; // native app build: set to "https://yoursite.netlify.app" (empty = same-origin web)
+  // Serverless functions (UG online search) only exist on Netlify, or when
+  // API_BASE points at a deployed functions host. GitHub Pages has none.
+  var HAS_FUNCTIONS = !!(API_BASE || (typeof location !== "undefined" && location.hostname && location.hostname.indexOf("netlify.app") >= 0));
   // Live requests backend. EITHER:
   //  - Firebase (works on Netlify Drop, no functions): set to "https://yourproject-default-rtdb.firebaseio.com"
   //  - Netlify functions (GitHub/CLI deploy): leave empty, functions at /.netlify/functions/requests
@@ -2298,24 +2305,31 @@
     pay.addEventListener("click", showPaymentsSheet);
     bar.appendChild(pay);
     var up = document.createElement("button"); up.type = "button"; up.textContent = "Save to cloud";
-    up.addEventListener("click", function () { pushCloud().then(function () { authErr(""); }); });
+    up.addEventListener("click", function () {
+      pushCloud().then(function (ok) {
+        flashNew(ok ? "Saved to cloud." : "Not signed in — sign in first.");
+      }).catch(function () { flashNew("Cloud save failed — try again.", "fit-low"); });
+    });
     bar.appendChild(up);
     var down = document.createElement("button"); down.type = "button"; down.textContent = "Get from cloud";
-    down.addEventListener("click", function () { pullCloud().then(function () { render(); }); });
+    down.addEventListener("click", function () {
+      pullCloud().then(function () { render(); flashNew("Loaded from cloud."); })
+        .catch(function () { flashNew("Cloud load failed — try again.", "fit-low"); });
+    });
     bar.appendChild(down);
     var out = document.createElement("button"); out.type = "button"; out.textContent = "Sign out";
     out.addEventListener("click", signOut);
     bar.appendChild(out);
   }
   function pushCloud() {
-    if (!cloudOn()) return Promise.resolve();
+    if (!cloudOn()) return Promise.resolve(false);
     var url = userPath() + "/data.json";
     return authed(url).then(function (u) {
       return fetch(u, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(s) });
-    }).catch(function () {});
+    }).then(function () { return true; });
   }
   function pullCloud() {
-    if (!cloudOn()) return Promise.resolve();
+    if (!cloudOn()) return Promise.resolve(false);
     var url = userPath() + "/data.json";
     return authed(url).then(function (u) { return fetch(u); })
       .then(function (r) { return r.json(); })
@@ -2327,13 +2341,14 @@
           if (s.sets.B && typeof s.sets.B[0] === "number") s.sets.B = [s.sets.B, emptyBlock()];
           save();
         } else if (s.songs.some(function (x) { return x.name; })) {
-          pushCloud(); // first login with existing local data — migrate it up
+          return pushCloud(); // first login with existing local data — migrate it up
         }
-      }).catch(function () {});
+        return true;
+      }); // rejections propagate so callers can show feedback
   }
   function afterLogin() {
     renderAuthBar();
-    pullCloud().then(function () { render(); });
+    pullCloud().then(function () { render(); }).catch(function () { render(); });
     loadRequests();
     syncSongbook();
   }
@@ -2492,15 +2507,22 @@
     tb.appendChild(mkBtn("Wishlist", renderWishlist));
     listEl.appendChild(tb);
 
-    var ugWrap = document.createElement("div");
-    ugWrap.className = "ug-search";
-    var ugInp = document.createElement("input");
-    ugInp.type = "search";
-    ugInp.placeholder = "Search Ultimate Guitar (online)…";
-    ugInp.addEventListener("keydown", function (e) { if (e.key === "Enter") ugSearchOnline(ugInp.value.trim()); });
-    var ugBtn = mkBtn("Search", function () { ugSearchOnline(ugInp.value.trim()); });
-    ugWrap.appendChild(ugInp); ugWrap.appendChild(ugBtn);
-    listEl.appendChild(ugWrap);
+    if (HAS_FUNCTIONS) {
+      var ugWrap = document.createElement("div");
+      ugWrap.className = "ug-search";
+      var ugInp = document.createElement("input");
+      ugInp.type = "search";
+      ugInp.placeholder = "Search Ultimate Guitar (online)…";
+      ugInp.addEventListener("keydown", function (e) { if (e.key === "Enter") ugSearchOnline(ugInp.value.trim()); });
+      var ugBtn = mkBtn("Search", function () { ugSearchOnline(ugInp.value.trim()); });
+      ugWrap.appendChild(ugInp); ugWrap.appendChild(ugBtn);
+      listEl.appendChild(ugWrap);
+    } else {
+      var ugOff = document.createElement("div");
+      ugOff.className = "rec-note";
+      ugOff.textContent = "Online Ultimate Guitar search needs the Netlify-hosted version — the built-in 600-song catalog suggestions work here.";
+      listEl.appendChild(ugOff);
+    }
     if (ugNote) {
       var un = document.createElement("div");
       un.className = "rec-note";
@@ -2519,7 +2541,7 @@
       var add = document.createElement("button");
       add.className = "btn add";
       add.type = "button";
-      add.textContent = "+ Add song (" + filled.length + "/30)";
+      add.textContent = "+ Add song (" + filled.length + "/" + POOL + ")";
       add.addEventListener("click", function () {
         s.expanded = s.songs.indexOf(emptySongByIdx());
         if (s.expanded < 0) return;
@@ -3226,7 +3248,7 @@
   }
 
   function clearBlock(which, bi) {
-    for (var i = 0; i < 12; i++) s.sets[which][bi][i] = -1;
+    for (var i = 0; i < SET_SLOTS; i++) s.sets[which][bi][i] = -1;
     save(); render();
   }
 
@@ -3242,7 +3264,7 @@
     });
     var kw = { singalong: 20, dance: 20, quiet: 18, ballad: 18, breather: 15, build: 10, block: 10, opener: 8, closer: 8, request: 8, banter: 5 };
     var filled = 0;
-    for (var i = 0; i < 12; i++) {
+    for (var i = 0; i < SET_SLOTS; i++) {
       if (s.sets[which][bi][i] >= 0) continue; // never overwrite a manual pick
       var best = -1, bestScore = -Infinity;
       pool.forEach(function (song, pi) {
@@ -3530,6 +3552,7 @@
 
   // ---------- audience requests (hosted) ----------
   function requestFit(song, artist) {
+    if (!song) return 0; // "more songs"/charged requests have no song field
     var sl = song.toLowerCase();
     var a = (artist || "").toLowerCase();
     var pool = filledSongs();
@@ -3562,9 +3585,9 @@
     return Math.floor(m / 60) + "h ago";
   }
 
-  function flashNew(text) {
+  function flashNew(text, cls) {
     var flash = document.createElement("div");
-    flash.className = "fit-badge fit-high";
+    flash.className = "fit-badge " + (cls || "fit-high");
     flash.style.cssText = "display:block;text-align:center;margin:10px 0;padding:10px;font-size:14px;";
     flash.textContent = text || "New request just came in!";
     listEl.insertBefore(flash, listEl.firstChild);
@@ -3797,16 +3820,30 @@
     if (!w || !w.document) return;
     var pageUrl = myRequestsUrl();
     var tip = effTipLink();
-    var html = "<html><head><title>Scan to request a song</title>" +
-      "<style>body{font-family:Arial,sans-serif;text-align:center;padding:40px;color:#1c2733;}h1{font-size:64px;margin:20px 0;}p{font-size:32px;color:#5c6b7a;margin:14px 0;}img{width:420px;margin:10px;}hr{border:0;border-top:2px solid #dde6ee;margin:30px 0;}sub{font-size:24px;color:#8a97a5;}</style></head><body>" +
-      "<h1>" + stageLabel() + "</h1>" +
-      "<p>Scan to request a song</p>" +
-      "<img src='https://api.qrserver.com/v1/create-qr-code/?size=420x420&data=" + encodeURIComponent(pageUrl) + "'>" +
-      (tip ? "<hr><p>Loved it? Tip the band</p><img src='https://api.qrserver.com/v1/create-qr-code/?size=420x420&data=" + encodeURIComponent(tip) + "'>" : "") +
-      "<p class='sub'>" + pageUrl + "</p>" +
-      "</body></html>";
-    w.document.write(html);
-    w.document.close();
+    var d = w.document;
+    d.title = "Scan to request a song";
+    var style = d.createElement("style");
+    style.textContent = "body{font-family:Arial,sans-serif;text-align:center;padding:40px;color:#1c2733;}h1{font-size:64px;margin:20px 0;}p{font-size:32px;color:#5c6b7a;margin:14px 0;}img{width:420px;margin:10px;}hr{border:0;border-top:2px solid #dde6ee;margin:30px 0;}sub{font-size:24px;color:#8a97a5;}";
+    d.head.appendChild(style);
+    function el(tag, text) {
+      var n = d.createElement(tag);
+      if (text) n.textContent = text; // never innerHTML — stage name is user input
+      d.body.appendChild(n);
+      return n;
+    }
+    el("h1", stageLabel());
+    el("p", "Scan to request a song");
+    var qr = d.createElement("img");
+    qr.src = "https://api.qrserver.com/v1/create-qr-code/?size=420x420&data=" + encodeURIComponent(pageUrl);
+    d.body.appendChild(qr);
+    if (tip) {
+      d.body.appendChild(d.createElement("hr"));
+      el("p", "Loved it? Tip the band");
+      var tipQr = d.createElement("img");
+      tipQr.src = "https://api.qrserver.com/v1/create-qr-code/?size=420x420&data=" + encodeURIComponent(tip);
+      d.body.appendChild(tipQr);
+    }
+    el("sub", pageUrl);
   }
 
   function doClearRequests() {
@@ -3978,7 +4015,7 @@
         var which = (s.tab === "A" || s.tab === "B") ? s.tab : "A";
         var placed = false;
         for (var bi = 0; bi < 2 && !placed; bi++) {
-          for (var si = 0; si < 12; si++) {
+          for (var si = 0; si < SET_SLOTS; si++) {
             if (s.sets[which][bi][si] < 0) { s.sets[which][bi][si] = pi; placed = true; break; }
           }
         }
@@ -3996,7 +4033,9 @@
   }
 
   function syncSongbook() {
-    if (!REQUESTS_DB_URL || !HOSTED) return;
+    // Only ever writes to the signed-in user's own path. The old shared
+    // /songbook.json write was removed — it was open to anyone and nothing read it.
+    if (!cloudOn()) return;
     var now = Date.now();
     if (now - lastSync < 3000) return;
     lastSync = now;
@@ -4007,21 +4046,12 @@
         b.forEach(function (v) { if (v >= 0 && pool[v]) setNames.push(pool[v].name); });
       });
     });
-    var book = { sets: setNames, pool: pool.map(function (x) { return x.name; }) };
+    var book = { stageName: stageLabel(), sets: setNames, pool: pool.map(function (x) { return x.name; }) };
     if (s.links) book.links = { tip: s.links.tip || "", extra: s.links.extra || "" };
-    if (cloudOn()) {
-      book.stageName = stageLabel();
-      var pubUrl = userPath() + "/public.json";
-      authed(pubUrl).then(function (u) {
-        return fetch(u, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(book) });
-      }).catch(function () {});
-    } else {
-      fetch(REQUESTS_DB_URL + "/songbook.json", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(book)
-      }).catch(function () {});
-    }
+    var pubUrl = userPath() + "/public.json";
+    authed(pubUrl).then(function (u) {
+      return fetch(u, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(book) });
+    }).catch(function () {});
   }
 
   function renderRequests() {
@@ -4776,11 +4806,47 @@
       try {
         var data = JSON.parse(rd.result);
         var st = data.state || data;
-        if (!st.songs || !st.sets) throw new Error("bad backup");
-        s = st;
-        while (s.songs.length < POOL) s.songs.push(emptySong());
-        if (s.sets.A && typeof s.sets.A[0] === "number") s.sets.A = [s.sets.A, emptyBlock()];
-        if (s.sets.B && typeof s.sets.B[0] === "number") s.sets.B = [s.sets.B, emptyBlock()];
+        // strict shape check — a backup that parses as JSON but has the wrong
+        // shape must never replace the current state
+        if (!st || !Array.isArray(st.songs) || !st.sets ||
+            !Array.isArray(st.sets.A) || !Array.isArray(st.sets.B)) throw new Error("bad backup");
+        var songs = st.songs.slice(0, POOL);
+        while (songs.length < POOL) songs.push(emptySong());
+        function normBlocks(arr) {
+          // handles the old flat 12-slot format and malformed block entries
+          var blocks = arr.map(function (b) { return Array.isArray(b) ? b.slice() : emptyBlock(); });
+          if (arr.length && !Array.isArray(arr[0])) blocks = [arr.map(function (v) { return typeof v === "number" ? v : -1; }), emptyBlock()];
+          return blocks.slice(0, 2);
+        }
+        var sets = { A: normBlocks(st.sets.A), B: normBlocks(st.sets.B) };
+        // sanitize every song so a partially-filled backup can't break the app
+        var clean = songs.map(function (song) {
+          var out = emptySong();
+          if (song && typeof song === "object") {
+            ["name", "artist", "key", "capo", "bpm", "note", "trans", "status", "len"].forEach(function (k) {
+              if (typeof song[k] === "string") out[k] = song[k];
+            });
+            if (typeof song.energy === "number") out.energy = song.energy;
+          }
+          return out;
+        });
+        // drop set assignments that point at invalid songs
+        [sets.A, sets.B].forEach(function (blocks) {
+          blocks.forEach(function (block) {
+            if (Array.isArray(block)) {
+              block.forEach(function (v, i) {
+                if (typeof v !== "number" || v < 0 || v >= clean.length) block[i] = -1;
+              });
+            }
+          });
+        });
+        var next = DEF();
+        next.songs = clean;
+        next.sets = sets;
+        next.tab = "pool";
+        if (st.wishlist && Array.isArray(st.wishlist)) next.wishlist = st.wishlist;
+        if (st.links && typeof st.links === "object") next.links = { tip: String(st.links.tip || ""), extra: String(st.links.extra || "") };
+        s = next;
         if (data.reqStats) try { localStorage.setItem("reqStats", JSON.stringify(data.reqStats)); } catch (e) {}
         if (data.songStats) try { localStorage.setItem("songStats", JSON.stringify(data.songStats)); } catch (e) {}
         save(); render();
@@ -4809,16 +4875,27 @@
   renderAuthBar();
   bootAuth();
   render();
-  if (!requestsTimer) requestsTimer = setInterval(loadRequests, 5000);
+  // Poll for requests while the page is visible; pause when hidden (phone
+  // screen off / another app) to save battery and network at gigs.
+  function startReqPolling() {
+    if (!requestsTimer && !document.hidden) requestsTimer = setInterval(loadRequests, 5000);
+  }
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) {
+      if (requestsTimer) { clearInterval(requestsTimer); requestsTimer = null; }
+    } else {
+      loadRequests();
+      startReqPolling();
+    }
+  });
+  startReqPolling();
 })();
 </script>
 <script>
-// Service workers caused stale-version caching problems — unregister any and
-// never register again. Fresh app every load; requests still live via Firebase.
+// Service worker: network-first for pages (always fresh after a deploy),
+// cache-first for static files. Bump the cache name in sw.js when assets change.
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.getRegistrations().then(function (regs) {
-    regs.forEach(function (r) { r.unregister(); });
-  }).catch(function () {});
+  navigator.serviceWorker.register("./sw.js").catch(function () {});
 }
 </script>
 </body>

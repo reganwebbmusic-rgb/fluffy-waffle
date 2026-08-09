@@ -1,0 +1,9 @@
+# dependencies
+node_modules/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# local-only config / backups
+*.local.json
