@@ -20,6 +20,7 @@ your-folder/
 ├── icon.svg                  <- app icon
 ├── apple-touch-icon.png      <- iOS icon
 ├── firebase-config.js        <- your Firebase Web API key (see "v2 setup" below)
+├── extra-songs.json          <- optional: extra catalog songs (JSON array of [title, artist, key, bpm] rows, merged automatically at load; duplicates skipped)
 ├── netlify.toml              <- tells Netlify where the functions are
 ├── package.json              <- declares @netlify/blobs dependency
 └── netlify/

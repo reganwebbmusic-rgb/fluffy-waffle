@@ -276,7 +276,7 @@
 <div class="wrap">
   <header>
     <h1>Setlist Builder</h1>
-    <p>30-song pool · 4 × 45-min sets · 2,300-song catalog</p>
+    <p id="catCount">30-song pool · 4 × 45-min sets · 2,341-song catalog</p>
     <div id="authBar"></div>
   </header>
 
@@ -2736,7 +2736,11 @@
           have[k] = true;
           fresh.push([String(r[0]).slice(0, 120), String(r[1] || "").slice(0, 120), String(r[2] || ""), String(r[3] || "")]);
         });
-        if (fresh.length) CATALOG = CATALOG.concat(fresh);
+        if (fresh.length) {
+          CATALOG = CATALOG.concat(fresh);
+          var cc = document.getElementById("catCount");
+          if (cc) cc.textContent = CATALOG.length.toLocaleString("en-GB") + "-song catalog";
+        }
       } catch (e) {}
     };
     x.send();
@@ -3142,7 +3146,7 @@
     } else {
       var ugOff = document.createElement("div");
       ugOff.className = "rec-note";
-      ugOff.textContent = "Online Ultimate Guitar search needs the Netlify-hosted version — the built-in 2,300-song catalog suggestions work here.";
+      ugOff.textContent = "Online Ultimate Guitar search needs the Netlify-hosted version — the built-in 2,341-song catalog suggestions work here.";
       listEl.appendChild(ugOff);
     }
     if (ugNote) {
@@ -3173,7 +3177,7 @@
     } else if (!songsQuery && !filled.length) {
       var hint = document.createElement("div");
       hint.className = "rec-note";
-      hint.textContent = "No songs yet \u2014 tap + Add song, or Recommend to auto-pick from the 2,300-song catalog.";
+      hint.textContent = "No songs yet \u2014 tap + Add song, or Recommend to auto-pick from the 2,341-song catalog.";
       listEl.appendChild(hint);
     }
     if (filled.length < POOL) {
@@ -4260,7 +4264,7 @@
     if (!q) return;
     ugResults = []; ugNote = "";
     if (!HOSTED) {
-      ugNote = "Online search needs the hosted app. Offline, search the built-in 2,300-song catalog.";
+      ugNote = "Online search needs the hosted app. Offline, search the built-in 2,341-song catalog.";
       render();
       return;
     }
