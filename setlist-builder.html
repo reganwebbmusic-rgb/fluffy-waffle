@@ -1,4 +1,4 @@
-  var REQUESTS_PAGE_URL = "https://stately-florentine-d946bb.netlify.app/";<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -919,8 +919,12 @@
   var editRefs = {}; // DOM refs for live auto-fill (not serialized)
   var play = null;   // play-mode state (not serialized)
   var HOSTED = typeof location !== "undefined" && location.protocol !== "file:";
-  var REQUESTS_PAGE_URL = "https://YOURSITE.netlify.app/requests.html"; // <- set your hosted URL
+  var REQUESTS_PAGE_URL = "https://stately-florentine-d946bb.netlify.app/requests.html";
   var API_BASE = ""; // native app build: set to "https://yoursite.netlify.app" (empty = same-origin web)
+  // Live requests backend. EITHER:
+  //  - Firebase (works on Netlify Drop, no functions): set to "https://yourproject-default-rtdb.firebaseio.com"
+  //  - Netlify functions (GitHub/CLI deploy): leave empty, functions at /.netlify/functions/requests
+  var REQUESTS_DB_URL = "";
   var poolRecs = [];
   var ugResults = [];
   var ugNote = "";
@@ -1887,24 +1891,48 @@
     return Math.floor(m / 60) + "h ago";
   }
 
+  function flashNew() {
+    var flash = document.createElement("div");
+    flash.className = "fit-badge fit-high";
+    flash.style.cssText = "display:block;text-align:center;margin:10px 0;padding:10px;font-size:14px;";
+    flash.textContent = "New request just came in!";
+    listEl.insertBefore(flash, listEl.firstChild);
+    setTimeout(function () { if (flash.parentNode) flash.parentNode.removeChild(flash); }, 6000);
+  }
+
   function loadRequests() {
     if (!HOSTED) { renderRequests(); return; }
+    if (REQUESTS_DB_URL) { loadRequestsFirebase(); return; }
     fetch(API_BASE + "/.netlify/functions/requests").then(function (r) { return r.json(); }).then(function (list) {
       if (!Array.isArray(list)) throw new Error("bad response");
       var hadNew = requestsData.length > 0 && list.length > requestsData.length;
       requestsData = list;
       reqNote = "";
       renderRequests();
-      if (hadNew) {
-        var flash = document.createElement("div");
-        flash.className = "fit-badge fit-high";
-        flash.style.cssText = "display:block;text-align:center;margin:10px 0;padding:10px;font-size:14px;";
-        flash.textContent = "New request just came in!";
-        listEl.insertBefore(flash, listEl.firstChild);
-        setTimeout(function () { if (flash.parentNode) flash.parentNode.removeChild(flash); }, 6000);
-      }
+      if (hadNew) flashNew();
     }).catch(function () {
       reqNote = "Can't reach the request server. Check the app is hosted and the function deployed.";
+      renderRequests();
+    });
+  }
+
+  function loadRequestsFirebase() {
+    fetch(REQUESTS_DB_URL + "/requests.json").then(function (r) { return r.json(); }).then(function (obj) {
+      var list = [];
+      if (obj && typeof obj === "object") {
+        Object.keys(obj).forEach(function (k) {
+          var v = obj[k];
+          if (v && v.song) list.push(v);
+        });
+      }
+      list.sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
+      var hadNew = requestsData.length > 0 && list.length > requestsData.length;
+      requestsData = list;
+      reqNote = "";
+      renderRequests();
+      if (hadNew) flashNew();
+    }).catch(function () {
+      reqNote = "Can't reach the request database. Check REQUESTS_DB_URL is set to your Firebase URL.";
       renderRequests();
     });
   }

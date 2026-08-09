@@ -38,6 +38,10 @@
   <div id="msg"></div>
 </main>
 <script>
+  // Backend: set FIREBASE_URL when using Netlify Drop (no functions):
+  //   "https://yourproject-default-rtdb.firebaseio.com"
+  // Leave empty to use the Netlify function at /.netlify/functions/requests.
+  var FIREBASE_URL = "";
   var ENDPOINT = "/.netlify/functions/requests";
   var sendBtn = document.getElementById("send");
   sendBtn.addEventListener("click", function () {
@@ -46,15 +50,17 @@
     if (!song) { msg.textContent = "Type a song first!"; return; }
     sendBtn.disabled = true;
     msg.textContent = "Sending…";
-    fetch(ENDPOINT, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        song: song,
-        artist: document.getElementById("artist").value.trim(),
-        note: document.getElementById("note").value.trim()
-      })
-    }).then(function (res) {
+    var payload = {
+      song: song,
+      artist: document.getElementById("artist").value.trim(),
+      note: document.getElementById("note").value.trim(),
+      ts: Date.now()
+    };
+    var url = FIREBASE_URL ? FIREBASE_URL + "/requests.json" : ENDPOINT;
+    var opts = FIREBASE_URL
+      ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }
+      : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ song: payload.song, artist: payload.artist, note: payload.note }) };
+    fetch(url, opts).then(function (res) {
       if (!res.ok) throw new Error("bad status");
       msg.textContent = "Got it — thanks! We'll see what we can do.";
       document.getElementById("song").value = "";
