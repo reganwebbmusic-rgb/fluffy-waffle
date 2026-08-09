@@ -64,19 +64,26 @@ Spark plan is enough for a gigging musician.
 The app has a built-in free/pro split (Free: 30-song pool; Pro: 300-song pool +
 gig archive). Buyers pay once, you approve, the code is delivered to their app.
 
-1. **Stripe** → **Payment links** → **Create payment link** → amount **£10**
-   (one-time) → copy the link.
+1. **PayPal** → create a **Buy Now** button: dashboard → **Buttons** → **Create
+   button** → type **Buy Now**, amount **£10 GBP**, one-time → copy the hosted
+   button URL (`https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=...`).
+   (Quick alternative: your `paypal.me/<name>/10` link — but the buyer can edit
+   the amount on some setups, so the hosted button is cleaner.)
 2. In `setlist-builder.html`, set:
    ```js
-   var PRO_LINK = "https://buy.stripe.com/YOUR_LINK"; // the £10 payment link
-   var SELLER_UID = "your-uid";                       // from your request link (?m=...)
+   var PRO_LINK = "https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=YOUR_ID"; // the £10 PayPal link
+   var SELLER_UID = "your-uid";     // from your request link (?m=...)
+   var DEV_CODE = "GRATIS-PRO-2026"; // change this — secret free-Pro code for you & gifts
    ```
 3. Re-publish the Firebase rules (`FIREBASE-RULES.md`) — the `orders` node is new.
 4. **Buyers**: pay on the link → open the app → Tools → Setlist Pro → enter the
    email they paid with → "I've paid — get my code".
-5. **You**: Tools → Setlist Pro → check the payment arrived in Stripe for that
+5. **You**: Tools → Setlist Pro → check the payment arrived in PayPal for that
    email → tap **Approve** → the code is delivered to their app automatically
    (you can also copy it to email them if they're not in-app).
+
+**Free Pro without paying:** anyone can enter the `DEV_CODE` in "Unlock with
+code" to get Pro free — use it for yourself and to gift licenses.
 
 Notes: the code is stored on the buyer's device (works offline). Any client-side
 unlock can be cracked by a determined user — fine for a £10 musician tool.

@@ -316,10 +316,16 @@
   var POOL = 30;
   var PRO_POOL = 300;
   var PRO_PRICE = 10;
-  // Your Stripe Payment Link for the one-time £10 Pro unlock (see DEPLOY-GUIDE "Pro sales").
+  // Your PayPal payment link for the one-time £10 Pro unlock (see DEPLOY-GUIDE "Pro sales").
+  // Use a PayPal "Buy Now" hosted button link, or your paypal.me/<name>/10 link.
   var PRO_LINK = "";
+  // Secret developer code: enter it in "Unlock with code" to get Pro free.
+  // Use it for yourself and to gift Pro to anyone. Lives in the source, so
+  // treat it as secret-ish — change it whenever you want.
+  var DEV_CODE = "GRATIS-PRO-2026";
   // Your Firebase uid — copy it from your invite/request link (?m=...). Your own
-  // account then counts as Pro automatically. Leave "" until you've set it.
+  // account then counts as Pro automatically (needed to approve sales). Leave ""
+  // until you've set it.
   var SELLER_UID = "";
   var PRO_KEY = "sb2pro";
   function proRecord() { try { var p = JSON.parse(localStorage.getItem(PRO_KEY)); return p && p.code ? p : null; } catch (e) { return null; } }
@@ -5532,6 +5538,8 @@
       pUn.addEventListener("click", function () {
         var c = pCode.value.trim().toUpperCase();
         if (!c) { flashNew("Type your code first.", "fit-low"); return; }
+        // secret developer code — free Pro for you and anyone you gift it to
+        if (DEV_CODE && c === DEV_CODE) { setPro("dev", ""); flashNew("Pro unlocked (developer code)."); render(); return; }
         fetch(REQUESTS_DB_URL + "/orders.json").then(function (r) { return r.json(); }).then(function (d) {
           var found = null;
           if (d) for (var k in d) { if (d[k] && d[k].status === "approved" && d[k].code === c) { found = d[k]; break; } }
