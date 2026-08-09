@@ -37,11 +37,17 @@ private data to themselves, and stop anonymous deletion of requests.
       ".write": false
     },
 
-    // Each musician's data is only readable/writable by themselves.
+    // Each musician's data is only readable/writable by themselves,
+    // except their request inbox: the audience can CREATE new requests
+    // (the request link carries ?m=<uid>), but only the musician can
+    // edit or delete them.
     "users": {
       "$uid": {
         ".read": "$uid === auth.uid",
-        ".write": "$uid === auth.uid"
+        ".write": "$uid === auth.uid",
+        "requests": {
+          ".write": "auth != null || !data.exists()"
+        }
       }
     }
   }

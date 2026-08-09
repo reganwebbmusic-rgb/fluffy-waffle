@@ -13,7 +13,7 @@
   }
   main { width: 100%; max-width: 460px; padding: 32px 24px; text-align: center; }
   h1 { font-size: 34px; margin: 0 0 6px; letter-spacing: -0.5px; }
-  p.sub { color: #9fb0c0; margin: 0 0 28px; font-size: 15px; }
+  p.sub { color: #9fb0c0; margin: 0 0 24px; font-size: 15px; }
   input {
     width: 100%; font-size: 17px; padding: 14px 16px; margin-bottom: 12px;
     border: 1px solid #3a4d5f; border-radius: 12px; background: #243747; color: #fff; font-family: inherit;
@@ -24,6 +24,14 @@
     border: 0; border-radius: 12px; background: #4da3ff; color: #0f1a24; cursor: pointer; font-family: inherit;
   }
   button:disabled { opacity: .6; }
+  .divider { display: flex; align-items: center; gap: 12px; margin: 26px 0 4px; color: #7c8fa1; font-size: 13px; }
+  .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: #3a4d5f; }
+  .opt { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+  .opt button { font-size: 15px; padding: 13px 8px; margin: 0; background: #243747; color: #fff; border: 1px solid #3a4d5f; }
+  .opt button.primary { background: #4da3ff; color: #0f1a24; border-color: #4da3ff; }
+  .opt button.wide { grid-column: 1 / -1; }
+  .opt button.fun { background: #f0c987; color: #0f1a24; border-color: #f0c987; }
+  .opt button:active { filter: brightness(1.15); }
   #msg { margin-top: 16px; font-size: 15px; color: #9fd8a8; min-height: 22px; }
 </style>
 </head>
@@ -34,7 +42,11 @@
   <input id="song" placeholder="Song title *" autocomplete="off">
   <input id="artist" placeholder="Artist (optional)" autocomplete="off">
   <input id="note" placeholder="Dedication? (optional)" autocomplete="off">
+  <input id="email" type="email" placeholder="Email (for payment links)" autocomplete="email">
   <button id="send" type="button">Send request</button>
+
+  <div class="divider">Keep the night going</div>
+  <div class="opt" id="opts"></div>
   <div id="msg"></div>
 </main>
 <script>
@@ -43,39 +55,102 @@
   // Leave empty to use the Netlify function at /.netlify/functions/requests.
   var FIREBASE_URL = "https://toolgig-663e4-default-rtdb.firebaseio.com";
   var ENDPOINT = "/.netlify/functions/requests";
+
+  // Optional: your Google / Trustpilot / Facebook review link.
+  // Set it and a "Leave a review" button appears on this page.
+  var REVIEW_LINK = "";
+
+  // Prices (in £) for the extra buttons — change freely.
+  var PRICE_1_EXTRA = 10;   // 1 extra song
+  var PRICE_2_EXTRA = 10;   // 2 extra songs
+  var PRICE_STAY = 20;      // stay longer
+  var PRICE_PACKUP = 200;   // pack up and go home (the fun one)
+
+  // The app's QR code adds ?m=<uid> to this page's URL. When present, requests
+  // go straight to that musician's private inbox; otherwise to the shared inbox.
+  var MUSICIAN = "";
+  try {
+    var qs = new URLSearchParams(location.search);
+    MUSICIAN = (qs.get("m") || "").replace(/[^A-Za-z0-9_-]/g, "");
+  } catch (e) {}
+
   var sendBtn = document.getElementById("send");
-  sendBtn.addEventListener("click", function () {
-    var song = document.getElementById("song").value.trim();
-    var msg = document.getElementById("msg");
-    if (!song) { msg.textContent = "Type a song first!"; return; }
-    sendBtn.disabled = true;
-    msg.textContent = "Sending…";
-    // cap lengths client-side to match the server-side limits (80/80/200)
-    song = song.slice(0, 80);
-    var artist = document.getElementById("artist").value.trim().slice(0, 80);
-    var note = document.getElementById("note").value.trim().slice(0, 200);
-    var payload = {
-      song: song,
-      artist: artist,
-      note: note,
-      ts: Date.now()
-    };
-    var url = FIREBASE_URL ? FIREBASE_URL + "/requests.json" : ENDPOINT;
-    var opts = FIREBASE_URL
-      ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }
-      : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ song: payload.song, artist: payload.artist, note: payload.note }) };
-    fetch(url, opts).then(function (res) {
+  var optsEl = document.getElementById("opts");
+  var msgEl = document.getElementById("msg");
+  var busy = false;
+
+  function say(txt) { msgEl.textContent = txt; }
+  function mail() { return document.getElementById("email").value.trim().slice(0, 120); }
+
+  function target() {
+    if (MUSICIAN) return FIREBASE_URL + "/users/" + encodeURIComponent(MUSICIAN) + "/requests.json";
+    return FIREBASE_URL ? FIREBASE_URL + "/requests.json" : ENDPOINT;
+  }
+
+  function post(payload, doneMsg) {
+    if (busy) return;
+    busy = true;
+    say("Sending…");
+    var body = FIREBASE_URL
+      ? JSON.stringify(payload)
+      : JSON.stringify({ song: payload.song, artist: payload.artist, note: payload.note });
+    fetch(target(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: body
+    }).then(function (res) {
       if (!res.ok) throw new Error("bad status");
-      msg.textContent = "Got it — thanks! We'll see what we can do.";
+      say(doneMsg || "Got it — thanks!");
       document.getElementById("song").value = "";
       document.getElementById("artist").value = "";
       document.getElementById("note").value = "";
     }).catch(function () {
-      msg.textContent = "Something went wrong — try again.";
+      say("Something went wrong — try again.");
     }).then(function () {
-      sendBtn.disabled = false;
+      busy = false;
     });
+  }
+
+  sendBtn.addEventListener("click", function () {
+    var song = document.getElementById("song").value.trim();
+    if (!song) { say("Type a song first!"); return; }
+    post({
+      song: song.slice(0, 80),
+      artist: document.getElementById("artist").value.trim().slice(0, 80),
+      note: document.getElementById("note").value.trim().slice(0, 200),
+      email: mail(),
+      ts: Date.now()
+    }, "Got it — thanks! We'll see what we can do.");
   });
+
+  function paidButton(label, payload, doneMsg, cls) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.textContent = label;
+    if (cls) b.className = cls;
+    b.addEventListener("click", function () {
+      payload.email = mail();
+      payload.ts = Date.now();
+      post(payload, doneMsg);
+    });
+    optsEl.appendChild(b);
+  }
+
+  paidButton("Tip the band", { type: "tip", tip: true }, "Tip sent — the band's on it!");
+  paidButton("£" + PRICE_1_EXTRA + " — 1 extra song", { type: "songs", songs: 1, charge: PRICE_1_EXTRA }, "Extra song requested — we'll send a payment link.", "primary");
+  paidButton("£" + PRICE_2_EXTRA + " — 2 extra songs", { type: "songs", songs: 2, charge: PRICE_2_EXTRA }, "Extra songs requested — we'll send a payment link.");
+  paidButton("£" + PRICE_STAY + " — stay longer", { type: "stay", charge: PRICE_STAY }, "More time requested — we'll send a payment link.");
+  paidButton("£" + PRICE_PACKUP + " — pack up and go home", { type: "packup", charge: PRICE_PACKUP }, "Ha! Request sent — the band will be in touch.", "fun wide");
+
+  if (REVIEW_LINK) {
+    var rv = document.createElement("button");
+    rv.type = "button";
+    rv.textContent = "Leave a review";
+    rv.addEventListener("click", function () {
+      if (window.open) window.open(REVIEW_LINK, "_blank"); else location.href = REVIEW_LINK;
+    });
+    optsEl.appendChild(rv);
+  }
 </script>
 </body>
 </html>

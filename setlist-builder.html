@@ -3881,6 +3881,8 @@
       var n = r.songs || 1;
       return n + (n > 1 ? " more songs" : " more song");
     }
+    if (r.type === "stay") return "Stay longer — extra time";
+    if (r.type === "packup") return "Pack up and go home";
     return r.song || "";
   }
 
@@ -3908,7 +3910,8 @@
     sheet.className = "sheet";
     var tag = document.createElement("span");
     tag.className = "fit-badge " + (r.tip ? "tip" : (r.type !== "song" ? "fit-med" : "fit-high"));
-    tag.textContent = r.tip ? "TIP REQUEST" : (r.type !== "song" ? "MORE SONGS" : "New request");
+    tag.textContent = r.tip ? "TIP REQUEST"
+      : (r.type === "songs" ? "MORE SONGS" : r.type === "stay" ? "STAY LONGER" : r.type === "packup" ? "PACK UP" : "New request");
     var h = document.createElement("h3"); h.textContent = typeLabel(r);
     var sub = document.createElement("div"); sub.className = "sub";
     if (r.type !== "song") {
@@ -4148,7 +4151,7 @@
       var badgeTxt2;
       if (r.status === "paid") { badgeCls += "fit-high"; badgeTxt2 = "PAID"; }
       else if (r.status === "accepted" && r.charge) { badgeCls += "fit-med"; badgeTxt2 = "ACCEPTED"; }
-      else { badgeCls += (r.tip ? "tip" : (isSong ? cls : "fit-med")); badgeTxt2 = r.tip ? "TIP · " + badgeTxt : (isSong ? badgeTxt : "MORE"); }
+      else { badgeCls += (r.tip ? "tip" : (isSong ? cls : "fit-med")); badgeTxt2 = r.tip ? "TIP · " + badgeTxt : (isSong ? badgeTxt : (r.type === "stay" ? "STAY" : r.type === "packup" ? "PACKUP" : "MORE")); }
       badgeEl.className = badgeCls;
       badgeEl.textContent = badgeTxt2;
       box.appendChild(name); box.appendChild(meta);
