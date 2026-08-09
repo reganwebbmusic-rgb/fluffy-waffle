@@ -1,0 +1,15 @@
+{
+  "name": "Setlist Builder — Gig Toolkit",
+  "short_name": "Setlists",
+  "description": "Gig setlist builder with chords, lyrics and play mode for gigging musicians.",
+  "start_url": "./setlist-builder.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f2f5f8",
+  "theme_color": "#1c2b3a",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" },
+    { "src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}
