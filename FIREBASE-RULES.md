@@ -47,6 +47,11 @@ private data to themselves, and stop anonymous deletion of requests.
         ".write": "$uid === auth.uid",
         "requests": {
           ".write": "auth != null || !data.exists()"
+        },
+        // public.json — the audience request page reads this (no login) to
+        // show the musician's tip / payment links instantly on the buttons
+        "public.json": {
+          ".read": true
         }
       }
     }
@@ -59,6 +64,11 @@ private data to themselves, and stop anonymous deletion of requests.
 > visitor can't wipe your request list mid-gig. If you also want to stop
 > spam, add a per-IP rate limit in the Netlify function (or require a
 > per-gig code from the audience).
+>
+> `public.json` is world-readable on purpose: the audience request page uses
+> it to show your tip/payment links instantly. It only ever contains your
+> public stage name and payment links — never your private data. **Every
+> time you change these rules, click Publish and test the request page.**
 
 ## Security notes
 

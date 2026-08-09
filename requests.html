@@ -38,7 +38,7 @@
 <body>
 <main>
   <h1>Request a Song</h1>
-  <p class="sub">At tonight's gig — your shout could be our next tune.</p>
+  <p class="sub">It's free, but tipping is optional.</p>
   <input id="song" placeholder="Song title *" autocomplete="off">
   <input id="artist" placeholder="Artist (optional)" autocomplete="off">
   <input id="note" placeholder="Dedication? (optional)" autocomplete="off">
@@ -73,6 +73,18 @@
     var qs = new URLSearchParams(location.search);
     MUSICIAN = (qs.get("m") || "").replace(/[^A-Za-z0-9_-]/g, "");
   } catch (e) {}
+
+  // Payment links published by the musician (the app writes users/<uid>/public.json
+  // when they sign in with links set). When available, paid/tip buttons open the
+  // payment page immediately; otherwise we fall back to the "we'll send a link" flow.
+  var pubLinks = { tip: "", extra: "" };
+  if (MUSICIAN && FIREBASE_URL) {
+    fetch(FIREBASE_URL + "/users/" + encodeURIComponent(MUSICIAN) + "/public.json")
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d && d.links) pubLinks = { tip: String(d.links.tip || ""), extra: String(d.links.extra || "") };
+      }).catch(function () {});
+  }
 
   var sendBtn = document.getElementById("send");
   var optsEl = document.getElementById("opts");
@@ -131,7 +143,15 @@
     b.addEventListener("click", function () {
       payload.email = mail();
       payload.ts = Date.now();
-      post(payload, doneMsg);
+      var pay = payload.charge ? pubLinks.extra : (payload.tip ? pubLinks.tip : "");
+      if (pay) {
+        // open the payment page right away, then tell the band
+        var u = payload.charge ? pay.replace("{{AMOUNT}}", payload.charge) : pay;
+        if (window.open) window.open(u, "_blank"); else location.href = u;
+        post(payload, "Payment page opened — thanks!");
+      } else {
+        post(payload, doneMsg);
+      }
     });
     optsEl.appendChild(b);
   }
