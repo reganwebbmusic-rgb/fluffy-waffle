@@ -4832,6 +4832,7 @@
   }
 
   function handleRequest(id, status) {
+    if (!cloudOn()) { flashNew("Sign in to accept or decline requests.", "fit-low"); return; }
     var r = null;
     requestsData.forEach(function (x) { if (x && x.id === id) r = x; });
     if (r) seenReqs[id] = 1;
