@@ -2964,7 +2964,7 @@
     return myDeviceId();
   }
   function stageLabel() { return (me && me.stage) || STAGE_NAME || (me && me.email) || ""; }
-  var APP_VER = 9; // bump when the request page changes — every QR scan then loads a fresh copy for everyone
+  var APP_VER = 10; // bump when the request page changes — every QR scan then loads a fresh copy for everyone
   var dbgLast = "never", dbgErr = ""; // request diagnostics shown on the Requests tab
   function myRequestsUrl() {
     return REQUESTS_PAGE_URL + (REQUESTS_PAGE_URL.indexOf("?") >= 0 ? "&" : "?") + "m=" + encodeURIComponent(myId()) + "&v=" + APP_VER;
@@ -5068,9 +5068,9 @@
     var sheet = document.createElement("div");
     sheet.className = "sheet";
     var tag = document.createElement("span"); tag.className = "fit-badge tip"; tag.textContent = "YOUR PAYMENT LINKS";
-    var h = document.createElement("h3"); h.textContent = "Payment links \u2014 yours only";
+    var h = document.createElement("h3"); h.textContent = "Your links \u2014 payments & reviews";
     var sub = document.createElement("div"); sub.className = "sub";
-    sub.textContent = "These are used for your tip jar QR and the pay-per-song links. Each musician sets their own \u2014 money goes straight to whoever owns the account.";
+    sub.textContent = "Each musician sets their own \u2014 money goes straight to whoever owns the account. These load onto your request page automatically.";
     var l1 = document.createElement("label"); l1.style.cssText = "display:block;font-size:12px;color:#5c6b7a;margin:10px 0 4px;";
     l1.textContent = "Tip link (Stripe / PayPal / CashApp)";
     var i1 = document.createElement("input"); i1.type = "text"; i1.id = "payTip"; i1.placeholder = "https://...";
@@ -5081,14 +5081,20 @@
     var i2 = document.createElement("input"); i2.type = "text"; i2.id = "payExtra"; i2.placeholder = "https://...?amount={{AMOUNT}}";
     i2.style.cssText = "width:100%;font-size:15px;padding:10px;border:1px solid #c8d3dd;border-radius:9px;";
     i2.value = (s.links && s.links.extra) || "";
+    var l3 = document.createElement("label"); l3.style.cssText = "display:block;font-size:12px;color:#5c6b7a;margin:10px 0 4px;";
+    l3.textContent = "Review link (Google / Trustpilot / Facebook) \u2014 the Leave a review button on your request page";
+    var i3 = document.createElement("input"); i3.type = "text"; i3.id = "payReview"; i3.placeholder = "https://...";
+    i3.style.cssText = "width:100%;font-size:15px;padding:10px;border:1px solid #c8d3dd;border-radius:9px;";
+    i3.value = (s.links && s.links.review) || "";
     var msg = document.createElement("div"); msg.className = "auth-msg"; msg.style.textAlign = "center";
     var btns = document.createElement("div"); btns.className = "btns";
     var saveBtn = document.createElement("button"); saveBtn.type = "button"; saveBtn.className = "btn save"; saveBtn.textContent = "Save links";
     saveBtn.addEventListener("click", function () {
-      if (!s.links) s.links = { tip: "", extra: "" };
+      if (!s.links) s.links = { tip: "", extra: "", review: "" };
       s.links.tip = i1.value.trim();
       s.links.extra = i2.value.trim();
-      msg.textContent = "Saved \u2014 your tip jar and payment buttons now use these.";
+      s.links.review = i3.value.trim();
+      msg.textContent = "Saved \u2014 your tip jar, payment buttons and review button now use these.";
       save();
     });
     var close = document.createElement("button"); close.type = "button"; close.className = "btn ug"; close.textContent = "Done";
@@ -5097,6 +5103,7 @@
     sheet.appendChild(tag); sheet.appendChild(h); sheet.appendChild(sub);
     sheet.appendChild(l1); sheet.appendChild(i1);
     sheet.appendChild(l2); sheet.appendChild(i2);
+    sheet.appendChild(l3); sheet.appendChild(i3);
     sheet.appendChild(msg); sheet.appendChild(btns);
     bg.appendChild(sheet);
     document.body.appendChild(bg);
@@ -5443,7 +5450,7 @@
       });
     });
     var book = { stageName: stageLabel(), sets: setNames, pool: pool.map(function (x) { return x.name; }) };
-    if (s.links) book.links = { tip: s.links.tip || "", extra: s.links.extra || "" };
+    if (s.links) book.links = { tip: s.links.tip || "", extra: s.links.extra || "", review: s.links.review || "" };
     var pubUrl = userPath() + "/public";
     authed(pubUrl).then(function (u) {
       return fetch(u, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(book) });
@@ -6734,7 +6741,7 @@
         next.tab = "songs";
         next.setView = "A";
         if (st.wishlist && Array.isArray(st.wishlist)) next.wishlist = st.wishlist;
-        if (st.links && typeof st.links === "object") next.links = { tip: String(st.links.tip || ""), extra: String(st.links.extra || "") };
+        if (st.links && typeof st.links === "object") next.links = { tip: String(st.links.tip || ""), extra: String(st.links.extra || ""), review: String(st.links.review || "") };
         if (window.confirm("Merge into your current setlist?\n\nOK = merge (adds their songs to your pool, keeps your sets)\nCancel = replace everything with the backup")) {
           var mergedN = 0;
           clean.forEach(function (song) {
