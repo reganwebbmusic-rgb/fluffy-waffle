@@ -2939,6 +2939,14 @@
   function userPath() {
     return REQUESTS_DB_URL + "/users/" + encodeURIComponent(myId());
   }
+  // Inbox paths: "requests" is the shared ROOT inbox (audience posts straight
+  // to /requests.json); per-account inboxes live under /users/<id>/requests.json.
+  function inboxJsonUrl(inbox) {
+    return inbox === "requests" ? "/requests.json" : "/" + inbox + "/requests.json";
+  }
+  function requestItemUrl(inbox, id) {
+    return inbox === "requests" ? "/requests/" + id + ".json" : "/" + inbox + "/requests/" + id + ".json";
+  }
   // identity: your signed-in uid, or a persistent device id so requests work
   // even before you sign in — each device gets its own private inbox
   var DEVICE_ID = null;
@@ -2956,7 +2964,7 @@
     return myDeviceId();
   }
   function stageLabel() { return (me && me.stage) || STAGE_NAME || (me && me.email) || ""; }
-  var APP_VER = 8; // bump when the request page changes — every QR scan then loads a fresh copy for everyone
+  var APP_VER = 9; // bump when the request page changes — every QR scan then loads a fresh copy for everyone
   var dbgLast = "never", dbgErr = ""; // request diagnostics shown on the Requests tab
   function myRequestsUrl() {
     return REQUESTS_PAGE_URL + (REQUESTS_PAGE_URL.indexOf("?") >= 0 ? "&" : "?") + "m=" + encodeURIComponent(myId()) + "&v=" + APP_VER;
@@ -4975,9 +4983,13 @@
     }
     var seen = {};
     var merged = [];
+    var failedInboxes = 0;
     var pending = inboxes.map(function (inbox) {
-      return dbGet(REQUESTS_DB_URL + "/" + inbox + "/requests.json")
-        .then(function (r) { return r.json(); })
+      return dbGet(REQUESTS_DB_URL + inboxJsonUrl(inbox))
+        .then(function (r) {
+          if (!r.ok) { failedInboxes++; return null; }
+          return r.json();
+        })
         .then(function (obj) {
           if (obj && typeof obj === "object") {
             Object.keys(obj).forEach(function (k) {
@@ -4985,12 +4997,12 @@
               if (v && typeof v === "object" && !seen[k]) { seen[k] = 1; v.id = k; v._inbox = inbox; merged.push(v); }
             });
           }
-        }).catch(function () {}); // one bad inbox must never stall the others
+        }).catch(function () { failedInboxes++; }); // one bad inbox must never stall the others
     });
     // process whatever arrived, even if an inbox failed
     Promise.all(pending).then(function () {
       merged.sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
-      dbgLast = new Date().toLocaleTimeString() + " \u00b7 " + inboxes.length + " inbox(es) \u00b7 " + merged.length + " found";
+      dbgLast = new Date().toLocaleTimeString() + " \u00b7 " + inboxes.length + " inbox(es) \u00b7 " + merged.length + " found" + (failedInboxes ? " \u00b7 " + failedInboxes + " failed" : "");
       processRequests(merged);
     });
   }
@@ -5218,7 +5230,7 @@
     if (!REQUESTS_DB_URL) return;
     var inbox = "users/" + encodeURIComponent(myId());
     (requestsData || []).forEach(function (x) { if (x && x.id === id && x._inbox) inbox = x._inbox; });
-    var url = REQUESTS_DB_URL + "/" + inbox + "/requests/" + id + ".json";
+    var url = REQUESTS_DB_URL + requestItemUrl(inbox, id);
     var doDel = function (u) { return fetch(u, { method: "DELETE" }); };
     authed(url).then(doDel).then(function (r) {
       if (r.status === 401) return doDel(url); // expired token → retry without auth
@@ -5232,7 +5244,7 @@
     // update the inbox the request actually came from (account or device)
     var inbox = "users/" + encodeURIComponent(myId());
     (requestsData || []).forEach(function (x) { if (x && x.id === id && x._inbox) inbox = x._inbox; });
-    var url = REQUESTS_DB_URL + "/" + inbox + "/requests/" + id + ".json";
+    var url = REQUESTS_DB_URL + requestItemUrl(inbox, id);
     var doPatch = function (u) {
       return fetch(u, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     };
