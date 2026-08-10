@@ -4888,7 +4888,9 @@
         if (!r || !r.id || r.status === "accepted" || r.status === "declined") continue;
         if (seenReqs[r.id]) continue;
         activePopup = r;
-        showRequestPopup(r);
+        seenReqs[r.id] = 1; // mark BEFORE showing so it can never re-pop
+        try { localStorage.setItem("seenReqs", JSON.stringify(seenReqs)); } catch (e) {}
+        try { showRequestPopup(r); } catch (e) { activePopup = null; }
         break;
       }
     }
@@ -5183,11 +5185,11 @@
     var inbox = "users/" + encodeURIComponent(myId());
     (requestsData || []).forEach(function (x) { if (x && x.id === id && x._inbox) inbox = x._inbox; });
     var url = REQUESTS_DB_URL + "/" + inbox + "/requests/" + id + ".json";
-    authed(url).then(function (u) {
-      return fetch(u, { method: "DELETE" });
-    }).then(function (r) {
+    var doDel = function (u) { return fetch(u, { method: "DELETE" }); };
+    authed(url).then(doDel).then(function (r) {
+      if (r.status === 401) return doDel(url); // expired token → retry without auth
       if (r.ok) { loadRequests(); flashNew("Request cleared."); }
-      else flashNew("Couldn't clear \u2014 try again.", "fit-low");
+      else throw new Error("bad");
     }).catch(function () { flashNew("Couldn't clear \u2014 try again.", "fit-low"); });
   }
 
@@ -5197,14 +5199,18 @@
     var inbox = "users/" + encodeURIComponent(myId());
     (requestsData || []).forEach(function (x) { if (x && x.id === id && x._inbox) inbox = x._inbox; });
     var url = REQUESTS_DB_URL + "/" + inbox + "/requests/" + id + ".json";
-    return authed(url).then(function (u) {
+    var doPatch = function (u) {
       return fetch(u, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    }).then(function (r) {
+    };
+    return authed(url).then(doPatch).then(function (r) {
+      // expired/invalid token: Firebase rejects the token itself — retry
+      // without auth (the inbox rules allow the write anyway)
+      if (r.status === 401) return doPatch(url);
       if (!r.ok) throw new Error("bad");
       loadRequests(); // refresh right away so accept/decline feels instant
       return r;
     }).catch(function () {
-      flashNew("Action failed \u2014 try again, or sign in.", "fit-low");
+      flashNew("Action failed \u2014 try again.", "fit-low");
     });
   }
 
