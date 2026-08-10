@@ -4882,6 +4882,11 @@
     // not block anything) or the QR screen
     var modalOpen = false;
     try { modalOpen = [].some.call(document.querySelectorAll(".modal-bg"), function (m) { return m.style.display !== "none"; }); } catch (e) {}
+    // fallback banner: a new request is waiting — shown whenever the full
+    // popup can't appear (modal open, QR screen, etc.) so nothing is missed
+    if (s.tab !== "requests" && list.some(function (x) { return x && x.id && x.status !== "declined" && x.status !== "accepted" && !seenReqs[x.id]; })) {
+      showReqBanner(list);
+    }
     if (!activePopup && reqView !== "qr" && !modalOpen) {
       for (var i = 0; i < list.length; i++) {
         var r = list[i];
@@ -4896,6 +4901,29 @@
     }
     if (hadNew && s.tab === "requests") flashNew();
     updateReqBadge();
+  }
+
+  // unmissable banner when a new request arrives (works even if the popup is blocked)
+  function showReqBanner(list) {
+    try {
+      var first = null;
+      for (var i = 0; i < list.length; i++) {
+        if (list[i] && list[i].id && list[i].status !== "declined" && list[i].status !== "accepted" && !seenReqs[list[i].id]) { first = list[i]; break; }
+      }
+      if (!first) return;
+      var old = document.getElementById("reqBanner");
+      if (old && old.parentNode) old.parentNode.removeChild(old);
+      var b = document.createElement("div");
+      b.id = "reqBanner";
+      b.style.cssText = "position:fixed;top:8px;left:8px;right:8px;z-index:70;background:#f0c987;color:#0f1a24;border-radius:12px;padding:12px 14px;font-weight:600;box-shadow:0 4px 14px rgba(0,0,0,.25);cursor:pointer;";
+      b.textContent = "New request: " + (first.song || (first.type === "tip" ? "a tip!" : "an extra")) + " \u2014 tap to open";
+      b.addEventListener("click", function () {
+        s.tab = "requests"; save(); render();
+        if (b.parentNode) b.parentNode.removeChild(b);
+      });
+      document.body.appendChild(b);
+      setTimeout(function () { if (b.parentNode) b.parentNode.removeChild(b); }, 9000);
+    } catch (e) {}
   }
 
   // yellow unread indicator on the Requests tab (clears when you open it)
@@ -4937,27 +4965,22 @@
     }
     var seen = {};
     var merged = [];
-    var remaining = inboxes.length;
-    inboxes.forEach(function (inbox) {
-      fetch(REQUESTS_DB_URL + "/" + inbox + "/requests.json").then(function (r) { return r.json(); }).then(function (obj) {
-        if (obj && typeof obj === "object") {
-          Object.keys(obj).forEach(function (k) {
-            var v = obj[k];
-            if (v && typeof v === "object" && !seen[k]) { seen[k] = 1; v.id = k; v._inbox = inbox; merged.push(v); }
-          });
-        }
-        remaining--;
-        if (remaining === 0) {
-          merged.sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
-          processRequests(merged);
-        }
-      }).catch(function () {
-        remaining--;
-        if (remaining === 0) {
-          reqNote = "Can't reach the request database \u2014 check it's hosted and the rules are published.";
-          if (s.tab === "requests" && reqView === "list") renderRequests();
-        }
-      });
+    var pending = inboxes.map(function (inbox) {
+      return fetch(REQUESTS_DB_URL + "/" + inbox + "/requests.json")
+        .then(function (r) { return r.json(); })
+        .then(function (obj) {
+          if (obj && typeof obj === "object") {
+            Object.keys(obj).forEach(function (k) {
+              var v = obj[k];
+              if (v && typeof v === "object" && !seen[k]) { seen[k] = 1; v.id = k; v._inbox = inbox; merged.push(v); }
+            });
+          }
+        }).catch(function () {}); // one bad inbox must never stall the others
+    });
+    // process whatever arrived, even if an inbox failed
+    Promise.all(pending).then(function () {
+      merged.sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
+      processRequests(merged);
     });
   }
 
@@ -6715,17 +6738,20 @@
   renderAuthBar();
   bootAuth();
   render();
-  // Poll for requests while the page is visible; pause when hidden (phone
-  // screen off / another app) to save battery and network at gigs.
+  // Robust request polling: a self-healing timeout chain that survives screen
+  // locks and tab switches — it pauses while hidden but can never die.
   function startReqPolling() {
-    if (!requestsTimer && !document.hidden) requestsTimer = setInterval(loadRequests, 5000);
+    if (requestsTimer) { clearTimeout(requestsTimer); requestsTimer = null; }
+    function tick() {
+      if (!document.hidden) { try { loadRequests(); } catch (e) {} }
+      requestsTimer = setTimeout(tick, 5000);
+    }
+    try { loadRequests(); } catch (e) {}
+    tick();
   }
   document.addEventListener("visibilitychange", function () {
-    if (document.hidden) {
-      if (requestsTimer) { clearInterval(requestsTimer); requestsTimer = null; }
-    } else {
-      loadRequests();
-      startReqPolling();
+    if (!document.hidden) {
+      try { loadRequests(); } catch (e) {}
       if (play && play.active) requestWake();
     }
   });
