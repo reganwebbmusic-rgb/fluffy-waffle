@@ -6566,7 +6566,8 @@
     var inp = document.createElement("input");
     inp.type = "file";
     inp.multiple = true;
-    inp.accept = ".pro,.chopro,.cho,.crd,.chord,.txt,.xml,.sbp,.sbpbackup,.zip";
+    // NO accept filter: mobile browsers grey out unknown extensions like
+    // .sbpbackup, so we let anything be picked and validate in code instead
     inp.style.cssText = "display:block;width:calc(100% - 28px);margin:14px 14px 4px;font-size:14px;";
     var status = document.createElement("div");
     status.className = "rec-note";
