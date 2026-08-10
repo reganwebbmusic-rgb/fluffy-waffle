@@ -428,6 +428,34 @@
   var REF_PRO_ME = false;
   var REF_UNLIM_ME = false;
   var REF_PACK_ME = false;
+  // Rules reminder: shows in Admin until the owner confirms the new database
+  // rules are published (see firebase-rules.json in the repo).
+  var RULES_DONE_KEY = "sb2rulesDone";
+  var RULES_JSON = {
+    "rules": {
+      ".read": true,
+      "requests": { ".write": true },
+      "shouts": { ".write": true },
+      "sets": { ".write": true },
+      "orders": { ".read": true, ".write": true },
+      "bandsessions": { ".read": true, ".write": true },
+      "sharedsets": { ".read": true, ".write": true },
+      "users": {
+        ".read": true,
+        "$uid": {
+          ".write": "auth != null && ($uid === auth.uid || root.child('admins/' + auth.uid).exists())"
+        }
+      },
+      "refs": {
+        ".read": true,
+        "$uid": {
+          ".write": "auth != null"
+        }
+      },
+      "admins": {}
+    }
+  };
+  RULES_JSON.rules.admins[SELLER_UID] = true;
   var PRO_KEY = "sb2pro";
   var UL_KEY = "sb2ul";
   // Gig Packs: ready-made setlists sold through the same PayPal + Firebase order
@@ -8286,6 +8314,35 @@
     st.style.padding = "2px 4px 8px";
     st.textContent = "Admin \u2014 users & referrals";
     listEl.appendChild(st);
+
+    // rules reminder until the owner confirms they're published
+    if (!(function () { try { return localStorage.getItem(RULES_DONE_KEY); } catch (e) { return null; } })()) {
+      var rc = document.createElement("section");
+      rc.className = "card";
+      rc.style.cssText = "padding:16px;border:2px solid #ffcf7a;";
+      var rh = document.createElement("h3");
+      rh.textContent = "Action needed \u2014 publish the Firebase rules";
+      rc.appendChild(rh);
+      var rp = document.createElement("div");
+      rp.className = "purpose";
+      rp.textContent = "Referrals, the leaderboard and Grant rewards need the new database rules. Paste the JSON below into Firebase Console \u2192 Realtime Database \u2192 Rules \u2192 Publish. (You're already listed under admins.) Until it's done, signup tracking still works, but Admin stats and grants may be blocked.";
+      rc.appendChild(rp);
+      var pre = document.createElement("pre");
+      pre.style.cssText = "white-space:pre-wrap;word-break:break-word;background:#f2f5f8;border-radius:8px;padding:10px;font-size:12px;max-height:220px;overflow:auto;color:#22303c;";
+      pre.textContent = JSON.stringify(RULES_JSON, null, 2);
+      rc.appendChild(pre);
+      var rbtn = document.createElement("button");
+      rbtn.type = "button"; rbtn.className = "btn save";
+      rbtn.textContent = "I've published the rules";
+      rbtn.style.marginTop = "8px";
+      rbtn.addEventListener("click", function () {
+        try { localStorage.setItem(RULES_DONE_KEY, "1"); } catch (e) {}
+        render();
+        flashNew("Reminder hidden \u2014 welcome to the admin dashboard.");
+      });
+      rc.appendChild(rbtn);
+      listEl.appendChild(rc);
+    }
     dbGet(REQUESTS_DB_URL + "/users.json").then(function (r) { return r.json(); }).then(function (users) {
       if (!users) { var e = document.createElement("div"); e.className = "notes"; e.textContent = "No accounts yet \u2014 users appear here once they sign in."; listEl.appendChild(e); return; }
       var now = Date.now(), day = 86400000;
