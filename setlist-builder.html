@@ -2964,7 +2964,7 @@
     return myDeviceId();
   }
   function stageLabel() { return (me && me.stage) || STAGE_NAME || (me && me.email) || ""; }
-  var APP_VER = 10; // bump when the request page changes — every QR scan then loads a fresh copy for everyone
+  var APP_VER = 11; // bump when the request page changes — every QR scan then loads a fresh copy for everyone
   var dbgLast = "never", dbgErr = ""; // request diagnostics shown on the Requests tab
   function myRequestsUrl() {
     return REQUESTS_PAGE_URL + (REQUESTS_PAGE_URL.indexOf("?") >= 0 ? "&" : "?") + "m=" + encodeURIComponent(myId()) + "&v=" + APP_VER;
@@ -4972,11 +4972,11 @@
   }
 
   function loadRequestsFirebase() {
-    // Poll every inbox this band could receive into and merge — account inbox,
-    // this device's inbox, and the shared fallback (older links/QR codes post
-    // there). Requests show up in real time no matter which link was used.
-    var inboxes = ["requests"]; // shared/legacy inbox (this DB's own)
-    inboxes.push("users/" + encodeURIComponent(myId()));
+    // Privacy: poll only THIS musician's own inboxes — the account inbox and
+    // this device's inbox. Never a shared pool, so no-one sees anyone else's
+    // requests. The QR code embeds ?m=<this mailbox>, so audience submissions
+    // land here and show up in real time.
+    var inboxes = ["users/" + encodeURIComponent(myId())];
     if (me && me.uid) {
       var dev = myDeviceId();
       if (dev && dev !== me.uid) inboxes.push("users/" + encodeURIComponent(dev));

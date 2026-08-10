@@ -192,9 +192,9 @@
     });
   }
   if (FIREBASE_URL) {
-    // always poll the shared inbox — every request lands here now, so status
-    // updates identically on every phone, from any link
-    var queueSource = "requests.json";
+    // poll THIS musician's private inbox — every request sent via their QR
+    // lands here, so the queue and your status update identically on every phone
+    var queueSource = MUSICIAN ? ("users/" + encodeURIComponent(MUSICIAN) + "/requests.json") : "requests.json";
     setInterval(function () {
       dbGet(FIREBASE_URL + "/" + queueSource)
         .then(function (r) { return r.json(); })
@@ -240,8 +240,10 @@
   function mail() { return document.getElementById("email").value.trim().slice(0, 120); }
 
   function target() {
-    // every submission goes to the band's shared inbox — one place the app
-    // always reads, so requests and status work identically on every phone
+    // Per-musician privacy: the QR code carries ?m=<musician>, so the request
+    // goes ONLY into that musician's private inbox — never a shared pool that
+    // every user can see. Direct visits (no ?m=) fall back to the shared inbox.
+    if (MUSICIAN && FIREBASE_URL) return FIREBASE_URL + "/users/" + encodeURIComponent(MUSICIAN) + "/requests.json";
     return FIREBASE_URL ? FIREBASE_URL + "/requests.json" : ENDPOINT;
   }
 
