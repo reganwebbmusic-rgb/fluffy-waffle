@@ -252,6 +252,7 @@
     .card { box-shadow: none; border: 1px solid #ccc; break-inside: avoid; }
   }
 
+  .play-view.dimmed { filter: brightness(.72); }
   /* TOOLGIG refresh — modern, easy on the eye */
   body { background: linear-gradient(180deg, #f2f6fa 0%, #e9f0f6 100%); background-attachment: fixed; }
   header h1 { font-size: 30px; letter-spacing: 2.5px; font-weight: 800; }
@@ -3507,6 +3508,30 @@
     editRefs.artist = editInputs[1];
     editRefs.key = editInputs[2];
     editRefs.bpm = editInputs[4];
+    // tap-tempo: tap along to the beat to set the BPM
+    (function () {
+      var taps = [];
+      var tapB = document.createElement("button");
+      tapB.type = "button"; tapB.className = "btn ug"; tapB.textContent = "Tap";
+      tapB.style.cssText = "font-size:12px;padding:6px 10px;flex:0 0 auto;";
+      tapB.addEventListener("click", function () {
+        var now = Date.now();
+        taps.push(now);
+        if (taps.length > 6) taps.shift();
+        if (taps.length >= 2) {
+          var sum = 0;
+          for (var i = 1; i < taps.length; i++) sum += taps[i] - taps[i - 1];
+          var bpm = Math.round(60000 / (sum / (taps.length - 1)));
+          if (bpm >= 30 && bpm <= 300) {
+            editRefs.bpm.value = String(bpm);
+            try { editRefs.bpm.dispatchEvent(new Event("input")); } catch (e) {}
+            try { editRefs.bpm.dispatchEvent(new Event("change")); } catch (e) {}
+          }
+        }
+      });
+      var par = editRefs.bpm.parentNode;
+      if (par) par.appendChild(tapB);
+    })();
     return box;
   }
 
@@ -3663,7 +3688,152 @@
       pick.appendChild(b);
     });
     listEl.appendChild(pick);
+    var ctb = document.createElement("div");
+    ctb.className = "toolbar";
+    ctb.appendChild(mkBtn("Share set", shareSet));
+    ctb.appendChild(mkBtn("Community sets", renderCommunitySets));
+    listEl.appendChild(ctb);
+    addSetClock(s.setView === "B" ? "B" : "A");
     renderSet(s.setView === "B" ? "B" : "A");
+  }
+
+  // ---------- community shared sets ----------
+  function setRows(which) {
+    var pool = filledSongs(), rows = [];
+    s.sets[which].forEach(function (block) {
+      block.forEach(function (v) {
+        if (v >= 0 && pool[v]) rows.push({ name: pool[v].name, artist: pool[v].artist || "", key: pool[v].key || "", bpm: pool[v].bpm || "" });
+      });
+    });
+    return rows;
+  }
+  function shareSet() {
+    var name = window.prompt("Name this set (e.g. \u201cPub rock bangers\u201d):");
+    if (!name) return;
+    var desc = window.prompt("Short description (optional):") || "";
+    var payload = { name: String(name).slice(0, 80), desc: String(desc).slice(0, 200), setA: setRows("A"), setB: setRows("B"), author: stageLabel() || (me && me.email) || "Musician", ts: Date.now() };
+    if (!payload.setA.length && !payload.setB.length) { flashNew("Your sets are empty \u2014 add songs first.", "fit-low"); return; }
+    fetch(REQUESTS_DB_URL + "/sharedsets.json", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
+      .then(function (r) { if (!r.ok) throw new Error(); flashNew("Set shared \u2014 the community can now use it!"); })
+      .catch(function () { flashNew("Couldn't share \u2014 check the rules are published.", "fit-low"); });
+  }
+  function poolIndexFor(name, artist) {
+    for (var i = 0; i < s.songs.length; i++) {
+      if (s.songs[i].name && s.songs[i].name.toLowerCase() === String(name).toLowerCase() &&
+        (!artist || (s.songs[i].artist || "").toLowerCase() === String(artist).toLowerCase())) return i;
+    }
+    return -1;
+  }
+  function useSharedSet(set) {
+    if (!window.confirm("Add \u201c" + (set.name || "this set") + "\u201d to your pool and sets?")) return;
+    var added = 0;
+    function place(which, rows) {
+      if (!rows || !rows.length) return;
+      rows.forEach(function (row) {
+        var idx = poolIndexFor(row.name, row.artist);
+        if (idx < 0) { addSongNoRender(row.name, row.artist, row.key, row.bpm); added++; idx = poolIndexFor(row.name, row.artist); }
+        if (idx >= 0) {
+          for (var b = 0; b < 2; b++) {
+            for (var si = 0; si < SET_SLOTS; si++) {
+              if (s.sets[which][b][si] < 0) { s.sets[which][b][si] = idx; b = 2; break; }
+            }
+          }
+        }
+      });
+    }
+    place("A", set.setA);
+    place("B", set.setB);
+    save(); render();
+    flashNew("Set added \u2014 " + added + " new song" + (added === 1 ? "" : "s") + " in your pool.");
+  }
+  function renderCommunitySets() {
+    listEl.innerHTML = "";
+    reqView = "list";
+    var tb = document.createElement("div");
+    tb.className = "toolbar";
+    tb.appendChild(mkBtn("Back to sets", function () { render(); }));
+    listEl.appendChild(tb);
+    var title = document.createElement("div");
+    title.className = "purpose";
+    title.style.cssText = "font-weight:700;margin:8px 0;";
+    title.textContent = "Community sets \u2014 other musicians' set ideas";
+    listEl.appendChild(title);
+    fetch(REQUESTS_DB_URL + "/sharedsets.json").then(function (r) { return r.json(); }).then(function (d) {
+      var list = [];
+      if (d && typeof d === "object") Object.keys(d).forEach(function (k) { if (d[k] && typeof d[k] === "object") { d[k].id = k; list.push(d[k]); } });
+      list.sort(function (a, b) { return (b.ts || 0) - (a.ts || 0); });
+      if (!list.length) {
+        var none = document.createElement("div");
+        none.className = "s-empty";
+        none.textContent = "No shared sets yet \u2014 be the first to share yours!";
+        listEl.appendChild(none);
+        return;
+      }
+      list.forEach(function (set) {
+        var sec = document.createElement("section");
+        sec.className = "card";
+        sec.style.padding = "14px";
+        var nm = document.createElement("div");
+        nm.className = "name";
+        nm.textContent = set.name || "Untitled set";
+        var meta = document.createElement("div");
+        meta.className = "artist";
+        meta.textContent = (set.author || "") + " \u00b7 " + ((set.setA || []).length + (set.setB || []).length) + " songs" + (set.desc ? " \u00b7 " + set.desc : "");
+        var row = document.createElement("div");
+        row.className = "req-actions";
+        row.appendChild(mkBtn("Use this set", function () { useSharedSet(set); }));
+        sec.appendChild(nm); sec.appendChild(meta); sec.appendChild(row);
+        listEl.appendChild(sec);
+      });
+    }).catch(function () {
+      var err = document.createElement("div");
+      err.className = "s-empty";
+      err.textContent = "Couldn't load community sets \u2014 check the rules are published.";
+      listEl.appendChild(err);
+    });
+  }
+
+  // live set-time dashboard: current block + minutes left (assumes the gig
+  // starts at the time in Gig details, default 21:00)
+  var setClockTimer = null;
+  function addSetClock(which) {
+    if (setClockTimer) { clearInterval(setClockTimer); setClockTimer = null; }
+    var clock = document.createElement("div");
+    clock.id = "setClock";
+    clock.className = "purpose";
+    clock.style.cssText = "font-weight:600;margin:0 0 10px;";
+    listEl.appendChild(clock);
+    function tick() {
+      var lens = which === "A" ? SET_A_LEN : SET_B_LEN;
+      var st = starts(lens);
+      var baseH = 21, baseM = 0;
+      try {
+        if (s.gig && s.gig.start) { var p = String(s.gig.start).split(":"); baseH = parseInt(p[0], 10); baseM = parseInt(p[1], 10) || 0; }
+      } catch (e) {}
+      var now = new Date();
+      var ref = new Date(now); ref.setHours(baseH, baseM, 0, 0);
+      var t0 = ref.getTime();
+      if (now.getTime() < t0) {
+        clock.textContent = "Set " + which + " starts at " + String(baseH).padStart(2, "0") + ":" + String(baseM).padStart(2, "0");
+        clock.style.color = "#5c6b7a";
+        return;
+      }
+      var idx = -1, endT = t0;
+      for (var i = 0; i < st.length; i++) {
+        endT = t0 + (st[i] + lens[i]) * 60000;
+        if (now.getTime() >= t0 + st[i] * 60000 && now.getTime() < endT) { idx = i; break; }
+      }
+      if (idx >= 0) {
+        var left = Math.max(0, Math.ceil((endT - now.getTime()) / 60000));
+        clock.textContent = "Set " + which + " \u00b7 block " + (idx + 1) + "/" + lens.length + " \u00b7 " + left + " min left" + (left <= 2 ? " \u2014 nearly done!" : "");
+        clock.style.color = left <= 2 ? "#a03027" : "#1c2733";
+      } else {
+        clock.textContent = "Set " + which + " finished \u2014 nice gig!";
+        clock.style.color = "#1c2733";
+      }
+    }
+    tick();
+    setClockTimer = setInterval(tick, 15000);
   }
 
   function renderSet(which) {
@@ -3930,6 +4100,38 @@
         chords.style.fontSize = Math.min(32, f + 2) + "px";
       });
       ctrl.appendChild(zMinus); ctrl.appendChild(zPlus);
+      // bluetooth page-turner pedal (best-effort: any BLE button scrolls the sheet)
+      var pedalBtn = document.createElement("button");
+      pedalBtn.type = "button"; pedalBtn.className = "btn ug"; pedalBtn.textContent = "Pedal";
+      pedalBtn.addEventListener("click", function () {
+        if (!(navigator.bluetooth && navigator.bluetooth.requestDevice)) {
+          flashNew("Bluetooth page-turner needs Chrome/Android (not supported on iPhone Safari).", "fit-low");
+          return;
+        }
+        navigator.bluetooth.requestDevice({ acceptAllDevices: true })
+          .then(function (device) { return device.gatt.connect(); })
+          .then(function (server) { return server.getPrimaryServices(); })
+          .then(function (services) {
+            return Promise.all(services.map(function (svc) { return svc.getCharacteristics(); }))
+              .then(function (lists) { return lists.reduce(function (a, b) { return a.concat(b); }, []); });
+          })
+          .then(function (chars) {
+            flashNew("Pedal connected \u2014 press it to scroll the sheet.");
+            chars.forEach(function (ch) {
+              try {
+                if (ch.properties && ch.properties.notify) {
+                  ch.startNotifications().then(function () {
+                    ch.addEventListener("characteristicvaluechanged", function () {
+                      chords.scrollTop = (chords.scrollTop || 0) + 240;
+                    });
+                  }).catch(function () {});
+                }
+              } catch (e) {}
+            });
+          })
+          .catch(function (e) { flashNew("Pedal: " + (e.message || "couldn't connect") + " \u2014 make sure it's on.", "fit-low"); });
+      });
+      ctrl.appendChild(pedalBtn);
       ctrl.appendChild(expand);
       var tapHint = document.createElement("span");
       tapHint.textContent = "tap sheet for fullscreen";
@@ -4157,6 +4359,7 @@
   function enterPlay(which) {
     if (play && play.timer) clearInterval(play.timer);
     play = { which: which, idx: 0, playing: true, defaultSecs: 180, remaining: 180, timer: null, elCount: null, elFill: null, active: true };
+    requestWake();
     var songs = playSongs();
     if (!songs.length) { play = null; return; }
     recordPlay(songs[0]);
@@ -4244,8 +4447,35 @@
 
   function exitPlay() {
     if (play && play.timer) clearInterval(play.timer);
+    stopMet();
+    releaseWake();
     play = null;
   }
+  // keep the screen on during play mode (and re-request when the app regains focus)
+  var wakeLock = null;
+  function requestWake() {
+    try {
+      if (navigator.wakeLock && !wakeLock) {
+        navigator.wakeLock.request("screen").then(function (wl) { wakeLock = wl; }).catch(function () {});
+      }
+    } catch (e) {}
+  }
+  function releaseWake() {
+    try { if (wakeLock) { wakeLock.release(); wakeLock = null; } } catch (e) { wakeLock = null; }
+  }
+  // rehearsal metronome (click track at any BPM)
+  var metTimer = null, metBpm = 100;
+  function metBeep() {
+    try {
+      var ac = new (window.AudioContext || window.webkitAudioContext)();
+      var o = ac.createOscillator(), g = ac.createGain();
+      o.frequency.value = 880; o.connect(g); g.connect(ac.destination);
+      g.gain.value = 0.06; o.start();
+      setTimeout(function () { try { o.stop(); ac.close(); } catch (e) {} }, 40);
+    } catch (e) {}
+  }
+  function startMet(bpm) { stopMet(); metBpm = bpm; metTimer = setInterval(metBeep, 60000 / metBpm); }
+  function stopMet() { if (metTimer) { clearInterval(metTimer); metTimer = null; } }
 
   function renderPlay() {
     var songs = playSongs();
@@ -4255,6 +4485,8 @@
     var top = document.createElement("div");
     top.className = "toolbar";
     top.appendChild(mkBtn("Exit play", function () { exitPlay(); render(); }));
+    var dimBtn = mkBtn("Dim", function () { wrap.classList.toggle("dimmed"); });
+    top.appendChild(dimBtn);
     var countLbl = document.createElement("span");
     countLbl.style.cssText = "flex:1;font-size:13px;color:#5c6b7a;align-self:center;";
     countLbl.textContent = "Set " + play.which + " · song " + (play.idx + 1) + "/" + songs.length;
@@ -4282,6 +4514,18 @@
       card.appendChild(pn); card.appendChild(pa); card.appendChild(chips); card.appendChild(note);
       wrap.appendChild(card);
 
+      // up next — the next two songs so the band is ready
+      var upnext = document.createElement("div");
+      upnext.className = "pnote";
+      upnext.style.cssText = "font-weight:600;color:#41505e;";
+      var nexts = [];
+      for (var ni = 1; ni <= 2; ni++) {
+        var nx = songs[(play.idx + ni) % songs.length];
+        if (nx) nexts.push(nx.name);
+      }
+      upnext.textContent = nexts.length ? "Up next: " + nexts.join(" \u00b7 ") : "";
+      wrap.appendChild(upnext);
+
       var bar = document.createElement("div");
       bar.className = "play-bar";
       var slider = document.createElement("input");
@@ -4299,6 +4543,25 @@
       lbl.id = "playSecs"; lbl.textContent = play.defaultSecs + "s / song";
       bar.appendChild(slider); bar.appendChild(lbl);
       wrap.appendChild(bar);
+
+      // rehearsal metronome
+      var metRow = document.createElement("div");
+      metRow.className = "play-bar";
+      var metBtn = mkBtn("Metronome", function () {
+        if (metTimer) { stopMet(); metBtn.textContent = "Metronome"; }
+        else { startMet(parseInt(metBpmInp.value, 10) || 100); metBtn.textContent = "Stop metronome"; }
+      });
+      var metBpmInp = document.createElement("input");
+      metBpmInp.type = "range"; metBpmInp.min = "40"; metBpmInp.max = "200"; metBpmInp.step = "5";
+      metBpmInp.value = song.bpm ? parseInt(song.bpm, 10) || 100 : 100;
+      var metLbl = document.createElement("span");
+      metLbl.textContent = metBpmInp.value + " bpm";
+      metBpmInp.addEventListener("input", function () {
+        metLbl.textContent = metBpmInp.value + " bpm";
+        if (metTimer) startMet(parseInt(metBpmInp.value, 10) || 100);
+      });
+      metRow.appendChild(metBtn); metRow.appendChild(metBpmInp); metRow.appendChild(metLbl);
+      wrap.appendChild(metRow);
 
       var ctrls = document.createElement("div"); ctrls.className = "play-ctrls";
       var prevB = mkBtn("Prev", playPrev);
@@ -4562,9 +4825,9 @@
   }
   function gigArchive() { try { return JSON.parse(localStorage.getItem("gigArchive")) || []; } catch (e) { return []; } }
   function gigEarnings() {
-    var tips = 0, extras = 0;
-    gigArchive().forEach(function (g) { tips += g.tips || 0; extras += g.extras || 0; });
-    return { tips: tips, extras: extras };
+    var tips = 0, extras = 0, fees = 0;
+    gigArchive().forEach(function (g) { tips += g.tips || 0; extras += g.extras || 0; fees += g.fee || 0; });
+    return { tips: tips, extras: extras, fees: fees };
   }
   function archiveGig() {
     var st = gigStats();
@@ -4573,6 +4836,7 @@
       date: new Date().toLocaleDateString(),
       total: st.total, accepted: st.accepted, declined: st.declined, paid: st.paid,
       tips: st.tips, extras: st.extras, mailing: st.mailing,
+      fee: (s.gig && s.gig.fee) || 0,
       songs: setlistNames(),
       most: topRequests(3).map(function (x) { return x.name + " (" + x.n + ")"; })
     });
@@ -4641,6 +4905,15 @@
     var tag = document.createElement("span"); tag.className = "fit-badge fit-high"; tag.textContent = "END OF GIG";
     var h = document.createElement("h3"); h.textContent = "Gig report \u2014 clear requests?";
     var pre = document.createElement("div"); pre.className = "chords"; pre.textContent = text;
+    var feeRow = document.createElement("div");
+    feeRow.style.cssText = "display:flex;align-items:center;gap:8px;margin:10px 0;";
+    var feeLbl = document.createElement("span");
+    feeLbl.textContent = "Gig fee \u00a3";
+    var feeInp = document.createElement("input");
+    feeInp.type = "number"; feeInp.min = "0"; feeInp.step = "5";
+    feeInp.value = (s.gig && s.gig.fee) ? String(s.gig.fee) : "0";
+    feeInp.style.cssText = "flex:1;padding:10px 12px;font-size:15px;border:1px solid #c8d3dd;border-radius:10px;";
+    feeRow.appendChild(feeLbl); feeRow.appendChild(feeInp);
     var btns = document.createElement("div"); btns.className = "btns";
     var share = document.createElement("button"); share.type = "button"; share.className = "btn save"; share.textContent = "Share";
     share.addEventListener("click", function () {
@@ -4648,13 +4921,18 @@
       else copyText(text);
     });
     var clear = document.createElement("button"); clear.type = "button"; clear.className = "btn del"; clear.textContent = "Clear & finish";
-    clear.addEventListener("click", function () { closePopup(); doClearRequests(); });
+    clear.addEventListener("click", function () {
+      var fee = Math.max(0, parseFloat(feeInp.value) || 0);
+      if (!s.gig) s.gig = {};
+      s.gig.fee = fee; save();
+      closePopup(); doClearRequests();
+    });
     var cardBtn = document.createElement("button"); cardBtn.type = "button"; cardBtn.className = "btn ug"; cardBtn.textContent = "Share setlist card";
     cardBtn.addEventListener("click", function () { buildShareCard(); });
     var keep = document.createElement("button"); keep.type = "button"; keep.className = "btn ug"; keep.textContent = "Keep requests";
     keep.addEventListener("click", closePopup);
     btns.appendChild(share); btns.appendChild(cardBtn); btns.appendChild(clear); btns.appendChild(keep);
-    sheet.appendChild(tag); sheet.appendChild(h); sheet.appendChild(pre); sheet.appendChild(btns);
+    sheet.appendChild(tag); sheet.appendChild(h); sheet.appendChild(pre); sheet.appendChild(feeRow); sheet.appendChild(btns);
     bg.appendChild(sheet);
     document.body.appendChild(bg);
     popupBg = bg;
@@ -5630,12 +5908,83 @@
           var row = document.createElement("div");
           row.className = "purpose";
           row.style.marginTop = "7px";
-          row.textContent = g.date + " \u00b7 " + g.total + " requests \u00b7 \u00a3" + (g.tips || 0) + " tips" + (g.extras ? " \u00b7 \u00a3" + g.extras + " extras" : "");
+          row.textContent = g.date + " \u00b7 " + g.total + " requests \u00b7 \u00a3" + (g.tips || 0) + " tips" + (g.extras ? " \u00b7 \u00a3" + g.extras + " extras" : "") + (g.fee ? " \u00b7 \u00a3" + g.fee + " fee" : "");
           ac.appendChild(row);
         });
       }
       listEl.appendChild(ac);
     }
+
+    // Gig details — date, venue, soundcheck, start time (used by the set clock)
+    var gd = document.createElement("section");
+    gd.className = "card"; gd.style.padding = "16px";
+    var gdh = document.createElement("h3");
+    gdh.textContent = "Gig details";
+    gdh.style.cssText = "background:none;padding:0 0 6px;border:0;";
+    gd.appendChild(gdh);
+    if (!s.gig) s.gig = {};
+    function gigField(ph, key, type) {
+      var inp = document.createElement("input");
+      inp.type = type || "text";
+      inp.placeholder = ph;
+      inp.value = s.gig[key] || "";
+      inp.style.cssText = "width:100%;margin:5px 0;";
+      inp.addEventListener("input", function () { s.gig[key] = inp.value; save(); });
+      gd.appendChild(inp);
+      return inp;
+    }
+    gigField("Date (e.g. 2026-08-15)", "date", "date");
+    gigField("Venue", "venue");
+    gigField("Soundcheck time (e.g. 19:30)", "soundcheck");
+    gigField("Start time (e.g. 21:00) \u2014 drives the set clock", "start");
+    gigField("Notes", "notes");
+    listEl.appendChild(gd);
+
+    // Share & export
+    var sh = document.createElement("section");
+    sh.className = "card"; sh.style.padding = "16px";
+    var shh = document.createElement("h3");
+    shh.textContent = "Share & export";
+    shh.style.cssText = "background:none;padding:0 0 6px;border:0;";
+    var srow = document.createElement("div");
+    srow.className = "req-actions";
+    srow.appendChild(mkBtn("Share setlist", shareSetlist));
+    srow.appendChild(mkBtn("Export gigs (.ics)", exportICS));
+    srow.appendChild(mkBtn("Export report (CSV)", exportCSV));
+    sh.appendChild(shh); sh.appendChild(srow);
+    listEl.appendChild(sh);
+
+    // Practice streak
+    var ps = document.createElement("section");
+    ps.className = "card"; ps.style.padding = "16px";
+    var psh = document.createElement("h3");
+    psh.textContent = "Practice streak";
+    psh.style.cssText = "background:none;padding:0 0 6px;border:0;";
+    ps.appendChild(psh);
+    var streakData = { last: "", n: 0 };
+    try { streakData = JSON.parse(localStorage.getItem("sb2streak")) || streakData; } catch (e) {}
+    var todayKey = new Date().toDateString();
+    var streakLbl = document.createElement("div");
+    streakLbl.className = "purpose";
+    function showStreak() {
+      var ok = streakData.last === todayKey;
+      streakLbl.textContent = streakData.n + (streakData.n === 1 ? " day" : " days") + " streak" + (ok ? " \u2014 practiced today \u2713" : " \u2014 practice today to keep it alive");
+    }
+    showStreak();
+    var streakBtn = document.createElement("button");
+    streakBtn.type = "button"; streakBtn.className = "btn save";
+    streakBtn.textContent = "I practiced today";
+    streakBtn.addEventListener("click", function () {
+      if (streakData.last === todayKey) { flashNew("Already counted today \u2014 nice work!"); return; }
+      var y = new Date(Date.now() - 86400000).toDateString();
+      streakData.n = (streakData.last === y) ? (streakData.n + 1) : 1;
+      streakData.last = todayKey;
+      try { localStorage.setItem("sb2streak", JSON.stringify(streakData)); } catch (e) {}
+      showStreak();
+      flashNew("Streak: " + streakData.n + (streakData.n === 1 ? " day" : " days") + " \u2014 keep it going!");
+    });
+    ps.appendChild(streakLbl); ps.appendChild(streakBtn);
+    listEl.appendChild(ps);
 
     // Setlist Pro — free vs paid
     var pro = document.createElement("section");
@@ -5903,6 +6252,53 @@
   tab(document.getElementById("tabRequests"), "requests");
   tab(document.getElementById("tabTools"), "tools");
 
+  function shareSetlistText() {
+    var pool = filledSongs(), lines = [];
+    ["A", "B"].forEach(function (w) {
+      s.sets[w].forEach(function (block) {
+        block.forEach(function (v) { if (v >= 0 && pool[v]) lines.push(pool[v].name + (pool[v].artist ? " \u2014 " + pool[v].artist : "")); });
+      });
+    });
+    return lines.join("\n");
+  }
+  function shareSetlist() {
+    var txt = shareSetlistText() || "Nothing in the sets yet.";
+    if (navigator.share) { try { navigator.share({ title: "Tonight's setlist", text: txt }).catch(function () {}); } catch (e) { copyText(txt); } }
+    else copyText(txt);
+  }
+  function downloadText(txt, name, type) {
+    if (typeof Blob === "undefined" || typeof URL === "undefined" || !URL.createObjectURL) { copyText(txt); return; }
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([txt], { type: type || "text/plain" }));
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { try { URL.revokeObjectURL(a.href); } catch (e) {} }, 2000);
+  }
+  function exportICS() {
+    var lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//TOOLGIG//EN", "CALSCALE:GREGORIAN"];
+    var g = s.gig;
+    if (g && g.date) {
+      var d = String(g.date).slice(0, 10).replace(/-/g, "");
+      var t = (g.start || "21:00").replace(/[^0-9]/g, "");
+      lines.push("BEGIN:VEVENT");
+      lines.push("UID:toolgig-" + d + "@toolgig");
+      lines.push("DTSTART;TZID=Europe/London:" + d + "T" + (t ? t + "00" : "210000"));
+      lines.push("SUMMARY:" + (g.venue || "Gig"));
+      lines.push("DESCRIPTION:" + (g.notes || ""));
+      lines.push("END:VEVENT");
+    }
+    lines.push("END:VCALENDAR");
+    downloadText(lines.join("\r\n"), "toolgig-gigs.ics", "text/calendar");
+  }
+  function exportCSV() {
+    var rows = [["date", "requests", "accepted", "declined", "paid", "tips", "extras", "fee", "total"]];
+    (gigArchive() || []).forEach(function (g) {
+      var tips = g.tips || 0, extras = g.extras || 0, fee = g.fee || 0;
+      rows.push([g.date, g.total || 0, g.accepted || 0, g.declined || 0, g.paid || 0, tips, extras, fee, tips + extras + fee]);
+    });
+    downloadText(rows.map(function (r) { return r.join(","); }).join("\n"), "toolgig-gig-report.csv", "text/csv");
+  }
   function doExport() {
     var data = { app: "setlist-builder", version: 2, exported: new Date().toISOString(), state: s, reqStats: reqStats(), songStats: songStats() };
     var txt = JSON.stringify(data);
@@ -5970,10 +6366,19 @@
         next.setView = "A";
         if (st.wishlist && Array.isArray(st.wishlist)) next.wishlist = st.wishlist;
         if (st.links && typeof st.links === "object") next.links = { tip: String(st.links.tip || ""), extra: String(st.links.extra || "") };
-        s = next;
-        if (data.reqStats) try { localStorage.setItem("reqStats", JSON.stringify(data.reqStats)); } catch (e) {}
-        if (data.songStats) try { localStorage.setItem("songStats", JSON.stringify(data.songStats)); } catch (e) {}
-        save(); render();
+        if (window.confirm("Merge into your current setlist?\n\nOK = merge (adds their songs to your pool, keeps your sets)\nCancel = replace everything with the backup")) {
+          var mergedN = 0;
+          clean.forEach(function (song) {
+            if (song && song.name && addSongNoRender(song.name, song.artist, song.key, song.bpm)) mergedN++;
+          });
+          save(); render();
+          flashNew("Merged " + mergedN + " song" + (mergedN === 1 ? "" : "s") + " into your pool.");
+        } else {
+          s = next;
+          if (data.reqStats) try { localStorage.setItem("reqStats", JSON.stringify(data.reqStats)); } catch (e) {}
+          if (data.songStats) try { localStorage.setItem("songStats", JSON.stringify(data.songStats)); } catch (e) {}
+          save(); render();
+        }
       } catch (e) {
         if (window.alert) window.alert("That file doesn't look like a Setlist Builder backup.");
       }
@@ -6008,6 +6413,7 @@
     } else {
       loadRequests();
       startReqPolling();
+      if (play && play.active) requestWake();
     }
   });
   startReqPolling();

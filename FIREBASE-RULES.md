@@ -28,6 +28,13 @@ private data to themselves, and stop anonymous deletion of requests.
       ".write": true
     },
 
+    // Community shared sets: anyone can read and upload a set idea (create is
+    // open); editing/deleting existing ones needs sign-in.
+    "sharedsets": {
+      ".read": true,
+      ".write": "auth != null || !data.exists()"
+    },
+
     // No shared songbook anymore (the app only writes per-user public.json).
     "songbook": {
       ".read": true,
