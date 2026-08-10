@@ -4883,9 +4883,10 @@
     // not block anything) or the QR screen
     var modalOpen = false;
     try { modalOpen = [].some.call(document.querySelectorAll(".modal-bg"), function (m) { return m.style.display !== "none"; }); } catch (e) {}
-    // fallback banner: a new request is waiting — shown whenever the full
-    // popup can't appear (modal open, QR screen, etc.) so nothing is missed
-    if (s.tab !== "requests" && list.some(function (x) { return x && x.id && x.status !== "declined" && x.status !== "accepted" && !seenReqs[x.id]; })) {
+    // fallback banner: a new request is waiting — shown whenever the user is
+    // NOT looking at the request LIST (covers other tabs AND the QR screen)
+    var viewingList = s.tab === "requests" && reqView === "list";
+    if (!viewingList && list.some(function (x) { return x && x.id && x.status !== "declined" && x.status !== "accepted" && !seenReqs[x.id]; })) {
       showReqBanner(list);
     }
     if (!activePopup && reqView !== "qr" && !modalOpen) {
@@ -4936,7 +4937,7 @@
     (requestsData || []).forEach(function (r) {
       if (r && r.status !== "declined" && (r.ts || 0) > reqReadAt) unseen++;
     });
-    var show = unseen > 0 && s.tab !== "requests";
+    var show = unseen > 0 && !(s.tab === "requests" && reqView === "list");
     btn.classList.toggle("tab-new", show);
     if (cnt) { cnt.style.display = show ? "inline-block" : "none"; cnt.textContent = unseen > 9 ? "9+" : String(unseen); }
   }
