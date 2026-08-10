@@ -33,6 +33,15 @@
   .opt button.fun { background: #f0c987; color: #0f1a24; border-color: #f0c987; }
   .opt button:active { filter: brightness(1.15); }
   #msg { margin-top: 16px; font-size: 15px; color: #9fd8a8; min-height: 22px; }
+  /* your request's status — a pop-up style banner pinned to the top so it
+     can't be missed, with a gentle pulse to draw the eye */
+  #myStatus {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 80;
+    padding: 16px 18px; font-weight: 700; text-align: center;
+    border-radius: 0 0 14px 14px; box-shadow: 0 4px 16px rgba(0,0,0,.35);
+    animation: pulseStatus 1.4s ease-in-out infinite;
+  }
+  @keyframes pulseStatus { 0%, 100% { opacity: 1; } 50% { opacity: .7; } }
 </style>
 </head>
 <body>
@@ -59,7 +68,7 @@
     <div class="divider">Keep the night going</div>
     <div class="opt" id="opts"></div>
   </div>
-  <div id="myStatus" style="display:none;border-radius:12px;padding:12px 14px;font-weight:600;margin:14px 0;text-align:left;"></div>
+  <div id="myStatus" style="display:none;"></div>
   <div id="queue"></div>
   <div id="msg"></div>
 </main>
@@ -179,29 +188,37 @@
       queueEl.appendChild(row);
     });
   }
-  if (MUSICIAN && FIREBASE_URL) {
+  if (FIREBASE_URL) {
+    // always poll: the band's own inbox when the QR/link has ?m=, otherwise the
+    // shared inbox (older links post there). The queue only shows for ?m= links.
+    var queueSource = MUSICIAN
+      ? ("users/" + encodeURIComponent(MUSICIAN) + "/requests.json")
+      : "requests.json";
     setInterval(function () {
-      fetch(FIREBASE_URL + "/users/" + encodeURIComponent(MUSICIAN) + "/requests.json")
+      fetch(FIREBASE_URL + "/" + queueSource)
         .then(function (r) { return r.json(); })
         .then(function (d) {
           var list = [];
           if (d && typeof d === "object") Object.keys(d).forEach(function (k) { if (d[k] && typeof d[k] === "object") { d[k].id = k; list.push(d[k]); } });
           queueSnapshot = list;
-          renderQueue(list);
-          // update the audience member's own request status (accepted/declined)
+          if (MUSICIAN) renderQueue(list);
+          // update this person's own request status (accepted/declined) — match
+          // by song name AND closest timestamp so it always finds THEIR request
           if (myReq) {
-            var hit = null;
+            var hit = null, best = 1e15;
             list.forEach(function (x) {
-              if (!hit && x && x.song && String(x.song).toLowerCase() === String(myReq.song).toLowerCase() && x.status) hit = x;
+              if (!x || !x.song || String(x.song).toLowerCase() !== String(myReq.song).toLowerCase()) return;
+              var d = Math.abs((x.ts || 0) - (myReq.ts || 0));
+              if (d < best) { best = d; hit = x; }
             });
-            if (hit) {
+            if (hit && hit.status) {
               myReq.status = hit.status;
               try { localStorage.setItem("sb2myreq", JSON.stringify(myReq)); } catch (e) {}
               renderMyStatus();
             }
           }
         }).catch(function () {});
-    }, 5000);
+    }, 4000);
   }
 
   // your own request's status — the band accepts/declines and this updates live
