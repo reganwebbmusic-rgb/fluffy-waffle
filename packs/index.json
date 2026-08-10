@@ -4,7 +4,7 @@
   "name": "Wedding Gig Pack",
   "tagline": "The full wedding reception, done right — dinner, first dance and floor-fillers in one box.",
   "price": 9.99,
-  "buyUrl": "",
+    "buyUrl": "https://checkout.revolut.com/pay/071495c4-adf4-4517-8396-6dc16c17ec27",
   "total": 109,
   "sets": [
    {
@@ -29,7 +29,7 @@
   "name": "Party & Functions Pack",
   "tagline": "High-energy floor-fillers for birthdays, functions and club nights — zero slow songs.",
   "price": 9.99,
-  "buyUrl": "",
+    "buyUrl": "https://checkout.revolut.com/pay/071495c4-adf4-4517-8396-6dc16c17ec27",
   "total": 104,
   "sets": [
    {
@@ -54,7 +54,7 @@
   "name": "Country Night Pack",
   "tagline": "Three sets of singalong country — classic to modern, tailgate to dancehall.",
   "price": 9.99,
-  "buyUrl": "",
+    "buyUrl": "https://checkout.revolut.com/pay/071495c4-adf4-4517-8396-6dc16c17ec27",
   "total": 107,
   "sets": [
    {
@@ -79,7 +79,7 @@
   "name": "British Pub Gig Pack",
   "tagline": "Terrace anthems, indie singalongs and last-orders classics — the full pub setlist.",
   "price": 9.99,
-  "buyUrl": "",
+    "buyUrl": "https://checkout.revolut.com/pay/071495c4-adf4-4517-8396-6dc16c17ec27",
   "total": 116,
   "sets": [
    {
@@ -104,7 +104,7 @@
   "name": "Restaurant Gig Pack",
   "tagline": "Mellow, dinner-friendly favourites — background gold that fills the room without clearing it.",
   "price": 9.99,
-  "buyUrl": "",
+    "buyUrl": "https://checkout.revolut.com/pay/071495c4-adf4-4517-8396-6dc16c17ec27",
   "total": 131,
   "sets": [
    {
