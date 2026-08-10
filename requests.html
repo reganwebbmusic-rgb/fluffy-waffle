@@ -189,11 +189,9 @@
     });
   }
   if (FIREBASE_URL) {
-    // always poll: the band's own inbox when the QR/link has ?m=, otherwise the
-    // shared inbox (older links post there). The queue only shows for ?m= links.
-    var queueSource = MUSICIAN
-      ? ("users/" + encodeURIComponent(MUSICIAN) + "/requests.json")
-      : "requests.json";
+    // always poll the shared inbox — every request lands here now, so status
+    // updates identically on every phone, from any link
+    var queueSource = "requests.json";
     setInterval(function () {
       fetch(FIREBASE_URL + "/" + queueSource)
         .then(function (r) { return r.json(); })
@@ -201,7 +199,7 @@
           var list = [];
           if (d && typeof d === "object") Object.keys(d).forEach(function (k) { if (d[k] && typeof d[k] === "object") { d[k].id = k; list.push(d[k]); } });
           queueSnapshot = list;
-          if (MUSICIAN) renderQueue(list);
+          renderQueue(list);
           // update this person's own request status (accepted/declined) — match
           // by song name AND closest timestamp so it always finds THEIR request
           if (myReq) {
@@ -239,7 +237,8 @@
   function mail() { return document.getElementById("email").value.trim().slice(0, 120); }
 
   function target() {
-    if (MUSICIAN) return FIREBASE_URL + "/users/" + encodeURIComponent(MUSICIAN) + "/requests.json";
+    // every submission goes to the band's shared inbox — one place the app
+    // always reads, so requests and status work identically on every phone
     return FIREBASE_URL ? FIREBASE_URL + "/requests.json" : ENDPOINT;
   }
 
