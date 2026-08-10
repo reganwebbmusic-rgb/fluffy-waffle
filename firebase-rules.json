@@ -1,0 +1,29 @@
+{
+  "rules": {
+    ".read": true,
+    "requests": { ".write": true },
+    "shouts": { ".write": true },
+    "sets": { ".write": true },
+    "orders": { ".read": true, ".write": true },
+    "bandsessions": { ".read": true, ".write": true },
+    "sharedsets": { ".read": true, ".write": true },
+    "users": {
+      ".read": true,
+      "$uid": {
+        ".write": "auth != null && ($uid === auth.uid || root.child('admins/' + auth.uid).exists())"
+      }
+    },
+    "refs": {
+      ".read": true,
+      "$uid": {
+        ".write": "auth != null"
+      }
+    },
+    "admins": {
+      ".read": true,
+      "$uid": {
+        ".write": false
+      }
+    }
+  }
+}

@@ -157,6 +157,59 @@ function check(name, cond, extra) {
   await new Promise((r) => setTimeout(r, 300));
   check("back to songs works", doc.getElementById("list").textContent.includes("Livin' On A Prayer"));
 
+  // ---- Admin gating + invite link (owner session) ----
+  const OWNER = "Vw7HD41oxoSCpPUDnl5i825QZ3K2";
+  const authSeed = JSON.stringify({ uid: OWNER, email: "owner@toolgig.com", stage: "Owner", offline: false, exp: Date.now() + 3600000 });
+  const dom2 = new JSDOM(html, {
+    runScripts: "dangerously",
+    url: "https://reganwebbmusic-rgb.github.io/fluffy-waffle/setlist-builder.html?invite=1",
+    beforeParse(w2) {
+      w2.localStorage.setItem("setlist-builder-v1", JSON.stringify(Object.assign({}, seed, { tab: "tools" })));
+      w2.localStorage.setItem("sb2tutDone", "1");
+      w2.localStorage.setItem("sb2auth", authSeed);
+      w2.XMLHttpRequest = class {
+        open(m, u) { this.url = u; }
+        send() {
+          const p = this.url.replace(/^\.\//, "").split("?")[0];
+          const f = path.join(root, p);
+          try { this.status = 200; this.responseText = fs.readFileSync(f, "utf8"); }
+          catch (e) { this.status = 404; this.responseText = ""; }
+          if (this.onload) this.onload();
+        }
+      };
+      w2.fetch = () => Promise.reject(new Error("off"));
+    }
+  });
+  const doc2 = dom2.window.document;
+  const click2 = (el) => el.dispatchEvent(new dom2.window.Event("click", { bubbles: true }));
+  await new Promise((r) => setTimeout(r, 800));
+  const tabAdmin = doc2.getElementById("tabAdmin");
+  check("Admin tab visible for owner", tabAdmin && tabAdmin.style.display !== "none");
+  // Tools invite card: link carries the owner uid
+  const invInput = [...doc2.querySelectorAll("input")].find((i) => i.readOnly && i.value && i.value.indexOf("invite=1") >= 0);
+  check("invite link carries referrer uid", !!invInput && invInput.value.indexOf("r=" + OWNER) >= 0, invInput && invInput.value.slice(0, 80));
+  // Admin tab renders without crashing
+  if (tabAdmin) click2(tabAdmin);
+  await new Promise((r) => setTimeout(r, 500));
+  const adminText = doc2.getElementById("list").textContent;
+  check("admin tab renders", adminText.length > 0 && (adminText.includes("User stats") || adminText.includes("Couldn't load user data")));
+  // non-owner: admin hidden
+  const dom3 = new JSDOM(html, {
+    runScripts: "dangerously",
+    url: "https://reganwebbmusic-rgb.github.io/fluffy-waffle/setlist-builder.html",
+    beforeParse(w3) {
+      w3.localStorage.setItem("setlist-builder-v1", JSON.stringify(seed));
+      w3.localStorage.setItem("sb2tutDone", "1");
+      w3.localStorage.setItem("sb2auth", JSON.stringify({ uid: "someone-else", email: "x@x.com", stage: "X", offline: false, exp: Date.now() + 3600000 }));
+      w3.XMLHttpRequest = class { open(m, u) { this.url = u; } send() { if (this.onload) this.onload(); } };
+      w3.fetch = () => Promise.reject(new Error("off"));
+    }
+  });
+  const doc3 = dom3.window.document;
+  await new Promise((r) => setTimeout(r, 800));
+  const tabAdmin3 = doc3.getElementById("tabAdmin");
+  check("Admin tab hidden for non-owner", tabAdmin3 && tabAdmin3.style.display === "none");
+
   console.log("\nerrors captured:", errors.length ? errors.join("\n  ") : "none");
   if (errors.length) process.exitCode = 1;
   console.log(process.exitCode ? "SMOKE TEST: FAILURES" : "SMOKE TEST: ALL PASSED");

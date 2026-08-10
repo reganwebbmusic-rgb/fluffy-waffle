@@ -384,6 +384,7 @@
     <button class="tab" id="tabRequests" type="button">Requests<span id="reqCount" class="req-count" style="display:none"></span></button>
     <button class="tab" id="tabPacks" type="button">Packs</button>
     <button class="tab" id="tabTools" type="button">Tools</button>
+    <button class="tab" id="tabAdmin" type="button" style="display:none">Admin</button>
   </div>
 
   <main id="list"></main>
@@ -419,6 +420,10 @@
   // account then counts as Pro automatically (needed to approve sales). Leave ""
   // until you've set it.
   var SELLER_UID = "Vw7HD41oxoSCpPUDnl5i825QZ3K2";
+  // Referral incentive: refer REF_GOAL friends (who sign in) and Pro unlocks for
+  // free. REF_PRO_ME is cached per session after refreshReferralStatus().
+  var REF_GOAL = 3;
+  var REF_PRO_ME = false;
   var PRO_KEY = "sb2pro";
   var UL_KEY = "sb2ul";
   // Gig Packs: ready-made setlists sold through the same PayPal + Firebase order
@@ -440,6 +445,7 @@
     if (proRecord()) return true;
     if (SELLER_UID && me && me.uid && me.uid === SELLER_UID) return true;
     if (TEST_EMAIL && me && me.email && String(me.email).toLowerCase() === TEST_EMAIL) return true;
+    if (REF_PRO_ME) return true;
     return false;
   }
   function setPro(code, email) { try { localStorage.setItem(PRO_KEY, JSON.stringify({ code: code, email: email || "", at: Date.now() })); } catch (e) {} }
@@ -3137,7 +3143,46 @@
   }
   function myInviteUrl() {
     var base = (typeof location !== "undefined" && location.href) ? location.href.split("?")[0] : "setlist-builder.html";
-    return base + "?invite=1";
+    var r = (me && me.uid && me.uid !== "local") ? me.uid : myDeviceId();
+    return base + "?invite=1&r=" + encodeURIComponent(r);
+  }
+  // referral / incentive tracking: on first login, record the account and who
+  // invited them (from ?r= in the URL). Referrals are stored per-referrer under
+  // /refs/<uid>/<newuid> so counts and the free-Pro reward stay cheap to read.
+  function trackSignup(uid, email) {
+    if (!uid || uid === "local") return;
+    var r = "";
+    try { r = String(new URLSearchParams(location.search).get("r") || "").replace(/[^a-zA-Z0-9]/g, "").slice(0, 40); } catch (e) {}
+    dbGet(REQUESTS_DB_URL + "/users/" + encodeURIComponent(uid) + ".json")
+      .then(function (res) { return res.json(); })
+      .then(function (u) {
+        if (u && u.joinedAt) return; // already tracked
+        return authed(REQUESTS_DB_URL + "/users/" + encodeURIComponent(uid) + ".json").then(function (url) {
+          return fetch(url, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: email || "", joinedAt: Date.now(), referredBy: r }) });
+        }).then(function () {
+          if (!r) return;
+          return authed(REQUESTS_DB_URL + "/refs/" + encodeURIComponent(r) + "/" + encodeURIComponent(uid) + ".json").then(function (url) {
+            return fetch(url, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(Date.now()) });
+          }).catch(function () {});
+        });
+      }).catch(function () {});
+  }
+  function referralCount(members) {
+    if (!members) return 0;
+    var n = 0;
+    for (var k in members) { if (members[k]) n++; }
+    return n;
+  }
+  function refreshReferralStatus() {
+    if (!me || !me.uid || me.uid === "local") { REF_PRO_ME = false; return; }
+    Promise.all([
+      dbGet(REQUESTS_DB_URL + "/refs/" + encodeURIComponent(me.uid) + ".json").then(function (r) { return r.json(); }).catch(function () { return null; }),
+      dbGet(REQUESTS_DB_URL + "/users/" + encodeURIComponent(me.uid) + ".json").then(function (r) { return r.json(); }).catch(function () { return null; })
+    ]).then(function (both) {
+      var n = referralCount(both[0]);
+      REF_PRO_ME = (n >= REF_GOAL) || !!(both[1] && both[1].rewards && both[1].rewards.pro);
+      renderAuthBar();
+    });
   }
   function authErr(msg) { var el = document.getElementById("authMsg"); if (el) el.textContent = msg; }
   function doAuth(mode) {
@@ -3155,6 +3200,8 @@
         idToken: res.idToken, refreshToken: res.refreshToken, exp: Date.now() + 3600000
       };
       saveMe();
+      trackSignup(me.uid, res.email);
+      refreshReferralStatus();
       document.getElementById("authBox").style.display = "none";
       afterLogin();
     }).catch(function () { authErr("Can't reach the login server — check your internet."); });
@@ -3166,7 +3213,13 @@
     document.getElementById("authStage").value = "";
     renderAuthBar();
   }
+  function updateAdminTab() {
+    var b = document.getElementById("tabAdmin");
+    if (!b) return;
+    b.style.display = (me && me.uid && SELLER_UID && me.uid === SELLER_UID) ? "" : "none";
+  }
   function renderAuthBar() {
+    updateAdminTab();
     var bar = document.getElementById("authBar");
     bar.innerHTML = "";
     if (isPro()) {
@@ -3348,6 +3401,7 @@
 
     if (s.tab === "requests") { renderRequests(); return; }
     if (s.tab === "packs") { renderPacks(); return; }
+    if (s.tab === "admin") { renderAdmin(); return; }
     if (s.tab === "tools") { renderTools(); return; }
     if (s.tab === "sets") {
       if (play && play.active !== false) { renderPlay(); return; }
@@ -7142,6 +7196,44 @@
     }
     listEl.appendChild(gig);
 
+    // Invite-friends referral card (signed-in users)
+    if (me && me.uid && me.uid !== "local") {
+      var inv = document.createElement("section");
+      inv.className = "card";
+      inv.style.padding = "16px";
+      var ivh = document.createElement("h3");
+      ivh.textContent = "Invite friends \u2014 get Pro free";
+      ivh.style.background = "none"; ivh.style.padding = "0 0 6px"; ivh.style.border = "0";
+      inv.appendChild(ivh);
+      var ivp = document.createElement("div");
+      ivp.className = "purpose";
+      ivp.textContent = "Share your invite link \u2014 when " + REF_GOAL + " friends sign in, Pro unlocks for you automatically (and the owner can grant it too).";
+      inv.appendChild(ivp);
+      var ivLink = document.createElement("input");
+      ivLink.type = "text"; ivLink.readOnly = true;
+      ivLink.value = myInviteUrl();
+      ivLink.style.cssText = "width:100%;box-sizing:border-box;margin-top:8px;";
+      inv.appendChild(ivLink);
+      var ivCopy = document.createElement("button");
+      ivCopy.type = "button"; ivCopy.className = "btn ug"; ivCopy.textContent = "Copy invite link";
+      ivCopy.style.marginTop = "8px";
+      ivCopy.addEventListener("click", function () { copyText(myInviteUrl()); flashNew("Invite link copied \u2014 send it to a musician."); });
+      inv.appendChild(ivCopy);
+      var ivStat = document.createElement("div");
+      ivStat.className = "rec-note";
+      ivStat.style.marginTop = "8px";
+      ivStat.textContent = REF_PRO_ME ? "Pro unlocked via referrals \u2014 nice!" : "Checking your referrals\u2026";
+      inv.appendChild(ivStat);
+      listEl.appendChild(inv);
+      dbGet(REQUESTS_DB_URL + "/refs/" + encodeURIComponent(me.uid) + ".json")
+        .then(function (r) { return r.json(); })
+        .then(function (m) {
+          var n = referralCount(m);
+          ivStat.textContent = n >= REF_GOAL ? "Pro unlocked via referrals \u2014 nice!" : "Referrals: " + n + " of " + REF_GOAL + " joined.";
+          if (n >= REF_GOAL && !REF_PRO_ME) { REF_PRO_ME = true; renderAuthBar(); }
+        }).catch(function () { ivStat.textContent = "Couldn't check referrals right now."; });
+    }
+
     var tun = document.createElement("section");
     tun.className = "card";
     tun.style.padding = "16px";
@@ -8110,6 +8202,119 @@
     document.body.appendChild(bg);
   }
 
+  // ---------- Admin tab (owner only) ----------
+  function adminSection(title) {
+    var sec = document.createElement("section");
+    sec.className = "card";
+    sec.style.padding = "16px";
+    var h = document.createElement("h3");
+    h.textContent = title;
+    h.style.background = "none"; h.style.padding = "0 0 8px"; h.style.border = "0";
+    sec.appendChild(h);
+    return sec;
+  }
+  function adminRow(label, val) {
+    var r = document.createElement("div");
+    r.className = "req-row";
+    var a = document.createElement("div"); a.style.cssText = "flex:1;color:#8a97a5;font-size:13px;"; a.textContent = label;
+    var b = document.createElement("div"); b.style.cssText = "font-weight:700;"; b.textContent = val;
+    r.appendChild(a); r.appendChild(b);
+    return r;
+  }
+  function renderAdmin() {
+    listEl.innerHTML = "";
+    var tb = document.createElement("div");
+    tb.className = "toolbar";
+    tb.appendChild(mkBtn("Back to songs", function () { s.tab = "songs"; save(); render(); }));
+    listEl.appendChild(tb);
+    var st = document.createElement("h2");
+    st.style.padding = "2px 4px 8px";
+    st.textContent = "Admin \u2014 users & referrals";
+    listEl.appendChild(st);
+    dbGet(REQUESTS_DB_URL + "/users.json").then(function (r) { return r.json(); }).then(function (users) {
+      if (!users) { var e = document.createElement("div"); e.className = "notes"; e.textContent = "No accounts yet \u2014 users appear here once they sign in."; listEl.appendChild(e); return; }
+      var now = Date.now(), day = 86400000;
+      var total = 0, today = 0, week = 0, month = 0, referred = 0;
+      var byRef = {}, recent = [];
+      for (var k in users) {
+        var u = users[k];
+        if (!u || !u.joinedAt) continue;
+        total++;
+        if (u.joinedAt >= now - day) today++;
+        if (u.joinedAt >= now - 7 * day) week++;
+        if (u.joinedAt >= now - 30 * day) month++;
+        if (u.referredBy) { referred++; byRef[u.referredBy] = (byRef[u.referredBy] || 0) + 1; }
+        recent.push({ email: u.email || "", at: u.joinedAt, ref: u.referredBy || "" });
+      }
+      var sec = adminSection("User stats");
+      sec.appendChild(adminRow("Total accounts", String(total)));
+      sec.appendChild(adminRow("Joined today", String(today)));
+      sec.appendChild(adminRow("Joined this week", String(week)));
+      sec.appendChild(adminRow("Joined this month", String(month)));
+      sec.appendChild(adminRow("Signed up via a referral", String(referred)));
+      listEl.appendChild(sec);
+      // top referrers
+      var top = Object.keys(byRef).map(function (id) { return { id: id, n: byRef[id] }; }).sort(function (a, b) { return b.n - a.n; }).slice(0, 5);
+      var rSec = adminSection("Top referrers");
+      if (!top.length) { var rn = document.createElement("div"); rn.className = "notes"; rn.textContent = "No referrals yet."; rSec.appendChild(rn); }
+      top.forEach(function (t2) {
+        var u3 = users[t2.id];
+        var email = (u3 && u3.email) || "";
+        rSec.appendChild(adminRow((email || "unknown") + " (uid " + t2.id + ")", t2.n + " of " + REF_GOAL + " for free Pro"));
+      });
+      listEl.appendChild(rSec);
+      // recent signups
+      recent.sort(function (a, b) { return b.at - a.at; });
+      var rec = adminSection("Recent signups");
+      recent.slice(0, 20).forEach(function (u2) {
+        var r2 = document.createElement("div");
+        r2.className = "req-row";
+        var a2 = document.createElement("div"); a2.style.cssText = "flex:1;min-width:0;";
+        var n2 = document.createElement("div"); n2.textContent = u2.email || "no email";
+        var m2 = document.createElement("div"); m2.className = "notes"; m2.style.cssText = "font-size:12px;";
+        m2.textContent = new Date(u2.at).toLocaleDateString() + " \u00b7 " + (u2.ref ? "referred by " + u2.ref.slice(0, 10) : "direct");
+        a2.appendChild(n2); a2.appendChild(m2);
+        r2.appendChild(a2);
+        rec.appendChild(r2);
+      });
+      listEl.appendChild(rec);
+      // grant pro
+      var g = adminSection("Grant Pro (manual reward)");
+      var gp = document.createElement("div"); gp.className = "purpose";
+      gp.textContent = "Enter a user's email to give them Pro instantly \u2014 for referrals you want to reward, or as a gift.";
+      g.appendChild(gp);
+      var gIn = document.createElement("input");
+      gIn.type = "email"; gIn.placeholder = "user@email.com";
+      gIn.style.cssText = "width:100%;box-sizing:border-box;margin-top:8px;";
+      g.appendChild(gIn);
+      var gMsg = document.createElement("div"); gMsg.className = "rec-note"; gMsg.style.marginTop = "6px";
+      g.appendChild(gMsg);
+      var gBtn = document.createElement("button");
+      gBtn.type = "button"; gBtn.className = "btn save"; gBtn.textContent = "Grant Pro";
+      gBtn.style.marginTop = "8px";
+      gBtn.addEventListener("click", function () {
+        var em = gIn.value.trim().toLowerCase();
+        if (!em) { gMsg.textContent = "Enter an email first."; return; }
+        var uid = null;
+        for (var k3 in users) { if (users[k3] && users[k3].email && String(users[k3].email).toLowerCase() === em) { uid = k3; break; } }
+        if (!uid) { gMsg.textContent = "No account found with that email."; return; }
+        var target = users[uid];
+        target.rewards = target.rewards || {};
+        target.rewards.pro = true;
+        authed(REQUESTS_DB_URL + "/users/" + encodeURIComponent(uid) + ".json").then(function (url) {
+          return fetch(url, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(target) });
+        }).then(function () { gMsg.textContent = "Pro granted to " + em + " \u2014 they get it on next sign-in."; })
+          .catch(function () { gMsg.textContent = "Couldn't save \u2014 check database rules."; });
+      });
+      g.appendChild(gBtn);
+      listEl.appendChild(g);
+    }).catch(function () {
+      var e = document.createElement("div"); e.className = "notes";
+      e.textContent = "Couldn't load user data \u2014 make sure the database rules allow reading /users.";
+      listEl.appendChild(e);
+    });
+  }
+
   function renderPackDetail(pk) {
     var un = isPackUnlocked(pk.id);
     var tb = document.createElement("div");
@@ -8364,7 +8569,7 @@
     btn.addEventListener("click", function () {
       exitPlay();
       s.tab = name; save(); render();
-      [["tabSongs", "songs"], ["tabSets", "sets"], ["tabRequests", "requests"], ["tabPacks", "packs"], ["tabTools", "tools"]].forEach(function (t) {
+      [["tabSongs", "songs"], ["tabSets", "sets"], ["tabRequests", "requests"], ["tabPacks", "packs"], ["tabTools", "tools"], ["tabAdmin", "admin"]].forEach(function (t) {
         document.getElementById(t[0]).classList.toggle("active", t[1] === name);
       });
       if (name === "requests") {
@@ -8378,6 +8583,7 @@
   tab(document.getElementById("tabRequests"), "requests");
   tab(document.getElementById("tabPacks"), "packs");
   tab(document.getElementById("tabTools"), "tools");
+  tab(document.getElementById("tabAdmin"), "admin");
 
   function shareSetlistText() {
     var pool = filledSongs(), lines = [];
@@ -8562,6 +8768,10 @@
     }
   });
   startReqPolling();
+
+  // Referral status + admin tab on boot (only when already signed in)
+  if (me && me.uid && me.uid !== "local") refreshReferralStatus();
+  updateAdminTab();
 
   // Install prompt: capture it so Tools can offer a one-tap "Install app" button
   // (Chrome/Android/Edge only \u2014 iPhone Safari falls back to manual steps).
