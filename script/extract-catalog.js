@@ -38,14 +38,14 @@ function norm(s) {
     .trim()
     .toLowerCase();
 }
-function push(t, a) {
-  const k = norm(t) + "|" + norm(a);
-  if (seen.has(k)) return;
-  seen.add(k);
-  songs.push([String(t).slice(0, 120), String(a || "").slice(0, 120)]);
+function push(t, a, k, b) {
+  const key = norm(t) + "|" + norm(a);
+  if (seen.has(key)) return;
+  seen.add(key);
+  songs.push([String(t).slice(0, 120), String(a || "").slice(0, 120), String(k || "").slice(0, 8), String(b || "").slice(0, 8)]);
 }
-builtin.forEach((r) => push(r[0], r[1]));
-extra.forEach((r) => push(r[0], r[1]));
+builtin.forEach((r) => push(r[0], r[1], r[2], r[3]));
+extra.forEach((r) => push(r[0], r[1], r[2], r[3]));
 
 fs.writeFileSync(
   path.join(root, "script", "catalog.json"),
