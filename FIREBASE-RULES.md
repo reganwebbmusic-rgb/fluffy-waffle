@@ -35,6 +35,16 @@ private data to themselves, and stop anonymous deletion of requests.
       ".write": "auth != null || !data.exists()"
     },
 
+    // Band sync sessions: anyone can read (band members join with a code) and
+    // create; anyone in the session can tap Next (updates are open).
+    "bandsessions": {
+      ".read": true,
+      ".write": "auth != null || !data.exists()",
+      "$sessionId": {
+        ".write": true
+      }
+    },
+
     // No shared songbook anymore (the app only writes per-user public.json).
     "songbook": {
       ".read": true,

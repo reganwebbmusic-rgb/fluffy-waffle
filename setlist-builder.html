@@ -253,6 +253,14 @@
   }
 
   .play-view.dimmed { filter: brightness(.72); }
+  @media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea { display: block !important; position: absolute; left: 0; top: 0; width: 100%; text-align: center; font-family: Arial, sans-serif; padding: 20px; }
+    #printArea h1 { font-size: 52px; margin: 10px 0; }
+    #printArea p { font-size: 26px; margin: 8px 0; }
+    #printArea div { font-size: 16px; color: #444; word-break: break-all; }
+  }
   /* TOOLGIG refresh — modern, easy on the eye */
   body { background: linear-gradient(180deg, #f2f6fa 0%, #e9f0f6 100%); background-attachment: fixed; }
   header h1 { font-size: 30px; letter-spacing: 2.5px; font-weight: 800; }
@@ -330,6 +338,8 @@
     <input type="file" id="importFile" accept="application/json,.json" style="display:none">
     <p class="note">Everything is saved on this device — close the page and it's still there.</p>
   </footer>
+
+  <div id="printArea" style="display:none;"></div>
 
   <div id="tutOverlay">
     <div class="tut-card">
@@ -3142,6 +3152,8 @@
 
   function render() {
     listEl.innerHTML = "";
+    if (setClockTimer) { clearInterval(setClockTimer); setClockTimer = null; }
+    if (bandTimer) { clearInterval(bandTimer); bandTimer = null; }
     var filled = filledSongs();
     poolCountEl.textContent = filled.length;
     barEl.style.width = (filled.length / poolSize() * 100) + "%";
@@ -3692,9 +3704,145 @@
     ctb.className = "toolbar";
     ctb.appendChild(mkBtn("Share set", shareSet));
     ctb.appendChild(mkBtn("Community sets", renderCommunitySets));
+    ctb.appendChild(mkBtn("Band sync", renderBandSync));
     listEl.appendChild(ctb);
     addSetClock(s.setView === "B" ? "B" : "A");
     renderSet(s.setView === "B" ? "B" : "A");
+  }
+
+  // ---------- band sync (Pro): one setlist, every phone ----------
+  var bandSession = null;
+  var bandTimer = null;
+  function bandCode() {
+    var cs = "ABCDEFGHJKMNPQRSTUVWXYZ23456789", out = "";
+    for (var i = 0; i < 6; i++) out += cs.charAt(Math.floor(Math.random() * cs.length));
+    return out;
+  }
+  function bandSongList() {
+    var pool = filledSongs(), out = [];
+    ["A", "B"].forEach(function (w) {
+      s.sets[w].forEach(function (block) {
+        block.forEach(function (v) { if (v >= 0 && pool[v]) out.push(pool[v].name + (pool[v].artist ? " \u2014 " + pool[v].artist : "")); });
+      });
+    });
+    return out;
+  }
+  function bandPush() {
+    if (!bandSession || !REQUESTS_DB_URL) return;
+    fetch(REQUESTS_DB_URL + "/bandsessions/" + bandSession.id + ".json", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idx: bandSession.idx, playing: bandSession.playing, ts: Date.now() })
+    }).catch(function () {});
+  }
+  function startBandSession() {
+    if (!isPro()) { flashNew("Band sync is a Pro feature \u2014 unlock it in Tools.", "fit-low"); return; }
+    var songs = bandSongList();
+    if (!songs.length) { flashNew("Add songs to your sets first.", "fit-low"); return; }
+    var code = bandCode();
+    fetch(REQUESTS_DB_URL + "/bandsessions.json", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: code, songs: songs, idx: 0, playing: false, host: stageLabel() || (me && me.email) || "Leader", ts: Date.now() })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      bandSession = { id: d.name, code: code, songs: songs, idx: 0, playing: false };
+      renderBandSync();
+      flashNew("Band session started \u2014 code " + code);
+    }).catch(function () { flashNew("Couldn't start \u2014 check the rules are published.", "fit-low"); });
+  }
+  function renderBandSync() {
+    listEl.innerHTML = "";
+    reqView = "list";
+    var tb = document.createElement("div");
+    tb.className = "toolbar";
+    tb.appendChild(mkBtn("Back to sets", function () { render(); }));
+    listEl.appendChild(tb);
+    if (!isPro()) {
+      var lock = document.createElement("div");
+      lock.className = "s-empty";
+      lock.textContent = "Band sync is a Pro feature \u2014 every device stays on the same song. Unlock it in Tools \u2192 Setlist Pro (\u00a310 once).";
+      listEl.appendChild(lock);
+      return;
+    }
+    if (!bandSession) {
+      var title = document.createElement("div");
+      title.className = "purpose";
+      title.style.cssText = "font-weight:700;margin:8px 0;";
+      title.textContent = "Band sync \u2014 one setlist, every phone";
+      listEl.appendChild(title);
+      var btns = document.createElement("div");
+      btns.className = "req-actions";
+      btns.appendChild(mkBtn("Start a session", startBandSession));
+      btns.appendChild(mkBtn("Join with a code", function () {
+        var code = window.prompt("Enter the 6-letter band code:");
+        if (!code) return;
+        fetch(REQUESTS_DB_URL + "/bandsessions.json").then(function (r) { return r.json(); }).then(function (d) {
+          if (!d) throw new Error();
+          var found = null;
+          for (var k in d) { if (d[k] && d[k].code && String(d[k].code).toUpperCase() === String(code).trim().toUpperCase()) { found = k; break; } }
+          if (!found) throw new Error("not found");
+          var s2 = d[found];
+          bandSession = { id: found, code: String(s2.code), songs: s2.songs || [], idx: s2.idx || 0, playing: !!s2.playing };
+          renderBandSync();
+        }).catch(function () { flashNew("No band found with that code \u2014 check it.", "fit-low"); });
+      }));
+      listEl.appendChild(btns);
+      var tip = document.createElement("div");
+      tip.className = "rec-note";
+      tip.textContent = "Start a session, share the code with your band, and everyone sees the same song. Anyone can tap Next.";
+      listEl.appendChild(tip);
+      return;
+    }
+    var codeRow = document.createElement("div");
+    codeRow.className = "purpose";
+    codeRow.style.cssText = "font-size:34px;font-weight:800;letter-spacing:6px;text-align:center;color:#1c2733;margin:10px 0;";
+    codeRow.textContent = bandSession.code;
+    listEl.appendChild(codeRow);
+    var nowEl = document.createElement("div");
+    nowEl.id = "bandNow";
+    var nextEl = document.createElement("div");
+    nextEl.id = "bandNext";
+    function drawBand() {
+      var cur = bandSession.songs[bandSession.idx] || "\u2014";
+      var nxt = bandSession.songs[bandSession.idx + 1] || "last song";
+      nowEl.textContent = "Now playing: " + cur;
+      nextEl.textContent = "Up next: " + nxt;
+      nowEl.className = "name";
+      nowEl.style.cssText = "font-size:22px;font-weight:700;margin:8px 0 4px;";
+      nextEl.className = "artist";
+      nextEl.style.cssText = "margin-bottom:12px;";
+    }
+    drawBand();
+    listEl.appendChild(nowEl); listEl.appendChild(nextEl);
+    var ctr = document.createElement("div");
+    ctr.className = "req-actions";
+    var prev = mkBtn("\u2039 Prev", function () { bandSession.idx = Math.max(0, bandSession.idx - 1); bandPush(); drawBand(); });
+    var nxt2 = mkBtn("Next \u203a", function () { if (bandSession.idx < bandSession.songs.length - 1) bandSession.idx++; bandPush(); drawBand(); });
+    ctr.appendChild(prev); ctr.appendChild(nxt2);
+    listEl.appendChild(ctr);
+    var end = mkBtn("End session", function () {
+      if (window.confirm("End this band session?")) {
+        fetch(REQUESTS_DB_URL + "/bandsessions/" + bandSession.id + ".json", { method: "DELETE" }).catch(function () {});
+        bandSession = null;
+        renderBandSync();
+      }
+    });
+    end.style.cssText = "margin-top:14px;width:100%;";
+    listEl.appendChild(end);
+    if (bandTimer) { clearInterval(bandTimer); bandTimer = null; }
+    bandTimer = setInterval(function () {
+      fetch(REQUESTS_DB_URL + "/bandsessions/" + bandSession.id + ".json").then(function (r) { return r.json(); }).then(function (d) {
+        if (!d) {
+          if (bandTimer) { clearInterval(bandTimer); bandTimer = null; }
+          bandSession = null;
+          renderBandSync();
+          return;
+        }
+        bandSession.idx = d.idx || 0;
+        bandSession.playing = !!d.playing;
+        drawBand();
+      }).catch(function () {});
+    }, 3000);
   }
 
   // ---------- community shared sets ----------
@@ -4049,13 +4197,17 @@
       playBtn.className = "btn ug";
       playBtn.textContent = "Auto-scroll";
       playBtn.addEventListener("click", function () { toggleScroll(chords, playBtn); });
+      var spInit = parseFloat(song.scrollSpeed) || 28;
       var speed = document.createElement("input");
-      speed.type = "range"; speed.min = "5"; speed.max = "60"; speed.step = "5"; speed.value = "28";
+      speed.type = "range"; speed.min = "5"; speed.max = "60"; speed.step = "5"; speed.value = String(spInit);
       var spLbl = document.createElement("span");
-      spLbl.textContent = "28px/s";
+      spLbl.textContent = spInit + "px/s";
+      scrollSpeed = spInit; // remember each song's favourite scroll speed
       speed.addEventListener("input", function () {
         scrollSpeed = +speed.value;
         spLbl.textContent = scrollSpeed + "px/s";
+        song.scrollSpeed = scrollSpeed;
+        save();
       });
       var expand = document.createElement("button");
       expand.type = "button";
@@ -4464,7 +4616,7 @@
     try { if (wakeLock) { wakeLock.release(); wakeLock = null; } } catch (e) { wakeLock = null; }
   }
   // rehearsal metronome (click track at any BPM)
-  var metTimer = null, metBpm = 100;
+  var metTimer = null, metBpm = 100, timerInt = null;
   function metBeep() {
     try {
       var ac = new (window.AudioContext || window.webkitAudioContext)();
@@ -5241,6 +5393,7 @@
     tb.appendChild(mkBtn("QR code", showQR));
     tb.appendChild(mkBtn("Tip jar", showTipQR));
     tb.appendChild(mkBtn("Stage sign", showStageSign));
+    tb.appendChild(mkBtn("Print sign", printSign));
     tb.appendChild(mkBtn("Refresh", loadRequests));
     tb.appendChild(mkBtn("End gig \u2014 clear all", clearAllRequests, true));
     listEl.appendChild(tb);
@@ -5908,12 +6061,82 @@
           var row = document.createElement("div");
           row.className = "purpose";
           row.style.marginTop = "7px";
-          row.textContent = g.date + " \u00b7 " + g.total + " requests \u00b7 \u00a3" + (g.tips || 0) + " tips" + (g.extras ? " \u00b7 \u00a3" + g.extras + " extras" : "") + (g.fee ? " \u00b7 \u00a3" + g.fee + " fee" : "");
+          if (g.photo) {
+            var im = document.createElement("img");
+            im.src = g.photo;
+            im.style.cssText = "width:56px;height:56px;object-fit:cover;border-radius:8px;margin:4px 8px 4px 0;vertical-align:middle;";
+            row.appendChild(im);
+          }
+          var tx = document.createElement("span");
+          tx.textContent = g.date + " \u00b7 " + g.total + " requests \u00b7 \u00a3" + (g.tips || 0) + " tips" + (g.extras ? " \u00b7 \u00a3" + g.extras + " extras" : "") + (g.fee ? " \u00b7 \u00a3" + g.fee + " fee" : "");
+          row.appendChild(tx);
+          var ph = document.createElement("button");
+          ph.type = "button"; ph.className = "btn ug"; ph.textContent = "Photo";
+          ph.style.cssText = "font-size:12px;padding:4px 8px;margin-left:6px;";
+          ph.addEventListener("click", function () {
+            var inp = document.createElement("input");
+            inp.type = "file"; inp.accept = "image/*";
+            inp.addEventListener("change", function () {
+              var f = inp.files && inp.files[0];
+              if (!f) return;
+              var rd = new FileReader();
+              rd.onload = function () {
+                var img = new Image();
+                img.onload = function () {
+                  var max = 700, w = img.width, h = img.height;
+                  if (w > max) { h = Math.round(h * max / w); w = max; }
+                  var cv = document.createElement("canvas");
+                  cv.width = w; cv.height = h;
+                  cv.getContext("2d").drawImage(img, 0, 0, w, h);
+                  try {
+                    g.photo = cv.toDataURL("image/jpeg", 0.7);
+                    localStorage.setItem("gigArchive", JSON.stringify(gigArchive()));
+                    render();
+                    flashNew("Photo saved to the gig archive.");
+                  } catch (e) { flashNew("Couldn't save the photo.", "fit-low"); }
+                };
+                img.src = rd.result;
+              };
+              rd.readAsDataURL(f);
+            });
+            inp.click();
+          });
+          row.appendChild(ph);
           ac.appendChild(row);
         });
       }
       listEl.appendChild(ac);
     }
+
+    // Gig timers — soundcheck / interval / set countdowns
+    var tm = document.createElement("section");
+    tm.className = "card"; tm.style.padding = "16px";
+    var tmh = document.createElement("h3");
+    tmh.textContent = "Gig timers";
+    tmh.style.cssText = "background:none;padding:0 0 6px;border:0;";
+    tm.appendChild(tmh);
+    var tmLbl = document.createElement("div");
+    tmLbl.className = "purpose";
+    tmLbl.textContent = "Pick a countdown \u2014 soundcheck, interval or set time.";
+    var tmRow = document.createElement("div");
+    tmRow.className = "req-actions";
+    function startTimer(min, label) {
+      if (timerInt) { clearInterval(timerInt); timerInt = null; }
+      var end = Date.now() + min * 60000;
+      function tick() {
+        var left = Math.max(0, Math.round((end - Date.now()) / 1000));
+        var m = Math.floor(left / 60), s2 = left % 60;
+        tmLbl.textContent = label + ": " + m + ":" + (s2 < 10 ? "0" : "") + s2 + " left";
+        if (left <= 0) { clearInterval(timerInt); timerInt = null; tmLbl.textContent = label + " \u2014 time's up!"; metBeep(); }
+      }
+      tick();
+      timerInt = setInterval(tick, 1000);
+    }
+    tmRow.appendChild(mkBtn("Soundcheck 30", function () { startTimer(30, "Soundcheck"); }));
+    tmRow.appendChild(mkBtn("Interval 15", function () { startTimer(15, "Interval"); }));
+    tmRow.appendChild(mkBtn("Set 45", function () { startTimer(45, "Set"); }));
+    tm.appendChild(tmLbl); tm.appendChild(tmRow);
+    listEl.appendChild(tm);
 
     // Gig details — date, venue, soundcheck, start time (used by the set clock)
     var gd = document.createElement("section");
@@ -6265,6 +6488,19 @@
     var txt = shareSetlistText() || "Nothing in the sets yet.";
     if (navigator.share) { try { navigator.share({ title: "Tonight's setlist", text: txt }).catch(function () {}); } catch (e) { copyText(txt); } }
     else copyText(txt);
+  }
+  function printSign() {
+    var pa = document.getElementById("printArea");
+    if (!pa) return;
+    pa.innerHTML = "";
+    var h = document.createElement("h1"); h.textContent = stageLabel() || "TOOLGIG";
+    var p = document.createElement("p"); p.textContent = "Scan to request a song \u2014 it's free, tipping optional";
+    var qr = document.createElement("img");
+    qr.src = "https://api.qrserver.com/v1/create-qr-code/?size=1200x1200&data=" + encodeURIComponent(myRequestsUrl());
+    qr.style.cssText = "width:70%;max-width:500px;margin:20px auto;display:block;";
+    var u = document.createElement("div"); u.textContent = myRequestsUrl();
+    pa.appendChild(h); pa.appendChild(p); pa.appendChild(qr); pa.appendChild(u);
+    setTimeout(function () { try { window.print(); } catch (e) {} }, 400);
   }
   function downloadText(txt, name, type) {
     if (typeof Blob === "undefined" || typeof URL === "undefined" || !URL.createObjectURL) { copyText(txt); return; }
