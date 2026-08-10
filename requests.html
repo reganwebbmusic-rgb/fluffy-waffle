@@ -107,15 +107,6 @@
   var queueEl = document.getElementById("queue");
   var busy = false;
 
-  // No ?m= in the link: there's no band to send to — explain instead of posting
-  // to an invisible shared inbox.
-  if (!MUSICIAN) {
-    var nb = document.getElementById("noBand");
-    var fw = document.getElementById("formWrap");
-    if (nb) nb.style.display = "block";
-    if (fw) fw.style.display = "none";
-  }
-
   // Band odds: a fun, stable estimate of the chance the band plays your song
   // (based on the song, the artist field, and the queue — not a promise).
   var oddsEl = document.getElementById("odds");

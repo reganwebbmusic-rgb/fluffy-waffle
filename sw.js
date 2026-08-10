@@ -2,7 +2,7 @@
    Network-first for page loads (setlist-builder.html, requests.html) so the
    app always reflects the latest deploy; cache-first for static assets.
    Bump CACHE when you change icons/manifest so old entries get purged. */
-const CACHE = "toolgig-v3";
+const CACHE = "toolgig-v4";
 const STATIC = ["./setlist-builder.html", "./requests.html", "./index.html", "./extra-songs.json", "./manifest.webmanifest", "./icon.svg", "./apple-touch-icon.png"];
 
 self.addEventListener("install", function (event) {

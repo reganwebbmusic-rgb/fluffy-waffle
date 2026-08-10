@@ -20,15 +20,12 @@ private data to themselves, and stop anonymous deletion of requests.
 ```json
 {
   "rules": {
-    // Public request inbox: anyone can READ (the app polls it) and CREATE a
-    // new request (the audience isn't signed in), but only signed-in users
-    // (you) can modify or delete existing entries.
+    // Shared/legacy request inbox (older links and the no-code request page
+    // post here). Fully public in this design — it's the band's own inbox;
+    // other musicians' QR posts go to their own users/<uid> inboxes instead.
     "requests": {
       ".read": true,
-      ".write": false,
-      "$requestId": {
-        ".write": "auth != null || !data.exists()"
-      }
+      ".write": true
     },
 
     // No shared songbook anymore (the app only writes per-user public.json).
