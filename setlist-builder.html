@@ -2953,7 +2953,8 @@
     return myDeviceId();
   }
   function stageLabel() { return (me && me.stage) || STAGE_NAME || (me && me.email) || ""; }
-  var APP_VER = 7; // bump when the request page changes — every QR scan then loads a fresh copy for everyone
+  var APP_VER = 8; // bump when the request page changes — every QR scan then loads a fresh copy for everyone
+  var dbgLast = "never", dbgErr = ""; // request diagnostics shown on the Requests tab
   function myRequestsUrl() {
     return REQUESTS_PAGE_URL + (REQUESTS_PAGE_URL.indexOf("?") >= 0 ? "&" : "?") + "m=" + encodeURIComponent(myId()) + "&v=" + APP_VER;
   }
@@ -4867,16 +4868,16 @@
     try { localStorage.setItem("reqStats", JSON.stringify(st)); } catch (e) {}
   }
   function processRequests(list) {
+    try {
     var hadNew = requestsData.length > 0 && list.length > requestsData.length;
     requestsData = list;
     reqNote = "";
-    if (pendingClearNote && !list.length) { reqNote = pendingClearNote; pendingClearNote = ""; }
-    var anyTracked = false;
-    for (var t = 0; t < list.length; t++) {
-      var rr = list[t];
-      if (rr && rr.id && rr.song && !tracked[rr.id]) { tracked[rr.id] = 1; trackRequest(rr); anyTracked = true; }
+    if (list.length) {
+      reqNote = list.length + " request" + (list.length > 1 ? "s" : "") + " \u2014 tap to handle (auto-fill Set A/B can pick these too)";
+    } else {
+      reqNote = "";
     }
-    if (anyTracked) try { localStorage.setItem("trackedReqs", JSON.stringify(tracked)); } catch (e) {}
+    dbgErr = "";
     if (s.tab === "requests" && reqView === "list") renderRequests();
     // real-time pop-up for unseen, unhandled requests (one at a time);
     // only blocked by a VISIBLE modal (hidden ones stay in the DOM and must
@@ -4903,6 +4904,10 @@
     }
     if (hadNew && s.tab === "requests") flashNew();
     updateReqBadge();
+    } catch (e) {
+      dbgErr = "display error: " + (e && e.message ? e.message : e);
+      try { renderRequests(); } catch (e2) {}
+    }
   }
 
   // unmissable banner when a new request arrives (works even if the popup is blocked)
@@ -4982,6 +4987,7 @@
     // process whatever arrived, even if an inbox failed
     Promise.all(pending).then(function () {
       merged.sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
+      dbgLast = new Date().toLocaleTimeString() + " \u00b7 " + inboxes.length + " inbox(es) \u00b7 " + merged.length + " found";
       processRequests(merged);
     });
   }
@@ -5489,6 +5495,11 @@
       e.style.padding = "20px 4px";
       e.textContent = "No requests yet — point the audience at your request page (QR button).";
       listEl.appendChild(e);
+      var dbg0 = document.createElement("div");
+      dbg0.className = "rec-note";
+      dbg0.style.cssText = "font-size:11px;color:#8a97a5;margin-top:14px;";
+      dbg0.textContent = "build " + APP_VER + " \u00b7 auto-check every 5s \u00b7 last: " + dbgLast + (dbgErr ? " \u00b7 " + dbgErr : "");
+      listEl.appendChild(dbg0);
       return;
     }
     var open = requestsData.filter(function (x) { return x && x.status !== "declined" && !(x.status === "accepted" && x.type === "song"); });
@@ -5605,6 +5616,11 @@
       }
       listEl.appendChild(sec);
     });
+    var dbg = document.createElement("div");
+    dbg.className = "rec-note";
+    dbg.style.cssText = "font-size:11px;color:#8a97a5;margin-top:14px;";
+    dbg.textContent = "build " + APP_VER + " \u00b7 auto-check every 5s \u00b7 last: " + dbgLast + (dbgErr ? " \u00b7 " + dbgErr : "");
+    listEl.appendChild(dbg);
   }
 
   function showTipQR() {
