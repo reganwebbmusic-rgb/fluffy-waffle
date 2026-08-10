@@ -5835,12 +5835,69 @@
     });
     return sec;
   }
+  var TUT_SLIDES = [
+    { t: "TOOLGIG tour", d: "Four tabs: Songs (your pool), Sets (A & B), Requests (live from the audience) and Tools. Tap any card for details." },
+    { t: "Songs tab", d: "Search 12,000+ songs, add to your pool, get suggestions once you have a couple, and tap-tempo any song's BPM." },
+    { t: "Sets tab", d: "Auto-fill your 45-min sets by energy, play them with count-in and metronome, share to the community, or sync the whole band." },
+    { t: "Requests tab", d: "Live audience requests pop up in real time. Accept (adds to pool + up next), decline, or clear. QR code, stage sign and print sign for the venue." },
+    { t: "Tuner", d: "Chromatic tuner with capo detection \u2014 tap the note to tune each string." },
+    { t: "Gig timers", d: "Soundcheck / interval / set countdowns so you never run over." },
+    { t: "Gig details", d: "Venue, soundcheck, start time and notes \u2014 the start time also drives the live set clock." },
+    { t: "Share & export", d: "Share tonight's setlist, export gigs to your calendar (.ics), or grab the CSV report for tax season." },
+    { t: "Practice streak", d: "Tap \u201cI practiced today\u201d to keep a daily streak alive." },
+    { t: "Backup & reset", d: "Export a backup file, import one (merge or replace), or start fresh. Backups stay free for everyone." },
+    { t: "Setlist Pro", d: "\u00a310 once: 300-song pool, gig archive with photos, band sync, and more. Use the developer code if you have one." },
+    { t: "Band sync", d: "Start a session, share the 6-letter code, and every phone follows the same song in real time." }
+  ];
+  function openTutorial() {
+    var bg = document.createElement("div");
+    bg.className = "modal-bg";
+    var sheet = document.createElement("div");
+    sheet.className = "sheet";
+    sheet.style.cssText = "max-width:440px;";
+    var idx = 0;
+    var title = document.createElement("h3");
+    var body = document.createElement("div");
+    body.className = "purpose";
+    body.style.cssText = "min-height:80px;line-height:1.6;";
+    var dots = document.createElement("div");
+    dots.style.cssText = "text-align:center;margin:10px 0;";
+    var btns = document.createElement("div");
+    btns.className = "btns";
+    var prevBtn = document.createElement("button"); prevBtn.type = "button"; prevBtn.className = "btn ug"; prevBtn.textContent = "Back";
+    prevBtn.addEventListener("click", function () { if (idx > 0) { idx--; draw(); } });
+    var nextBtn = document.createElement("button"); nextBtn.type = "button"; nextBtn.className = "btn save"; nextBtn.textContent = "Next";
+    nextBtn.addEventListener("click", function () {
+      if (idx < TUT_SLIDES.length - 1) { idx++; draw(); }
+      else { bg.style.display = "none"; }
+    });
+    function draw() {
+      title.textContent = TUT_SLIDES[idx].t;
+      body.textContent = TUT_SLIDES[idx].d;
+      dots.innerHTML = "";
+      TUT_SLIDES.forEach(function (s, i) {
+        var d = document.createElement("span");
+        d.style.cssText = "display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 4px;background:" + (i === idx ? "#4da3ff" : "#c8d3dd") + ";";
+        dots.appendChild(d);
+      });
+      prevBtn.disabled = idx === 0;
+      nextBtn.textContent = idx === TUT_SLIDES.length - 1 ? "Done" : "Next";
+    }
+    btns.appendChild(prevBtn); btns.appendChild(nextBtn);
+    sheet.appendChild(title); sheet.appendChild(body); sheet.appendChild(dots); sheet.appendChild(btns);
+    bg.appendChild(sheet);
+    bg.addEventListener("click", function (e) { if (e.target === bg) bg.style.display = "none"; });
+    document.body.appendChild(bg);
+    draw();
+  }
+
   function renderTools() {
     listEl.innerHTML = "";
     var tb = document.createElement("div");
     tb.className = "toolbar";
     tb.appendChild(mkBtn("Tuner", startTuner, true));
     tb.appendChild(mkBtn("Stop", stopTuner));
+    tb.appendChild(mkBtn("Tutorial", openTutorial));
     listEl.appendChild(tb);
 
     var tun = document.createElement("section");
