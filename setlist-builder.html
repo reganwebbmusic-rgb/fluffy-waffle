@@ -2889,7 +2889,7 @@
       songs: [], sets: { A: [], B: [] },
       tab: "songs", setView: "A", expanded: -1,
       wishlist: [], links: { tip: "", extra: "", review: "" },
-      upNext: [], gigCheck: { items: [] }, dark: false
+      upNext: [], gigCheck: { items: [] }, dark: false, setLib: []
     };
   };
   var s = DEF();
@@ -2905,6 +2905,7 @@
       if (!s.wishlist) s.wishlist = [];
       if (!Array.isArray(s.upNext)) s.upNext = [];
       if (!s.gigCheck || !Array.isArray(s.gigCheck.items)) s.gigCheck = { items: [] };
+      if (!Array.isArray(s.setLib)) s.setLib = [];
       if (s.dark === undefined) s.dark = false;
       while (s.songs.length < poolSize()) s.songs.push(emptySong()); // older saves may have fewer songs
       // re-tab migration: old tabs (pool / Set A / Set B) map onto Songs / Sets
@@ -3854,6 +3855,126 @@
     }
   }
 
+  // ---- set library: keep every set, load any two into Set A / Set B ----
+  function saveSetToLib(name, which) {
+    var names = [];
+    (s.sets[which] || []).forEach(function (b) {
+      b.forEach(function (v) { if (v >= 0 && s.songs[v] && s.songs[v].name) names.push(s.songs[v].name); });
+    });
+    if (!names.length) { flashNew("Set " + which + " is empty \u2014 nothing to save."); return 0; }
+    if (!name) name = (which === "A" ? "Set A" : "Set B") + " \u2014 " + new Date().toLocaleDateString();
+    if (!Array.isArray(s.setLib)) s.setLib = [];
+    s.setLib.push({ name: String(name).slice(0, 60), songs: names });
+    save();
+    return names.length;
+  }
+  function loadSetFromLib(idx, which) {
+    var entry = s.setLib && s.setLib[idx];
+    if (!entry) return { placed: 0, missing: 0, name: "" };
+    var pool = filledSongs();
+    var byName = {};
+    pool.forEach(function (x, i) { if (x && x.name) byName[x.name.toLowerCase()] = i; });
+    s.sets[which] = [emptyBlock(), emptyBlock()];
+    var placed = 0, missing = 0;
+    entry.songs.forEach(function (nm) {
+      var pi = byName[String(nm).toLowerCase()];
+      if (pi === undefined) { missing++; return; }
+      var done = false;
+      for (var bi = 0; bi < 2 && !done; bi++) {
+        for (var si = 0; si < SET_SLOTS; si++) {
+          if (s.sets[which][bi][si] < 0) { s.sets[which][bi][si] = pi; placed++; done = true; break; }
+        }
+      }
+    });
+    save();
+    return { placed: placed, missing: missing, name: entry.name };
+  }
+  function deleteSetFromLib(idx) {
+    if (Array.isArray(s.setLib) && s.setLib[idx]) {
+      var nm = s.setLib[idx].name;
+      s.setLib.splice(idx, 1);
+      save();
+      flashNew("Deleted \u201c" + nm + "\u201d from your library.");
+      renderSetLibrary();
+    }
+  }
+  function renderSetLibrary() {
+    listEl.innerHTML = "";
+    var tb = document.createElement("div");
+    tb.className = "toolbar";
+    tb.appendChild(mkBtn("Back to sets", renderSets));
+    listEl.appendChild(tb);
+    var sec = document.createElement("section");
+    sec.className = "card";
+    var h = document.createElement("h2");
+    h.textContent = "Set library";
+    sec.appendChild(h);
+    var sub = document.createElement("div");
+    sub.className = "rec-note";
+    sub.style.cssText = "margin:10px 14px 0;line-height:1.5;";
+    sub.textContent = "Every set you've saved or imported lives here. Load any two onto Set A and Set B \u2014 songs are matched by name, so edits to your pool never break a saved set.";
+    sec.appendChild(sub);
+    var saveRow = document.createElement("div");
+    saveRow.className = "toolbar";
+    saveRow.style.cssText = "margin:12px 14px;";
+    var saveA = mkBtn("Save current Set A", function () {
+      var n = window.prompt("Name this set", "Set A \u2014 " + new Date().toLocaleDateString());
+      if (n === null) return;
+      saveSetToLib(n, "A");
+      renderSetLibrary();
+    });
+    var saveB = mkBtn("Save current Set B", function () {
+      var n = window.prompt("Name this set", "Set B \u2014 " + new Date().toLocaleDateString());
+      if (n === null) return;
+      saveSetToLib(n, "B");
+      renderSetLibrary();
+    });
+    saveRow.appendChild(saveA); saveRow.appendChild(saveB);
+    sec.appendChild(saveRow);
+    var lib = s.setLib || [];
+    if (!lib.length) {
+      var emp = document.createElement("div");
+      emp.className = "rec-note";
+      emp.style.cssText = "margin:0 14px 14px;";
+      emp.textContent = "No saved sets yet \u2014 save your current A or B above, or import a Songbook Pro backup (Tools \u2192 SB Pro import) and all its setlists land here.";
+      sec.appendChild(emp);
+    } else {
+      lib.forEach(function (entry, i) {
+        var row = document.createElement("div");
+        row.style.cssText = "display:flex;align-items:center;gap:8px;padding:11px 14px;border-bottom:1px solid #edf1f5;";
+        var info = document.createElement("div");
+        info.style.cssText = "flex:1;min-width:0;";
+        var nm = document.createElement("div");
+        nm.className = "name";
+        nm.style.cssText = "font-size:15px;font-weight:600;";
+        nm.textContent = entry.name;
+        var cnt = document.createElement("div");
+        cnt.className = "artist";
+        cnt.textContent = entry.songs.length + " song" + (entry.songs.length === 1 ? "" : "s");
+        info.appendChild(nm); info.appendChild(cnt);
+        var toA = mkBtn("\u2192 A", function () {
+          var r = loadSetFromLib(i, "A");
+          flashNew("\u201c" + r.name + "\u201d loaded into Set A \u2014 " + r.placed + " song" + (r.placed === 1 ? "" : "s") + (r.missing ? " (" + r.missing + " not in pool)" : ""));
+          renderSets();
+        });
+        var toB = mkBtn("\u2192 B", function () {
+          var r = loadSetFromLib(i, "B");
+          flashNew("\u201c" + r.name + "\u201d loaded into Set B \u2014 " + r.placed + " song" + (r.placed === 1 ? "" : "s") + (r.missing ? " (" + r.missing + " not in pool)" : ""));
+          renderSets();
+        });
+        var del = document.createElement("button");
+        del.type = "button"; del.textContent = "\u2715";
+        del.style.cssText = "border:0;background:none;font-size:15px;color:#a03027;padding:6px;";
+        del.addEventListener("click", function () {
+          if (window.confirm("Delete \u201c" + entry.name + "\u201d from your library?")) deleteSetFromLib(i);
+        });
+        row.appendChild(info); row.appendChild(toA); row.appendChild(toB); row.appendChild(del);
+        sec.appendChild(row);
+      });
+    }
+    listEl.appendChild(sec);
+  }
+
   function renderSets() {
     var pick = document.createElement("div");
     pick.className = "tabs set-pick";
@@ -3871,6 +3992,7 @@
     listEl.appendChild(pick);
     var ctb = document.createElement("div");
     ctb.className = "toolbar";
+    ctb.appendChild(mkBtn("Set library", renderSetLibrary));
     ctb.appendChild(mkBtn("Share set", shareSet));
     ctb.appendChild(mkBtn("Community sets", renderCommunitySets));
     ctb.appendChild(mkBtn("Band sync", renderBandSync));
@@ -6386,26 +6508,6 @@
     });
     return { songs: songs, sets: sets };
   }
-  function placeImportedSet(setObj) {
-    var pool = filledSongs();
-    var byName = {};
-    pool.forEach(function (x, i) { if (x && x.name) byName[x.name.toLowerCase()] = i; });
-    var placed = 0, missing = 0;
-    var order = ["A", "B"];
-    setObj.songs.forEach(function (title) {
-      var pi = byName[String(title).toLowerCase()];
-      if (pi === undefined) { missing++; return; }
-      var done = false;
-      for (var oi = 0; oi < order.length && !done; oi++) {
-        for (var bi = 0; bi < 2 && !done; bi++) {
-          for (var si = 0; si < SET_SLOTS; si++) {
-            if (s.sets[order[oi]][bi][si] < 0) { s.sets[order[oi]][bi][si] = pi; placed++; done = true; break; }
-          }
-        }
-      }
-    });
-    return { placed: placed, missing: missing };
-  }
   function inflateRaw(bytes) {
     if (typeof DecompressionStream === "undefined") return Promise.reject(new Error("inflate unavailable"));
     return new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer();
@@ -6492,15 +6594,35 @@
         songs.forEach(function (song) { if (!wanted[String(song.name).toLowerCase()]) ordered.push(song); });
         var added = 0;
         ordered.forEach(function (song) { if (importSongIntoPool(song)) added++; });
-        var setAdded = 0, setMiss = 0;
+        // imported setlists go into the set library (all of them), then the
+        // first one is auto-loaded into Set A and the second into Set B when empty
+        if (!Array.isArray(s.setLib)) s.setLib = [];
+        var libAdded = 0, libIdx = [];
         sets.forEach(function (setObj) {
-          var r = placeImportedSet(setObj);
-          setAdded += r.placed; setMiss += r.missing;
+          if (!setObj.songs.length) return;
+          var dup = s.setLib.some(function (e) { return e.name === setObj.name; });
+          if (dup) return;
+          s.setLib.push({ name: String(setObj.name).slice(0, 60), songs: setObj.songs });
+          libIdx.push(s.setLib.length - 1);
+          libAdded++;
         });
+        var loadMsg = "";
+        if (libIdx.length) {
+          var aEmpty = s.sets.A.every(function (b) { return b.every(function (v) { return v < 0; }); });
+          var bEmpty = s.sets.B.every(function (b) { return b.every(function (v) { return v < 0; }); });
+          if (aEmpty) {
+            var r1 = loadSetFromLib(libIdx[0], "A");
+            loadMsg = " \u00b7 \u201c" + r1.name + "\u201d loaded into Set A";
+          }
+          if (bEmpty && libIdx.length > 1) {
+            var r2 = loadSetFromLib(libIdx[1], "B");
+            loadMsg += " \u00b7 \u201c" + r2.name + "\u201d loaded into Set B";
+          }
+        }
         save(); render();
         var msg = "Imported " + added + " song" + (added === 1 ? "" : "s") + " into your pool";
         if (added < songs.length) msg += " \u00b7 pool full: " + (songs.length - added) + " skipped (Pro has 300 slots)";
-        if (setAdded) msg += " \u00b7 " + setAdded + " placed into your sets" + (setMiss ? " (" + setMiss + " not found)" : "");
+        if (libAdded) msg += " \u00b7 " + libAdded + " set" + (libAdded === 1 ? "" : "s") + " saved to your set library" + loadMsg;
         if (errors) msg += " \u00b7 " + errors + " file(s) skipped";
         flashNew(msg);
       }
@@ -7438,6 +7560,7 @@
         next.setView = "A";
         if (st.wishlist && Array.isArray(st.wishlist)) next.wishlist = st.wishlist;
         if (st.links && typeof st.links === "object") next.links = { tip: String(st.links.tip || ""), extra: String(st.links.extra || ""), review: String(st.links.review || "") };
+        if (st.setLib && Array.isArray(st.setLib)) next.setLib = st.setLib;
         if (window.confirm("Merge into your current setlist?\n\nOK = merge (adds their songs to your pool, keeps your sets)\nCancel = replace everything with the backup")) {
           var mergedN = 0;
           clean.forEach(function (song) {
