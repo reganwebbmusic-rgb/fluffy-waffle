@@ -272,17 +272,6 @@
   .btn:active, .tab:active { transform: scale(.97); }
   .tab.tab-new { background: #f0c987; color: #0f1a24; font-weight: 700; box-shadow: 0 2px 6px rgba(240,201,135,.45); }
   .req-count { display: inline-block; background: #fff; color: #0f1a24; border-radius: 10px; font-size: 11px; font-weight: 700; padding: 1px 6px; margin-left: 5px; vertical-align: middle; }
-  #tutOverlay { display: none; position: fixed; inset: 0; z-index: 60; background: rgba(10,16,24,.86); align-items: center; justify-content: center; padding: 20px; }
-  #tutOverlay .tut-card { background: #fff; color: #1c2733; border-radius: 18px; max-width: 420px; width: 100%; padding: 24px; box-shadow: 0 10px 40px rgba(0,0,0,.4); }
-  #tutOverlay h1 { font-size: 24px; margin: 0 0 4px; letter-spacing: 1.5px; }
-  #tutOverlay .tut-sub { color: #5c6b7a; font-size: 14px; margin: 0 0 16px; }
-  #tutOverlay .tut-item { margin: 12px 0; text-align: left; }
-  #tutOverlay .tut-item b { color: #1c2733; }
-  #tutOverlay .tut-item span { color: #41505e; font-size: 14px; line-height: 1.5; }
-  #tutOverlay .tut-btns { display: flex; gap: 10px; margin-top: 18px; }
-  #tutOverlay button { flex: 1; padding: 13px; border: 0; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; }
-  #tutOverlay .btn-primary { background: #4da3ff; color: #0f1a24; }
-  #tutOverlay .btn-ghost { background: #eef3f8; color: #41505e; }
 </style>
 </head>
 <body>
@@ -340,21 +329,6 @@
   </footer>
 
   <div id="printArea" style="display:none;"></div>
-
-  <div id="tutOverlay">
-    <div class="tut-card">
-      <h1>Welcome to TOOLGIG</h1>
-      <p class="tut-sub">Your whole gig, in one app. 60-second tour:</p>
-      <div class="tut-item"><div><b>Songs</b><br><span>Add from 12,000+ songs, search, get suggestions</span></div></div>
-      <div class="tut-item"><div><b>Sets</b><br><span>Build 45-min sets, auto-fill, play mode with count-in</span></div></div>
-      <div class="tut-item"><div><b>Requests</b><br><span>Live song requests from your audience (yours only)</span></div></div>
-      <div class="tut-item"><div><b>Tools</b><br><span>Tuner, tip jar, stage sign QR, backup, Pro unlock</span></div></div>
-      <div class="tut-btns">
-        <button type="button" class="btn-primary" id="tutGot">Got it</button>
-        <button type="button" class="btn-ghost" id="tutSkip">Skip</button>
-      </div>
-    </div>
-  </div>
 </div>
 
 <script src="firebase-config.js"></script>
@@ -5927,6 +5901,7 @@
   function openTutorial() {
     var bg = document.createElement("div");
     bg.className = "modal-bg";
+    bg.style.zIndex = "80"; // above the sign-in screen and every other pop-up
     var sheet = document.createElement("div");
     sheet.className = "sheet";
     sheet.style.cssText = "max-width:440px;";
@@ -5939,6 +5914,8 @@
     dots.style.cssText = "text-align:center;margin:10px 0;";
     var btns = document.createElement("div");
     btns.className = "btns";
+    var skipBtn = document.createElement("button"); skipBtn.type = "button"; skipBtn.className = "btn ug"; skipBtn.textContent = "Skip";
+    skipBtn.addEventListener("click", function () { bg.style.display = "none"; });
     var prevBtn = document.createElement("button"); prevBtn.type = "button"; prevBtn.className = "btn ug"; prevBtn.textContent = "Back";
     prevBtn.addEventListener("click", function () { if (idx > 0) { idx--; draw(); } });
     var nextBtn = document.createElement("button"); nextBtn.type = "button"; nextBtn.className = "btn save"; nextBtn.textContent = "Next";
@@ -5958,7 +5935,7 @@
       prevBtn.disabled = idx === 0;
       nextBtn.textContent = idx === TUT_SLIDES.length - 1 ? "Done" : "Next";
     }
-    btns.appendChild(prevBtn); btns.appendChild(nextBtn);
+    btns.appendChild(skipBtn); btns.appendChild(prevBtn); btns.appendChild(nextBtn);
     sheet.appendChild(title); sheet.appendChild(body); sheet.appendChild(dots); sheet.appendChild(btns);
     bg.appendChild(sheet);
     bg.addEventListener("click", function (e) { if (e.target === bg) bg.style.display = "none"; });
@@ -6797,17 +6774,8 @@
   });
   startReqPolling();
 
-  // first-launch tutorial (dismissed permanently with Got it / Skip)
-  var tutOv = document.getElementById("tutOverlay");
-  function hideTut() { try { localStorage.setItem("sb2tut", "1"); } catch (e) {} if (tutOv) tutOv.style.display = "none"; }
-  var tutSeen = false;
-  try { tutSeen = localStorage.getItem("sb2tut") === "1"; } catch (e) {}
-  if (tutOv && !tutSeen) {
-    tutOv.style.display = "flex";
-    var tg = document.getElementById("tutGot"), ts3 = document.getElementById("tutSkip");
-    if (tg) tg.addEventListener("click", hideTut);
-    if (ts3) ts3.addEventListener("click", hideTut);
-  }
+  // Full tutorial pops up on EVERY launch — skip it any time with the Skip button.
+  openTutorial();
 })();
 </script>
 <script>
