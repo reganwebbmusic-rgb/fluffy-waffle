@@ -426,10 +426,14 @@
   // free — change it whenever you want.
   var PACKS_KEY = "sb2packs";
   var PACK_DEV_CODE = "GRATIS-PACKS-2026";
+  // Free Pro test account: anyone signing in with this email gets Pro
+  // automatically (password set up in Firebase Auth — see DEPLOY-GUIDE).
+  var TEST_EMAIL = "test@test.com";
   function proRecord() { try { var p = JSON.parse(localStorage.getItem(PRO_KEY)); return p && p.code ? p : null; } catch (e) { return null; } }
   function isPro() {
     if (proRecord()) return true;
     if (SELLER_UID && me && me.uid && me.uid === SELLER_UID) return true;
+    if (TEST_EMAIL && me && me.email && String(me.email).toLowerCase() === TEST_EMAIL) return true;
     return false;
   }
   function setPro(code, email) { try { localStorage.setItem(PRO_KEY, JSON.stringify({ code: code, email: email || "", at: Date.now() })); } catch (e) {} }
