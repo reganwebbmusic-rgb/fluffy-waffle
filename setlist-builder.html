@@ -3729,6 +3729,7 @@
   }
   function bandPush() {
     if (!bandSession || !REQUESTS_DB_URL) return;
+    bandSession.lastPush = Date.now();
     fetch(REQUESTS_DB_URL + "/bandsessions/" + bandSession.id + ".json", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -3838,7 +3839,10 @@
           renderBandSync();
           return;
         }
-        bandSession.idx = d.idx || 0;
+        // ignore a brief stale read right after we pushed (lets the PATCH land)
+        if (d.idx !== bandSession.idx && !(bandSession.idx > d.idx && Date.now() - (bandSession.lastPush || 0) < 2500)) {
+          bandSession.idx = d.idx || 0;
+        }
         bandSession.playing = !!d.playing;
         drawBand();
       }).catch(function () {});
@@ -4874,8 +4878,11 @@
     if (anyTracked) try { localStorage.setItem("trackedReqs", JSON.stringify(tracked)); } catch (e) {}
     if (s.tab === "requests" && reqView === "list") renderRequests();
     // real-time pop-up for unseen, unhandled requests (one at a time);
-    // not while the QR screen or any modal (sheet/stage sign/payment) is open
-    if (!activePopup && reqView !== "qr" && !(document.querySelector && document.querySelector(".modal-bg"))) {
+    // only blocked by a VISIBLE modal (hidden ones stay in the DOM and must
+    // not block anything) or the QR screen
+    var modalOpen = false;
+    try { modalOpen = [].some.call(document.querySelectorAll(".modal-bg"), function (m) { return m.style.display !== "none"; }); } catch (e) {}
+    if (!activePopup && reqView !== "qr" && !modalOpen) {
       for (var i = 0; i < list.length; i++) {
         var r = list[i];
         if (!r || !r.id || r.status === "accepted" || r.status === "declined") continue;
@@ -5194,6 +5201,7 @@
       return fetch(u, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     }).then(function (r) {
       if (!r.ok) throw new Error("bad");
+      loadRequests(); // refresh right away so accept/decline feels instant
       return r;
     }).catch(function () {
       flashNew("Action failed \u2014 try again, or sign in.", "fit-low");
