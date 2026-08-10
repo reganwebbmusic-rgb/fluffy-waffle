@@ -1,0 +1,818 @@
+{
+ "id": "restaurant",
+ "name": "Restaurant Gig Pack",
+ "tagline": "Mellow, dinner-friendly favourites — background gold that fills the room without clearing it.",
+ "price": 9.99,
+ "sets": [
+  {
+   "name": "Set A",
+   "vibe": "Early evening (soft & acoustic)",
+   "songs": [
+    [
+     "Hotel California",
+     "Eagles",
+     "Bm",
+     "75"
+    ],
+    [
+     "Take It Easy",
+     "Eagles",
+     "G",
+     "117"
+    ],
+    [
+     "Peaceful Easy Feeling",
+     "Eagles",
+     "E",
+     "92"
+    ],
+    [
+     "Dreams",
+     "Fleetwood Mac",
+     "F",
+     "120"
+    ],
+    [
+     "Go Your Own Way",
+     "Fleetwood Mac",
+     "F",
+     "134"
+    ],
+    [
+     "Brown Eyed Girl",
+     "Van Morrison",
+     "G",
+     "89"
+    ],
+    [
+     "Moondance",
+     "Van Morrison",
+     "A",
+     "101"
+    ],
+    [
+     "Don't Know Why",
+     "Norah Jones",
+     "B",
+     "80"
+    ],
+    [
+     "Come Away with Me",
+     "Norah Jones",
+     "B",
+     "80"
+    ],
+    [
+     "Sunrise",
+     "Norah Jones",
+     "F",
+     "90"
+    ],
+    [
+     "Fly Me to the Moon",
+     "Frank Sinatra",
+     "C",
+     "100"
+    ],
+    [
+     "The Way You Look Tonight",
+     "Frank Sinatra",
+     "F",
+     "90"
+    ],
+    [
+     "My Way",
+     "Frank Sinatra",
+     "G",
+     "80"
+    ],
+    [
+     "Haven't Met You Yet",
+     "Michael Bublé",
+     "G",
+     "100"
+    ],
+    [
+     "Home",
+     "Michael Bublé",
+     "G",
+     "100"
+    ],
+    [
+     "At Last",
+     "Etta James",
+     "F",
+     "87"
+    ],
+    [
+     "Valerie",
+     "Amy Winehouse",
+     "G",
+     "108"
+    ],
+    [
+     "Make You Feel My Love",
+     "Adele",
+     "Bb",
+     "100"
+    ],
+    [
+     "Someone Like You",
+     "Adele",
+     "A",
+     "135"
+    ],
+    [
+     "Easy on Me",
+     "Adele",
+     "C",
+     "90"
+    ],
+    [
+     "Perfect",
+     "Ed Sheeran",
+     "Ab",
+     "95"
+    ],
+    [
+     "Photograph",
+     "Ed Sheeran",
+     "D",
+     "108"
+    ],
+    [
+     "Thinking Out Loud",
+     "Ed Sheeran",
+     "D",
+     "79"
+    ],
+    [
+     "Castle on the Hill",
+     "Ed Sheeran",
+     "B",
+     "135"
+    ],
+    [
+     "All of Me",
+     "John Legend",
+     "G#",
+     "120"
+    ],
+    [
+     "Just the Way You Are",
+     "Bruno Mars",
+     "F",
+     "109"
+    ],
+    [
+     "Count on Me",
+     "Bruno Mars",
+     "C",
+     "100"
+    ],
+    [
+     "Talking to the Moon",
+     "Bruno Mars",
+     "C#",
+     "146"
+    ],
+    [
+     "I'm Yours",
+     "Jason Mraz",
+     "B",
+     "150"
+    ],
+    [
+     "Lucky",
+     "Jason Mraz",
+     "C",
+     "130"
+    ],
+    [
+     "Better Together",
+     "Us The Duo",
+     "F",
+     "110"
+    ],
+    [
+     "Riptide",
+     "Vance Joy",
+     "Am",
+     "102"
+    ],
+    [
+     "Ho Hey",
+     "The Lumineers",
+     "C",
+     "130"
+    ],
+    [
+     "Take Me to Church",
+     "Hozier",
+     "C",
+     "130"
+    ],
+    [
+     "Let Her Go",
+     "Passenger",
+     "G",
+     "76"
+    ],
+    [
+     "Somebody That I Used to Know",
+     "Gotye",
+     "D",
+     "124"
+    ],
+    [
+     "Let It Be",
+     "The Beatles",
+     "C",
+     "143"
+    ],
+    [
+     "Hey Jude",
+     "The Beatles",
+     "F",
+     "72"
+    ],
+    [
+     "Blackbird",
+     "The Beatles",
+     "G",
+     "139"
+    ],
+    [
+     "Here Comes the Sun",
+     "The Beatles",
+     "A",
+     "125"
+    ],
+    [
+     "Yesterday",
+     "The Beatles",
+     "F",
+     "101"
+    ],
+    [
+     "Bridge Over Troubled Water",
+     "Simon & Garfunkel",
+     "Eb",
+     "79"
+    ],
+    [
+     "The Sound of Silence",
+     "Simon & Garfunkel",
+     "Em",
+     "98"
+    ],
+    [
+     "Mrs. Robinson",
+     "Simon & Garfunkel",
+     "Eb",
+     "96"
+    ]
+   ]
+  },
+  {
+   "name": "Set B",
+   "vibe": "Peak-time favourites",
+   "songs": [
+    [
+     "Cecilia",
+     "Simon & Garfunkel",
+     "C",
+     "120"
+    ],
+    [
+     "Fire and Rain",
+     "James Taylor",
+     "D",
+     "84"
+    ],
+    [
+     "You've Got a Friend",
+     "Carole King",
+     "G",
+     "108"
+    ],
+    [
+     "So Far Away",
+     "Staind",
+     "F#",
+     "139"
+    ],
+    [
+     "Your Song",
+     "Elton John",
+     "Eb",
+     "100"
+    ],
+    [
+     "Tiny Dancer",
+     "Elton John",
+     "C",
+     "110"
+    ],
+    [
+     "Rocket Man",
+     "Elton John",
+     "Eb",
+     "135"
+    ],
+    [
+     "Wonderful Tonight",
+     "Eric Clapton",
+     "G",
+     "96"
+    ],
+    [
+     "Tears in Heaven",
+     "Eric Clapton",
+     "A",
+     "154"
+    ],
+    [
+     "Three Little Birds",
+     "Bob Marley & the Wailers",
+     "G",
+     "82"
+    ],
+    [
+     "Redemption Song",
+     "Bob Marley & the Wailers",
+     "G",
+     "76"
+    ],
+    [
+     "No Woman, No Cry",
+     "Bob Marley & the Wailers",
+     "C",
+     "76"
+    ],
+    [
+     "Is This Love",
+     "Bob Marley & the Wailers",
+     "D",
+     "112"
+    ],
+    [
+     "What a Wonderful World",
+     "Louis Armstrong",
+     "F",
+     "90"
+    ],
+    [
+     "Yellow",
+     "Coldplay",
+     "B",
+     "88"
+    ],
+    [
+     "Fix You",
+     "Coldplay",
+     "Eb",
+     "137"
+    ],
+    [
+     "The Scientist",
+     "Coldplay",
+     "F",
+     "143"
+    ],
+    [
+     "Viva la Vida",
+     "Coldplay",
+     "Ab",
+     "138"
+    ],
+    [
+     "Somewhere Only We Know",
+     "Keane",
+     "C",
+     "83"
+    ],
+    [
+     "Chasing Cars",
+     "Snow Patrol",
+     "C",
+     "104"
+    ],
+    [
+     "Drops of Jupiter",
+     "Train",
+     "C",
+     "96"
+    ],
+    [
+     "Hey, Soul Sister",
+     "Train",
+     "E",
+     "97"
+    ],
+    [
+     "Hey There Delilah",
+     "Plain White T's",
+     "C",
+     "104"
+    ],
+    [
+     "You're Beautiful",
+     "James Blunt",
+     "C",
+     "110"
+    ],
+    [
+     "Put Your Records On",
+     "Corinne Bailey Rae",
+     "A",
+     "96"
+    ],
+    [
+     "Everything",
+     "Michael Bublé",
+     "G",
+     "100"
+    ],
+    [
+     "Sway",
+     "Michael Bublé",
+     "D",
+     "126"
+    ],
+    [
+     "Feeling Good",
+     "Michael Bublé",
+     "Em",
+     "90"
+    ],
+    [
+     "She's the One",
+     "Robbie Williams",
+     "G",
+     "100"
+    ],
+    [
+     "You Raise Me Up",
+     "Westlife",
+     "C",
+     "90"
+    ],
+    [
+     "Stay With Me",
+     "CHANYEOL",
+     "C",
+     "125"
+    ],
+    [
+     "I'm Not The Only One",
+     "Sam Smith",
+     "F",
+     "82"
+    ],
+    [
+     "Too Good at Goodbyes",
+     "Sam Smith",
+     "C",
+     "110"
+    ],
+    [
+     "Someone You Loved",
+     "Lewis Capaldi",
+     "C",
+     "110"
+    ],
+    [
+     "Before You Go",
+     "Lewis Capaldi",
+     "C",
+     "100"
+    ],
+    [
+     "lovely (with Khalid)",
+     "Billie Eilish",
+     "E",
+     "115"
+    ],
+    [
+     "A Thousand Years",
+     "Christina Perri",
+     "A#",
+     "139"
+    ],
+    [
+     "Fireflies",
+     "Owl City",
+     "D#",
+     "180"
+    ],
+    [
+     "Skinny Love",
+     "Bon Iver",
+     "C",
+     "80"
+    ],
+    [
+     "Daughters",
+     "John Mayer",
+     "G",
+     "82"
+    ],
+    [
+     "Gravity",
+     "John Mayer",
+     "E",
+     "72"
+    ],
+    [
+     "She Used To Be Mine",
+     "Sara Bareilles",
+     "F",
+     "81"
+    ],
+    [
+     "Brave",
+     "Sara Bareilles",
+     "A#",
+     "185"
+    ],
+    [
+     "Haven't Met You Yet",
+     "Michael Bublé",
+     "G",
+     "100"
+    ]
+   ]
+  },
+  {
+   "name": "Set C",
+   "vibe": "Feel-good wind-down",
+   "songs": [
+    [
+     "Buffalo Soldier",
+     "Bob Marley & the Wailers",
+     "G",
+     "96"
+    ],
+    [
+     "Could You Be Loved",
+     "Bob Marley & the Wailers",
+     "A",
+     "98"
+    ],
+    [
+     "Stubborn Love",
+     "The Lumineers",
+     "C",
+     "125"
+    ],
+    [
+     "Ophelia",
+     "The Lumineers",
+     "C",
+     "145"
+    ],
+    [
+     "Better Man",
+     "Pearl Jam",
+     "G",
+     "78"
+    ],
+    [
+     "Shape of You",
+     "Ed Sheeran",
+     "C#m",
+     "96"
+    ],
+    [
+     "Galway Girl",
+     "Ed Sheeran",
+     "Em",
+     "96"
+    ],
+    [
+     "Budapest",
+     "George Ezra",
+     "C",
+     "118"
+    ],
+    [
+     "Shotgun",
+     "George Ezra",
+     "C",
+     "120"
+    ],
+    [
+     "Angels",
+     "Robbie Williams",
+     "G",
+     "100"
+    ],
+    [
+     "You're Still the One",
+     "Shania Twain",
+     "G",
+     "100"
+    ],
+    [
+     "Wonderwall",
+     "Oasis",
+     "F#m",
+     "87"
+    ],
+    [
+     "Champagne Supernova",
+     "Oasis",
+     "A",
+     "70"
+    ],
+    [
+     "Human",
+     "Rag'n'Bone Man",
+     "A",
+     "75"
+    ],
+    [
+     "Skinny Love",
+     "Bon Iver",
+     "C",
+     "80"
+    ],
+    [
+     "Fast Car",
+     "Tracy Chapman",
+     "C",
+     "104"
+    ],
+    [
+     "Sunshine on My Shoulders",
+     "John Denver",
+     "G",
+     "100"
+    ],
+    [
+     "Annie's Song",
+     "John Denver",
+     "D",
+     "103"
+    ],
+    [
+     "Leaving on a Jet Plane",
+     "John Denver",
+     "G",
+     "90"
+    ],
+    [
+     "Take Me Home, Country Roads",
+     "John Denver",
+     "A",
+     "84"
+    ],
+    [
+     "Time After Time",
+     "Cyndi Lauper",
+     "C",
+     "123"
+    ],
+    [
+     "Total Eclipse of the Heart",
+     "Bonnie Tyler",
+     "D",
+     "135"
+    ],
+    [
+     "If I Ain't Got You",
+     "Alicia Keys",
+     "F",
+     "101"
+    ],
+    [
+     "No One",
+     "Alicia Keys",
+     "G",
+     "90"
+    ],
+    [
+     "Empire State of Mind",
+     "Jay-Z ft. Alicia Keys",
+     "F#m",
+     "87"
+    ],
+    [
+     "I Will Always Love You",
+     "Whitney Houston",
+     "Ab",
+     "98"
+    ],
+    [
+     "Greatest Love of All",
+     "Whitney Houston",
+     "G",
+     "88"
+    ],
+    [
+     "Hero",
+     "Mariah Carey",
+     "E",
+     "80"
+    ],
+    [
+     "We Belong Together",
+     "Mariah Carey",
+     "C",
+     "90"
+    ],
+    [
+     "Un-Break My Heart",
+     "Toni Braxton",
+     "Am",
+     "90"
+    ],
+    [
+     "My Heart Will Go On",
+     "Celine Dion",
+     "E",
+     "90"
+    ],
+    [
+     "Because You Loved Me",
+     "Celine Dion",
+     "D",
+     "90"
+    ],
+    [
+     "I Don't Want to Miss a Thing",
+     "Aerosmith",
+     "D",
+     "72"
+    ],
+    [
+     "Always",
+     "Bon Jovi",
+     "E",
+     "90"
+    ],
+    [
+     "November Rain",
+     "Guns N' Roses",
+     "",
+     "84"
+    ],
+    [
+     "Every Rose Has Its Thorn",
+     "Poison",
+     "D",
+     "116"
+    ],
+    [
+     "More Than Words",
+     "Extreme",
+     "F#",
+     "183"
+    ],
+    [
+     "Iris",
+     "Goo Goo Dolls",
+     "D",
+     "98"
+    ],
+    [
+     "Slide",
+     "Goo Goo Dolls",
+     "G",
+     "78"
+    ],
+    [
+     "Kiss from a Rose",
+     "Seal",
+     "A#",
+     "132"
+    ],
+    [
+     "Shape of You",
+     "Ed Sheeran",
+     "C#m",
+     "96"
+    ],
+    [
+     "Thinking Out Loud",
+     "Ed Sheeran",
+     "D",
+     "79"
+    ],
+    [
+     "Perfect",
+     "Ed Sheeran",
+     "Ab",
+     "95"
+    ]
+   ]
+  }
+ ],
+ "stats": {
+  "total": 131,
+  "lyricsCovered": 131,
+  "droppedNoCatalog": 15,
+  "droppedNoLyrics": 0
+ }
+}

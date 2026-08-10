@@ -1,0 +1,127 @@
+[
+ {
+  "id": "wedding",
+  "name": "Wedding Gig Pack",
+  "tagline": "The full wedding reception, done right — dinner, first dance and floor-fillers in one box.",
+  "price": 9.99,
+  "buyUrl": "",
+  "total": 109,
+  "sets": [
+   {
+    "name": "Set A",
+    "vibe": "Dinner & cocktails (slower, romantic)",
+    "count": 37
+   },
+   {
+    "name": "Set B",
+    "vibe": "First dance & celebration",
+    "count": 37
+   },
+   {
+    "name": "Set C",
+    "vibe": "Floor-fillers & singalongs",
+    "count": 35
+   }
+  ]
+ },
+ {
+  "id": "party",
+  "name": "Party & Functions Pack",
+  "tagline": "High-energy floor-fillers for birthdays, functions and club nights — zero slow songs.",
+  "price": 9.99,
+  "buyUrl": "",
+  "total": 104,
+  "sets": [
+   {
+    "name": "Set A",
+    "vibe": "Warm-up bangers",
+    "count": 35
+   },
+   {
+    "name": "Set B",
+    "vibe": "Peak-time floor-fillers",
+    "count": 35
+   },
+   {
+    "name": "Set C",
+    "vibe": "Last-call singalongs",
+    "count": 34
+   }
+  ]
+ },
+ {
+  "id": "country",
+  "name": "Country Night Pack",
+  "tagline": "Three sets of singalong country — classic to modern, tailgate to dancehall.",
+  "price": 9.99,
+  "buyUrl": "",
+  "total": 107,
+  "sets": [
+   {
+    "name": "Set A",
+    "vibe": "Classics & slow ones",
+    "count": 36
+   },
+   {
+    "name": "Set B",
+    "vibe": "Mid-tempo singalongs",
+    "count": 36
+   },
+   {
+    "name": "Set C",
+    "vibe": "High-energy dancehall",
+    "count": 35
+   }
+  ]
+ },
+ {
+  "id": "british-pub",
+  "name": "British Pub Gig Pack",
+  "tagline": "Terrace anthems, indie singalongs and last-orders classics — the full pub setlist.",
+  "price": 9.99,
+  "buyUrl": "",
+  "total": 116,
+  "sets": [
+   {
+    "name": "Set A",
+    "vibe": "Warm-up & classics",
+    "count": 39
+   },
+   {
+    "name": "Set B",
+    "vibe": "Indie & terrace anthems",
+    "count": 39
+   },
+   {
+    "name": "Set C",
+    "vibe": "Last-orders singalongs",
+    "count": 38
+   }
+  ]
+ },
+ {
+  "id": "restaurant",
+  "name": "Restaurant Gig Pack",
+  "tagline": "Mellow, dinner-friendly favourites — background gold that fills the room without clearing it.",
+  "price": 9.99,
+  "buyUrl": "",
+  "total": 131,
+  "sets": [
+   {
+    "name": "Set A",
+    "vibe": "Early evening (soft & acoustic)",
+    "count": 44
+   },
+   {
+    "name": "Set B",
+    "vibe": "Peak-time favourites",
+    "count": 44
+   },
+   {
+    "name": "Set C",
+    "vibe": "Feel-good wind-down",
+    "count": 43
+   }
+  ]
+ }
+]

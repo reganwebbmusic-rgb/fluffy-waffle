@@ -1,0 +1,728 @@
+{
+ "id": "british-pub",
+ "name": "British Pub Gig Pack",
+ "tagline": "Terrace anthems, indie singalongs and last-orders classics — the full pub setlist.",
+ "price": 9.99,
+ "sets": [
+  {
+   "name": "Set A",
+   "vibe": "Warm-up & classics",
+   "songs": [
+    [
+     "Wonderwall",
+     "Oasis",
+     "F#m",
+     "87"
+    ],
+    [
+     "Don't Look Back in Anger",
+     "Oasis",
+     "C",
+     "81"
+    ],
+    [
+     "Champagne Supernova",
+     "Oasis",
+     "A",
+     "70"
+    ],
+    [
+     "Live Forever",
+     "Oasis",
+     "E",
+     "96"
+    ],
+    [
+     "Stand by Me",
+     "Oasis",
+     "D",
+     "88"
+    ],
+    [
+     "Roll with It",
+     "Oasis",
+     "D",
+     "135"
+    ],
+    [
+     "Whatever",
+     "Oasis",
+     "C",
+     "115"
+    ],
+    [
+     "Hey Jude",
+     "The Beatles",
+     "F",
+     "72"
+    ],
+    [
+     "Let It Be",
+     "The Beatles",
+     "C",
+     "143"
+    ],
+    [
+     "Twist and Shout",
+     "The Beatles",
+     "D",
+     "126"
+    ],
+    [
+     "Yellow Submarine",
+     "The Beatles",
+     "C#",
+     "111"
+    ],
+    [
+     "All You Need Is Love - Remastered 2009",
+     "The Beatles",
+     "G",
+     "103"
+    ],
+    [
+     "Don't Stop Me Now",
+     "Queen",
+     "F",
+     "156"
+    ],
+    [
+     "We Will Rock You",
+     "Queen",
+     "E",
+     "81"
+    ],
+    [
+     "We Are the Champions",
+     "Queen",
+     "Bb",
+     "63"
+    ],
+    [
+     "Another One Bites the Dust",
+     "Queen",
+     "Em",
+     "110"
+    ],
+    [
+     "Mr. Brightside",
+     "The Killers",
+     "Eb",
+     "148"
+    ],
+    [
+     "Somebody Told Me",
+     "The Killers",
+     "G",
+     "100"
+    ],
+    [
+     "I Bet You Look Good on the Dancefloor",
+     "Arctic Monkeys",
+     "E",
+     "105"
+    ],
+    [
+     "Do I Wanna Know?",
+     "Arctic Monkeys",
+     "F",
+     "85"
+    ],
+    [
+     "505",
+     "Arctic Monkeys",
+     "C",
+     "100"
+    ],
+    [
+     "R U Mine?",
+     "Arctic Monkeys",
+     "E",
+     "100"
+    ],
+    [
+     "Fluorescent Adolescent",
+     "Arctic Monkeys",
+     "D",
+     "100"
+    ],
+    [
+     "I'm Gonna Be (500 Miles)",
+     "The Proclaimers",
+     "G",
+     "130"
+    ],
+    [
+     "Come On Eileen",
+     "Dexys Midnight Runners",
+     "G",
+     "107"
+    ],
+    [
+     "Wake Me Up Before You Go-Go",
+     "Wham!",
+     "C",
+     "174"
+    ],
+    [
+     "Take On Me",
+     "A-ha",
+     "A",
+     "169"
+    ],
+    [
+     "Livin' On A Prayer",
+     "Bon Jovi",
+     "Eb",
+     "123"
+    ],
+    [
+     "You Give Love a Bad Name",
+     "Bon Jovi",
+     "",
+     "123"
+    ],
+    [
+     "Don't Stop Believin'",
+     "Journey",
+     "E",
+     "118"
+    ],
+    [
+     "Sweet Caroline",
+     "Neil Diamond",
+     "Bb",
+     "120"
+    ],
+    [
+     "Brown Eyed Girl",
+     "Van Morrison",
+     "G",
+     "89"
+    ],
+    [
+     "American Pie",
+     "Don McLean",
+     "G",
+     "102"
+    ],
+    [
+     "Rockin' All Over The World",
+     "Status Quo",
+     "C",
+     "131"
+    ],
+    [
+     "Should I Stay or Should I Go",
+     "The Clash",
+     "D",
+     "125"
+    ],
+    [
+     "London Calling",
+     "The Clash",
+     "Am",
+     "132"
+    ],
+    [
+     "Ghost Town",
+     "The Specials",
+     "C",
+     "100"
+    ],
+    [
+     "A Message to You Rudy",
+     "The Specials",
+     "C",
+     "130"
+    ],
+    [
+     "Too Much Too Young",
+     "The Specials",
+     "C",
+     "135"
+    ]
+   ]
+  },
+  {
+   "name": "Set B",
+   "vibe": "Indie & terrace anthems",
+   "songs": [
+    [
+     "Baggy Trousers",
+     "Madness",
+     "C",
+     "140"
+    ],
+    [
+     "Our House",
+     "Crosby, Stills, Nash & Young",
+     "A",
+     "140"
+    ],
+    [
+     "One Step Beyond",
+     "Madness",
+     "C",
+     "150"
+    ],
+    [
+     "Red Red Wine",
+     "UB40",
+     "F",
+     "100"
+    ],
+    [
+     "(I Can't Help) Falling in Love with You",
+     "UB40",
+     "C",
+     "100"
+    ],
+    [
+     "Cum on Feel the Noize",
+     "Quiet Riot",
+     "B",
+     "145"
+    ],
+    [
+     "Lola",
+     "The Kinks",
+     "E",
+     "120"
+    ],
+    [
+     "You Really Got Me",
+     "The Kinks",
+     "C",
+     "140"
+    ],
+    [
+     "Waterloo Sunset",
+     "The Kinks",
+     "E",
+     "90"
+    ],
+    [
+     "Pinball Wizard",
+     "The Who",
+     "E",
+     "108"
+    ],
+    [
+     "My Generation",
+     "The Who",
+     "E",
+     "100"
+    ],
+    [
+     "Baba O'Riley",
+     "The Who",
+     "G",
+     "126"
+    ],
+    [
+     "(I Can't Get No) Satisfaction",
+     "The Rolling Stones",
+     "E",
+     "136"
+    ],
+    [
+     "Brown Sugar",
+     "The Rolling Stones",
+     "C",
+     "122"
+    ],
+    [
+     "Start Me Up",
+     "The Rolling Stones",
+     "E",
+     "121"
+    ],
+    [
+     "Paint It Black",
+     "The Rolling Stones",
+     "Em",
+     "130"
+    ],
+    [
+     "Smoke on the Water",
+     "Deep Purple",
+     "G",
+     "115"
+    ],
+    [
+     "Back in Black",
+     "AC/DC",
+     "E",
+     "93"
+    ],
+    [
+     "Highway to Hell",
+     "AC/DC",
+     "A",
+     "121"
+    ],
+    [
+     "You Shook Me All Night Long",
+     "AC/DC",
+     "E",
+     "125"
+    ],
+    [
+     "Sweet Child O' Mine",
+     "Guns N' Roses",
+     "Db",
+     "125"
+    ],
+    [
+     "Paradise City",
+     "Guns N' Roses",
+     "Eb",
+     "155"
+    ],
+    [
+     "Welcome to the Jungle",
+     "Guns N' Roses",
+     "Eb",
+     "125"
+    ],
+    [
+     "Dancing in the Dark",
+     "Bruce Springsteen",
+     "Eb",
+     "118"
+    ],
+    [
+     "Born to Run",
+     "Bruce Springsteen",
+     "E",
+     "144"
+    ],
+    [
+     "Free Fallin'",
+     "Tom Petty",
+     "F",
+     "120"
+    ],
+    [
+     "American Girl",
+     "Tom Petty",
+     "E",
+     "133"
+    ],
+    [
+     "Sultans of Swing",
+     "Dire Straits",
+     "Dm",
+     "114"
+    ],
+    [
+     "Money for Nothing",
+     "Dire Straits",
+     "G",
+     "133"
+    ],
+    [
+     "Every Breath You Take",
+     "The Police",
+     "C",
+     "117"
+    ],
+    [
+     "Roxanne",
+     "The Police",
+     "G",
+     "134"
+    ],
+    [
+     "Song 2",
+     "Blur",
+     "E",
+     "120"
+    ],
+    [
+     "Parklife",
+     "Blur",
+     "F",
+     "100"
+    ],
+    [
+     "Common People",
+     "Pulp",
+     "G",
+     "120"
+    ],
+    [
+     "Bitter Sweet Symphony",
+     "The Verve",
+     "A",
+     "171"
+    ],
+    [
+     "Dakota",
+     "Stereophonics",
+     "C",
+     "120"
+    ],
+    [
+     "Somewhere Only We Know",
+     "Keane",
+     "C",
+     "83"
+    ],
+    [
+     "Chasing Cars",
+     "Snow Patrol",
+     "C",
+     "104"
+    ],
+    [
+     "Yellow",
+     "Coldplay",
+     "B",
+     "88"
+    ]
+   ]
+  },
+  {
+   "name": "Set C",
+   "vibe": "Last-orders singalongs",
+   "songs": [
+    [
+     "Viva la Vida",
+     "Coldplay",
+     "Ab",
+     "138"
+    ],
+    [
+     "Fix You",
+     "Coldplay",
+     "Eb",
+     "137"
+    ],
+    [
+     "Ruby",
+     "Kaiser Chiefs",
+     "C",
+     "140"
+    ],
+    [
+     "I Predict a Riot",
+     "Kaiser Chiefs",
+     "C",
+     "135"
+    ],
+    [
+     "Take Me Out",
+     "Franz Ferdinand",
+     "E",
+     "105"
+    ],
+    [
+     "Valerie",
+     "Amy Winehouse",
+     "G",
+     "108"
+    ],
+    [
+     "Rehab",
+     "Amy Winehouse",
+     "E",
+     "72"
+    ],
+    [
+     "Rolling in the Deep",
+     "Adele",
+     "Cm",
+     "105"
+    ],
+    [
+     "Someone Like You",
+     "Adele",
+     "A",
+     "135"
+    ],
+    [
+     "Shape of You",
+     "Ed Sheeran",
+     "C#m",
+     "96"
+    ],
+    [
+     "Perfect",
+     "Ed Sheeran",
+     "Ab",
+     "95"
+    ],
+    [
+     "Galway Girl",
+     "Ed Sheeran",
+     "Em",
+     "96"
+    ],
+    [
+     "Castle on the Hill",
+     "Ed Sheeran",
+     "B",
+     "135"
+    ],
+    [
+     "Budapest",
+     "George Ezra",
+     "C",
+     "118"
+    ],
+    [
+     "Shotgun",
+     "George Ezra",
+     "C",
+     "120"
+    ],
+    [
+     "Someone You Loved",
+     "Lewis Capaldi",
+     "C",
+     "110"
+    ],
+    [
+     "Human",
+     "Rag'n'Bone Man",
+     "A",
+     "75"
+    ],
+    [
+     "New Rules",
+     "Dua Lipa",
+     "G",
+     "116"
+    ],
+    [
+     "Don't Start Now",
+     "Dua Lipa",
+     "Am",
+     "124"
+    ],
+    [
+     "One Kiss",
+     "Dua Lipa",
+     "Am",
+     "124"
+    ],
+    [
+     "Angels",
+     "Robbie Williams",
+     "G",
+     "100"
+    ],
+    [
+     "Feel",
+     "Robbie Williams",
+     "C",
+     "100"
+    ],
+    [
+     "Rock DJ",
+     "Robbie Williams",
+     "E",
+     "100"
+    ],
+    [
+     "Rocket Man",
+     "Elton John",
+     "Eb",
+     "135"
+    ],
+    [
+     "Tiny Dancer",
+     "Elton John",
+     "C",
+     "110"
+    ],
+    [
+     "I'm Still Standing",
+     "Elton John",
+     "G",
+     "139"
+    ],
+    [
+     "Crocodile Rock",
+     "Elton John",
+     "A",
+     "126"
+    ],
+    [
+     "Uptown Girl",
+     "Billy Joel",
+     "E",
+     "150"
+    ],
+    [
+     "Piano Man",
+     "Billy Joel",
+     "C",
+     "176"
+    ],
+    [
+     "Don't You Want Me",
+     "The Human League",
+     "G",
+     "118"
+    ],
+    [
+     "Tainted Love",
+     "Soft Cell",
+     "Em",
+     "144"
+    ],
+    [
+     "Rio",
+     "Duran Duran",
+     "C",
+     "130"
+    ],
+    [
+     "Gold",
+     "Spandau Ballet",
+     "A#",
+     "143"
+    ],
+    [
+     "YMCA",
+     "Village People",
+     "C",
+     "125"
+    ],
+    [
+     "Celebration",
+     "Kool & the Gang",
+     "G",
+     "120"
+    ],
+    [
+     "Dancing Queen",
+     "ABBA",
+     "A",
+     "100"
+    ],
+    [
+     "Mamma Mia",
+     "ABBA",
+     "A",
+     "138"
+    ],
+    [
+     "Summer of '69",
+     "Bryan Adams",
+     "D",
+     "140"
+    ]
+   ]
+  }
+ ],
+ "stats": {
+  "total": 116,
+  "lyricsCovered": 116,
+  "droppedNoCatalog": 9,
+  "droppedNoLyrics": 0
+ }
+}

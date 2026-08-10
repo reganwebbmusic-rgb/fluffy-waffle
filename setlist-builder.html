@@ -382,6 +382,7 @@
     <button class="tab active" id="tabSongs" type="button">Songs</button>
     <button class="tab" id="tabSets" type="button">Sets</button>
     <button class="tab" id="tabRequests" type="button">Requests<span id="reqCount" class="req-count" style="display:none"></span></button>
+    <button class="tab" id="tabPacks" type="button">Packs</button>
     <button class="tab" id="tabTools" type="button">Tools</button>
   </div>
 
@@ -423,6 +424,11 @@
   var SELLER_UID = "";
   var PRO_KEY = "sb2pro";
   var UL_KEY = "sb2ul";
+  // Gig Packs: ready-made setlists sold through the same PayPal + Firebase order
+  // flow as Pro (order type "pack:<id>"). The developer code unlocks every pack
+  // free — change it whenever you want.
+  var PACKS_KEY = "sb2packs";
+  var PACK_DEV_CODE = "GRATIS-PACKS-2026";
   function proRecord() { try { var p = JSON.parse(localStorage.getItem(PRO_KEY)); return p && p.code ? p : null; } catch (e) { return null; } }
   function isPro() {
     if (proRecord()) return true;
@@ -3334,6 +3340,7 @@
     barEl.style.width = (filled.length / poolSize() * 100) + "%";
 
     if (s.tab === "requests") { renderRequests(); return; }
+    if (s.tab === "packs") { renderPacks(); return; }
     if (s.tab === "tools") { renderTools(); return; }
     if (s.tab === "sets") {
       if (play && play.active !== false) { renderPlay(); return; }
@@ -7675,7 +7682,7 @@
           var row = document.createElement("div");
           row.className = "req-row";
           var lbl = document.createElement("span");
-          lbl.textContent = o.email + " \u00b7 " + (o.ts ? new Date(o.ts).toLocaleTimeString() : "");
+          lbl.textContent = o.email + " \u00b7 " + (o.ts ? new Date(o.ts).toLocaleTimeString() : "") + " \u00b7 " + orderLabel(o.type);
           var app = document.createElement("button");
           app.type = "button"; app.className = "btn save"; app.textContent = "Approve";
           app.addEventListener("click", function () {
@@ -7721,6 +7728,339 @@
       stc.appendChild(sn);
     }
     listEl.appendChild(stc);
+  }
+
+  // ---------- Gig Packs tab ----------
+  var PACKS = null;          // metadata list from ./packs/index.json
+  var PACKS_DETAIL = {};     // packId -> full pack JSON
+  var PACKS_WAIT = [];
+  var PACK_VIEW = null;      // {id} when a pack detail is open
+  function packRecord() { try { var p = JSON.parse(localStorage.getItem(PACKS_KEY)); return (p && p.unlocked) ? p : null; } catch (e) { return null; } }
+  function isPackUnlocked(id) { var r = packRecord(); return !!(r && r.unlocked && r.unlocked[id]); }
+  function setPackUnlocked(id, code, email) {
+    var r = packRecord() || { unlocked: {} };
+    r.unlocked[id] = { code: code || "", email: email || "", at: Date.now() };
+    try { localStorage.setItem(PACKS_KEY, JSON.stringify(r)); } catch (e) {}
+  }
+  function unlockAllPacks(code, email) {
+    var r = packRecord() || { unlocked: {} };
+    (PACKS || []).forEach(function (pp) { if (!r.unlocked[pp.id]) r.unlocked[pp.id] = { code: code || "dev", email: email || "", at: Date.now() }; });
+    try { localStorage.setItem(PACKS_KEY, JSON.stringify(r)); } catch (e) {}
+  }
+  function packPrice(p) { return "\u00a3" + ((p && p.price) || 9.99).toFixed(2); }
+  function orderLabel(t) {
+    if (!t) return "Pro";
+    if (t === "ul") return "Unlimited";
+    if (t === "pro") return "Pro";
+    if (t.indexOf("pack:") === 0) {
+      var pid = t.slice(5), pn = null;
+      if (PACKS) for (var i = 0; i < PACKS.length; i++) if (PACKS[i].id === pid) pn = PACKS[i].name;
+      return pn || pid;
+    }
+    return t;
+  }
+
+  function ensurePacks(cb) {
+    if (PACKS) { cb(); return; }
+    PACKS_WAIT.push(cb);
+    if (PACKS_WAIT.length > 1) return;
+    var x = new XMLHttpRequest();
+    x.open("GET", "./packs/index.json", true);
+    x.onload = function () {
+      try { if (x.status === 200) { var d = JSON.parse(x.responseText); PACKS = Array.isArray(d) ? d : null; } } catch (e) { PACKS = null; }
+      var w = PACKS_WAIT; PACKS_WAIT = [];
+      w.forEach(function (f) { try { f(); } catch (e) {} });
+    };
+    x.onerror = function () { PACKS = null; var w = PACKS_WAIT; PACKS_WAIT = []; w.forEach(function (f) { try { f(); } catch (e) {} }); };
+    x.send();
+  }
+  function loadPackDetail(id, cb) {
+    if (PACKS_DETAIL[id]) { cb(); return; }
+    var x = new XMLHttpRequest();
+    x.open("GET", "./packs/" + id + ".json", true);
+    x.onload = function () {
+      try { if (x.status === 200) PACKS_DETAIL[id] = JSON.parse(x.responseText); } catch (e) { PACKS_DETAIL[id] = null; }
+      cb();
+    };
+    x.onerror = function () { PACKS_DETAIL[id] = null; cb(); };
+    x.send();
+  }
+
+  function addPackSongToPool(t, a, k, b) {
+    var filled = filledSongs();
+    if (filled.length >= poolSize()) { flashNew("Pool is full (" + poolSize() + "/" + poolSize() + ") \u2014 delete a song first.", "fit-low"); return; }
+    for (var i = 0; i < s.songs.length; i++) {
+      if (!s.songs[i].name) {
+        s.songs[i].name = String(t).slice(0, 120);
+        s.songs[i].artist = String(a || "").slice(0, 120);
+        s.songs[i].key = String(k || "").slice(0, 8);
+        s.songs[i].bpm = String(b || "").slice(0, 8);
+        s.songs[i].addedAt = Date.now();
+        save(); render();
+        flashNew("\u201c" + s.songs[i].name + "\u201d added to your pool");
+        return;
+      }
+    }
+  }
+
+  function showPackUnlock(p) {
+    var bg = document.createElement("div");
+    bg.className = "modal-bg pop";
+    var box = document.createElement("div");
+    box.className = "sheet";
+    box.style.cssText = "padding:16px;";
+    var h = document.createElement("h3"); h.textContent = "Unlock \u2014 " + p.name;
+    box.appendChild(h);
+    var note = document.createElement("div");
+    note.className = "notes";
+    note.textContent = "Paid via the buy button? Enter the email you paid with, or paste the code you were sent.";
+    box.appendChild(note);
+    var mail = document.createElement("input");
+    mail.type = "email"; mail.placeholder = "Email you paid with";
+    box.appendChild(mail);
+    var stat = document.createElement("div"); stat.className = "rec-note"; stat.style.marginTop = "6px";
+    box.appendChild(stat);
+    var wantType = "pack:" + p.id;
+    var check = document.createElement("button");
+    check.type = "button"; check.className = "btn save"; check.textContent = "I've paid \u2014 get my code";
+    check.addEventListener("click", function () {
+      var em = mail.value.trim().toLowerCase();
+      if (!em) { stat.textContent = "Enter the email you paid with."; return; }
+      stat.textContent = "Checking\u2026";
+      dbGet(REQUESTS_DB_URL + "/orders.json").then(function (r) { return r.json(); }).then(function (d) {
+        var o = null;
+        if (d) for (var k in d) { if (d[k] && d[k].type === wantType && d[k].email && String(d[k].email).toLowerCase() === em && d[k].status === "approved" && d[k].code) { o = d[k]; break; } }
+        if (o) { setPackUnlocked(p.id, o.code, em); closeSheet(bg); render(); flashNew(p.name + " unlocked!"); return; }
+        var hasPending = d && Object.keys(d).some(function (k) { return d[k] && d[k].type === wantType && d[k].email && String(d[k].email).toLowerCase() === em && d[k].status === "pending"; });
+        if (!hasPending) {
+          fetch(REQUESTS_DB_URL + "/orders.json", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: em, status: "pending", type: wantType, ts: Date.now() }) }).catch(function () {});
+        }
+        stat.textContent = "Payment not verified yet \u2014 checking every few seconds\u2026";
+        var tries = 0;
+        var poll = setInterval(function () {
+          tries++;
+          dbGet(REQUESTS_DB_URL + "/orders.json").then(function (r) { return r.json(); }).then(function (dd) {
+            if (!dd) return;
+            for (var kk in dd) {
+              var x = dd[kk];
+              if (x && x.type === wantType && x.email && String(x.email).toLowerCase() === em && x.status === "approved" && x.code) {
+                clearInterval(poll);
+                setPackUnlocked(p.id, x.code, em); closeSheet(bg); render();
+                flashNew(p.name + " unlocked!");
+                return;
+              }
+            }
+            if (tries > 75) { clearInterval(poll); stat.textContent = "Still no approval \u2014 you can re-check here later."; }
+          }).catch(function () {});
+        }, 4000);
+      }).catch(function () { stat.textContent = "Couldn't check \u2014 make sure the database rules are published."; });
+    });
+    box.appendChild(check);
+    var code = document.createElement("input");
+    code.type = "text"; code.placeholder = "Or paste your pack code";
+    code.style.marginTop = "8px";
+    box.appendChild(code);
+    var unc = document.createElement("button");
+    unc.type = "button"; unc.className = "btn ug"; unc.textContent = "Unlock with code";
+    unc.style.marginTop = "6px";
+    unc.addEventListener("click", function () {
+      var c = code.value.trim().toUpperCase();
+      if (!c) { stat.textContent = "Type your code first."; return; }
+      if (PACK_DEV_CODE && c === PACK_DEV_CODE) {
+        unlockAllPacks("dev", ""); closeSheet(bg); render();
+        flashNew("All Gig Packs unlocked (developer code).");
+        return;
+      }
+      dbGet(REQUESTS_DB_URL + "/orders.json").then(function (r) { return r.json(); }).then(function (d) {
+        var found = null;
+        if (d) for (var k in d) { if (d[k] && d[k].status === "approved" && d[k].code === c) { found = d[k]; break; } }
+        if (found && found.type === wantType) {
+          setPackUnlocked(p.id, c, found.email || ""); closeSheet(bg); render();
+          flashNew(p.name + " unlocked!");
+        } else if (found && found.type === "pack") {
+          unlockAllPacks(c, found.email || ""); closeSheet(bg); render();
+          flashNew("All Gig Packs unlocked!");
+        } else {
+          stat.textContent = "That code isn't valid for this pack \u2014 check it and try again.";
+        }
+      }).catch(function () { stat.textContent = "Couldn't check the code \u2014 try again."; });
+    });
+    box.appendChild(unc);
+    var cl = document.createElement("button");
+    cl.type = "button"; cl.className = "btn del"; cl.textContent = "Close"; cl.style.marginTop = "8px";
+    cl.addEventListener("click", function () { closeSheet(bg); });
+    box.appendChild(cl);
+    bg.appendChild(box);
+    bg.addEventListener("click", function (e) { if (e.target === bg) closeSheet(bg); });
+    document.body.appendChild(bg);
+  }
+
+  function renderPackDetail(pk) {
+    var un = isPackUnlocked(pk.id);
+    var tb = document.createElement("div");
+    tb.className = "toolbar";
+    tb.appendChild(mkBtn("Back to packs", function () { PACK_VIEW = null; renderPacks(); }));
+    listEl.appendChild(tb);
+    var card = document.createElement("section");
+    card.className = "card";
+    var nm = document.createElement("h2"); nm.textContent = pk.name;
+    card.appendChild(nm);
+    var tg = document.createElement("div"); tg.className = "purpose"; tg.textContent = pk.tagline;
+    card.appendChild(tg);
+    var st = document.createElement("div"); st.className = "notes";
+    st.textContent = un ? "Unlocked on this device \u2014 tap a song for chords & lyrics, or add it to your pool." : "Locked \u2014 preview the song lists; buy to unlock songs for your pool and lyrics.";
+    card.appendChild(st);
+    listEl.appendChild(card);
+    (pk.sets || []).forEach(function (sx) {
+      var sec = document.createElement("section");
+      sec.className = "card";
+      var sh = document.createElement("h3");
+      sh.style.background = "none"; sh.style.padding = "0 0 2px"; sh.style.border = "0";
+      sh.textContent = sx.name + " \u2014 " + sx.vibe + " (" + sx.songs.length + " songs)";
+      sec.appendChild(sh);
+      if (un) {
+        var addAll = document.createElement("button");
+        addAll.type = "button"; addAll.className = "btn ug";
+        addAll.textContent = "Add this set to pool";
+        addAll.addEventListener("click", function () {
+          var need = sx.songs.length;
+          var added = 0;
+          for (var i = 0; i < sx.songs.length && added < need; i++) {
+            var row = sx.songs[i];
+            if (filledSongs().length >= poolSize()) break;
+            for (var j = 0; j < s.songs.length; j++) {
+              if (!s.songs[j].name) {
+                s.songs[j].name = row[0]; s.songs[j].artist = row[1] || ""; s.songs[j].key = row[2] || ""; s.songs[j].bpm = row[3] || ""; s.songs[j].addedAt = Date.now();
+                added++;
+                break;
+              }
+            }
+          }
+          save(); render();
+          flashNew(added + " song" + (added === 1 ? "" : "s") + " added \u2014 pool " + filledSongs().length + "/" + poolSize() + (added < need ? " (pool full)" : ""));
+        });
+        sec.appendChild(addAll);
+      }
+      sx.songs.forEach(function (row) {
+        var r = document.createElement("div");
+        r.className = "req-row";
+        r.style.cssText = "align-items:center;";
+        var info = document.createElement("div");
+        info.style.cssText = "flex:1;min-width:0;";
+        var tEl = document.createElement("div"); tEl.textContent = row[0];
+        var aEl = document.createElement("div"); aEl.className = "notes"; aEl.style.cssText = "font-size:12px;color:#8a97a5;";
+        aEl.textContent = (row[1] || "") + (row[3] ? " \u00b7 " + row[3] + " bpm" : "");
+        info.appendChild(tEl); info.appendChild(aEl);
+        r.appendChild(info);
+        if (un) {
+          var lyr = document.createElement("button");
+          lyr.type = "button"; lyr.className = "btn ug"; lyr.textContent = "Lyrics";
+          lyr.addEventListener("click", function () {
+            openSheet({ name: row[0], artist: row[1] || "", key: row[2] || "", bpm: row[3] || "" }, false);
+          });
+          r.appendChild(lyr);
+          var add = document.createElement("button");
+          add.type = "button"; add.className = "btn save"; add.textContent = "+ Pool";
+          add.addEventListener("click", function () { addPackSongToPool(row[0], row[1], row[2], row[3]); });
+          r.appendChild(add);
+        }
+        sec.appendChild(r);
+      });
+      listEl.appendChild(sec);
+    });
+  }
+
+  function renderPacks() {
+    listEl.innerHTML = "";
+    var tb = document.createElement("div");
+    tb.className = "toolbar";
+    tb.appendChild(mkBtn("Back to songs", function () { s.tab = "songs"; save(); render(); }));
+    listEl.appendChild(tb);
+    if (PACK_VIEW && PACK_VIEW.id) {
+      var pid = PACK_VIEW.id;
+      if (!PACKS_DETAIL[pid]) {
+        var ld = document.createElement("div"); ld.className = "notes"; ld.textContent = "Loading pack\u2026";
+        listEl.appendChild(ld);
+        loadPackDetail(pid, function () { renderPacks(); });
+        return;
+      }
+      renderPackDetail(PACKS_DETAIL[pid]);
+      return;
+    }
+    ensurePacks(function () {
+      if (!PACKS) {
+        var nf = document.createElement("section");
+        nf.className = "card";
+        var nh = document.createElement("h2"); nh.textContent = "Gig Packs";
+        var np = document.createElement("div"); np.className = "purpose"; np.textContent = "Couldn't load the packs \u2014 make sure packs/index.json is deployed next to the app.";
+        nf.appendChild(nh); nf.appendChild(np);
+        listEl.appendChild(nf);
+        return;
+      }
+      var hd = document.createElement("h2");
+      hd.style.padding = "2px 4px 8px";
+      hd.textContent = "Gig Packs \u2014 ready-made setlists, lyrics included";
+      listEl.appendChild(hd);
+      PACKS.forEach(function (p) {
+        var card = document.createElement("section");
+        card.className = "card";
+        var nm = document.createElement("h3");
+        nm.style.background = "none"; nm.style.padding = "0 0 2px"; nm.style.border = "0";
+        nm.textContent = p.name + " \u00b7 " + packPrice(p);
+        card.appendChild(nm);
+        var tg = document.createElement("div"); tg.className = "purpose"; tg.textContent = p.tagline;
+        card.appendChild(tg);
+        var un = isPackUnlocked(p.id);
+        var sc = document.createElement("div");
+        sc.className = "req-row";
+        sc.style.cssText = "flex-wrap:wrap;margin-top:8px;";
+        (p.sets || []).forEach(function (sx) {
+          var chip = document.createElement("span");
+          chip.className = "fit-badge";
+          chip.style.cssText = "background:#e8eef5;color:#41505e;";
+          chip.textContent = sx.name + ": " + sx.count + " \u00b7 " + sx.vibe;
+          sc.appendChild(chip);
+        });
+        card.appendChild(sc);
+        var row = document.createElement("div");
+        row.className = "req-actions";
+        row.style.cssText = "margin-top:10px;";
+        var open = document.createElement("button");
+        open.type = "button"; open.className = "btn " + (un ? "save" : "ug");
+        open.textContent = un ? "Open pack" : "Preview";
+        open.addEventListener("click", function () {
+          PACK_VIEW = { id: p.id };
+          loadPackDetail(p.id, function () { render(); });
+        });
+        row.appendChild(open);
+        if (un) {
+          var bd = document.createElement("span");
+          bd.className = "fit-badge"; bd.style.cssText = "background:#e4f2e6;color:#237a3b;";
+          bd.textContent = "Unlocked";
+          row.appendChild(bd);
+        } else {
+          var buy = document.createElement("button");
+          buy.type = "button"; buy.className = "btn save";
+          buy.textContent = "Buy \u2014 " + packPrice(p);
+          buy.addEventListener("click", function () {
+            if (p.buyUrl) { if (window.open) window.open(p.buyUrl, "_blank"); else location.href = p.buyUrl; }
+            else flashNew("Payment link not set yet \u2014 add your checkout URL to packs/index.json.", "fit-low");
+          });
+          row.appendChild(buy);
+          var have = document.createElement("button");
+          have.type = "button"; have.className = "btn ug";
+          have.textContent = "I've paid / have a code";
+          have.addEventListener("click", function () { showPackUnlock(p); });
+          row.appendChild(have);
+        }
+        card.appendChild(row);
+        listEl.appendChild(card);
+      });
+      var how = document.createElement("div");
+      how.className = "notes";
+      how.textContent = "Buy a pack, then tap \u201cI've paid / have a code\u201d with the email you used (or paste the code) to unlock it on this device. Your pack songs work with the full lyric book.";
+      listEl.appendChild(how);
+    });
   }
 
   // ---------- lyrics auto-scroll + expand ----------
@@ -7809,7 +8149,7 @@
     btn.addEventListener("click", function () {
       exitPlay();
       s.tab = name; save(); render();
-      [["tabSongs", "songs"], ["tabSets", "sets"], ["tabRequests", "requests"], ["tabTools", "tools"]].forEach(function (t) {
+      [["tabSongs", "songs"], ["tabSets", "sets"], ["tabRequests", "requests"], ["tabPacks", "packs"], ["tabTools", "tools"]].forEach(function (t) {
         document.getElementById(t[0]).classList.toggle("active", t[1] === name);
       });
       if (name === "requests") {
@@ -7821,6 +8161,7 @@
   tab(document.getElementById("tabSongs"), "songs");
   tab(document.getElementById("tabSets"), "sets");
   tab(document.getElementById("tabRequests"), "requests");
+  tab(document.getElementById("tabPacks"), "packs");
   tab(document.getElementById("tabTools"), "tools");
 
   function shareSetlistText() {
