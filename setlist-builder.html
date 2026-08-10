@@ -2927,6 +2927,9 @@
     if (me.exp && me.exp - 120000 > Date.now()) return Promise.resolve(me.idToken);
     return refreshAuth().then(function (ok) { return ok ? me.idToken : ""; });
   }
+  // never let any cache (browser or service worker) serve stale database reads
+  function dbGet(url) { return fetch(url + (url.indexOf("?") >= 0 ? "&" : "?") + "_=" + Date.now(), { cache: "no-store" }); }
+
   function authed(url) {
     return ensureToken().then(function (t) {
       if (!t) return url;
@@ -3834,7 +3837,7 @@
     listEl.appendChild(end);
     if (bandTimer) { clearInterval(bandTimer); bandTimer = null; }
     bandTimer = setInterval(function () {
-      fetch(REQUESTS_DB_URL + "/bandsessions/" + bandSession.id + ".json").then(function (r) { return r.json(); }).then(function (d) {
+      dbGet(REQUESTS_DB_URL + "/bandsessions/" + bandSession.id + ".json").then(function (r) { return r.json(); }).then(function (d) {
         if (!d) {
           if (bandTimer) { clearInterval(bandTimer); bandTimer = null; }
           bandSession = null;
@@ -3912,7 +3915,7 @@
     title.style.cssText = "font-weight:700;margin:8px 0;";
     title.textContent = "Community sets \u2014 other musicians' set ideas";
     listEl.appendChild(title);
-    fetch(REQUESTS_DB_URL + "/sharedsets.json").then(function (r) { return r.json(); }).then(function (d) {
+    dbGet(REQUESTS_DB_URL + "/sharedsets.json").then(function (r) { return r.json(); }).then(function (d) {
       var list = [];
       if (d && typeof d === "object") Object.keys(d).forEach(function (k) { if (d[k] && typeof d[k] === "object") { d[k].id = k; list.push(d[k]); } });
       list.sort(function (a, b) { return (b.ts || 0) - (a.ts || 0); });
@@ -4973,7 +4976,7 @@
     var seen = {};
     var merged = [];
     var pending = inboxes.map(function (inbox) {
-      return fetch(REQUESTS_DB_URL + "/" + inbox + "/requests.json")
+      return dbGet(REQUESTS_DB_URL + "/" + inbox + "/requests.json")
         .then(function (r) { return r.json(); })
         .then(function (obj) {
           if (obj && typeof obj === "object") {
@@ -6369,7 +6372,7 @@
         var em = pMail.value.trim().toLowerCase();
         if (!em) { pStat.textContent = "Enter the email you paid with."; return; }
         pStat.textContent = "Checking\u2026";
-        fetch(REQUESTS_DB_URL + "/orders.json").then(function (r) { return r.json(); }).then(function (d) {
+        dbGet(REQUESTS_DB_URL + "/orders.json").then(function (r) { return r.json(); }).then(function (d) {
           var o = null, id = null;
           if (d) for (var k in d) { if (d[k] && d[k].email && String(d[k].email).toLowerCase() === em && d[k].status === "approved" && d[k].code) { o = d[k]; id = k; break; } }
           if (o) {
@@ -6385,7 +6388,7 @@
             var tries = 0;
             var poll = setInterval(function () {
               tries++;
-              fetch(REQUESTS_DB_URL + "/orders.json").then(function (r) { return r.json(); }).then(function (dd) {
+              dbGet(REQUESTS_DB_URL + "/orders.json").then(function (r) { return r.json(); }).then(function (dd) {
                 if (!dd) return;
                 for (var kk in dd) {
                   var x = dd[kk];
@@ -6414,7 +6417,7 @@
         if (!c) { flashNew("Type your code first.", "fit-low"); return; }
         // secret developer code — free Pro for you and anyone you gift it to
         if (DEV_CODE && c === DEV_CODE) { setPro("dev", ""); render(); renderAuthBar(); flashNew("Pro unlocked (developer code)."); return; }
-        fetch(REQUESTS_DB_URL + "/orders.json").then(function (r) { return r.json(); }).then(function (d) {
+        dbGet(REQUESTS_DB_URL + "/orders.json").then(function (r) { return r.json(); }).then(function (d) {
           var found = null;
           if (d) for (var k in d) { if (d[k] && d[k].status === "approved" && d[k].code === c) { found = d[k]; break; } }
           if (found) { setPro(c, found.email || ""); render(); renderAuthBar(); flashNew("Pro unlocked!"); }
@@ -6430,7 +6433,7 @@
       sv.style.marginTop = "12px";
       sv.textContent = "Pro sales \u2014 check the payment in Stripe, then Approve to deliver the code:";
       pro.appendChild(sv);
-      fetch(REQUESTS_DB_URL + "/orders.json").then(function (r) { return r.json(); }).then(function (d) {
+      dbGet(REQUESTS_DB_URL + "/orders.json").then(function (r) { return r.json(); }).then(function (d) {
         var pend = [];
         if (d) for (var k in d) { if (d[k] && d[k].status === "pending") pend.push({ id: k, email: d[k].email, ts: d[k].ts }); }
         pend.sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });

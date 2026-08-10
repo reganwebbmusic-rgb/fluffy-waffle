@@ -106,13 +106,16 @@
   var pubLinks = { tip: "", extra: "" };
   var stageName = "";
   if (MUSICIAN && FIREBASE_URL) {
-    fetch(FIREBASE_URL + "/users/" + encodeURIComponent(MUSICIAN) + "/public")
+    dbGet(FIREBASE_URL + "/users/" + encodeURIComponent(MUSICIAN) + "/public")
       .then(function (r) { return r.json(); })
       .then(function (d) {
         if (d && d.links) pubLinks = { tip: String(d.links.tip || ""), extra: String(d.links.extra || "") };
         if (d && d.stageName) stageName = String(d.stageName);
       }).catch(function () {});
   }
+
+  // never let any cache (browser or service worker) serve stale database reads
+  function dbGet(url) { return fetch(url + (url.indexOf("?") >= 0 ? "&" : "?") + "_=" + Date.now(), { cache: "no-store" }); }
 
   var sendBtn = document.getElementById("send");
   var optsEl = document.getElementById("opts");
@@ -193,7 +196,7 @@
     // updates identically on every phone, from any link
     var queueSource = "requests.json";
     setInterval(function () {
-      fetch(FIREBASE_URL + "/" + queueSource)
+      dbGet(FIREBASE_URL + "/" + queueSource)
         .then(function (r) { return r.json(); })
         .then(function (d) {
           var list = [];
