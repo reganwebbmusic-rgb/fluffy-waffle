@@ -2928,8 +2928,7 @@
   // identity: your signed-in uid, or a persistent device id so requests work
   // even before you sign in — each device gets its own private inbox
   var DEVICE_ID = null;
-  function myId() {
-    if (me && me.uid) return me.uid;
+  function myDeviceId() {
     if (!DEVICE_ID) {
       try {
         DEVICE_ID = localStorage.getItem("sb2dev");
@@ -2937,6 +2936,10 @@
       } catch (e) { DEVICE_ID = "d" + Math.random().toString(36).slice(2, 10); }
     }
     return DEVICE_ID;
+  }
+  function myId() {
+    if (me && me.uid) return me.uid;
+    return myDeviceId();
   }
   function stageLabel() { return (me && me.stage) || STAGE_NAME || (me && me.email) || ""; }
   function myRequestsUrl() {
@@ -4499,21 +4502,36 @@
   }
 
   function loadRequestsFirebase() {
-    // this device/account's own inbox only — public read, so it works before sign-in
-    var url = userPath() + "/requests.json";
-    fetch(url).then(function (r) { return r.json(); }).then(function (obj) {
-      var list = [];
-      if (obj && typeof obj === "object") {
-        Object.keys(obj).forEach(function (k) {
-          var v = obj[k];
-          if (v && typeof v === "object") { v.id = k; list.push(v); }
-        });
-      }
-      list.sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
-      processRequests(list);
-    }).catch(function () {
-      reqNote = "Can't reach the request database \u2014 check it's hosted and the rules are published.";
-      if (s.tab === "requests" && reqView === "list") renderRequests();
+    // Poll BOTH inboxes (account + this device) and merge — so requests show
+    // up in real time no matter which QR/link was used or sign-in state.
+    var inboxes = ["users/" + encodeURIComponent(myId())];
+    if (me && me.uid) {
+      var dev = myDeviceId();
+      if (dev && dev !== me.uid) inboxes.push("users/" + encodeURIComponent(dev));
+    }
+    var seen = {};
+    var merged = [];
+    var remaining = inboxes.length;
+    inboxes.forEach(function (inbox) {
+      fetch(REQUESTS_DB_URL + "/" + inbox + "/requests.json").then(function (r) { return r.json(); }).then(function (obj) {
+        if (obj && typeof obj === "object") {
+          Object.keys(obj).forEach(function (k) {
+            var v = obj[k];
+            if (v && typeof v === "object" && !seen[k]) { seen[k] = 1; v.id = k; v._inbox = inbox; merged.push(v); }
+          });
+        }
+        remaining--;
+        if (remaining === 0) {
+          merged.sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
+          processRequests(merged);
+        }
+      }).catch(function () {
+        remaining--;
+        if (remaining === 0) {
+          reqNote = "Can't reach the request database \u2014 check it's hosted and the rules are published.";
+          if (s.tab === "requests" && reqView === "list") renderRequests();
+        }
+      });
     });
   }
 
@@ -4723,8 +4741,10 @@
 
   function patchRequest(id, body) {
     if (!REQUESTS_DB_URL) return Promise.resolve();
-    // always this device/account's own inbox (never a shared one)
-    var url = userPath() + "/requests/" + id + ".json";
+    // update the inbox the request actually came from (account or device)
+    var inbox = "users/" + encodeURIComponent(myId());
+    (requestsData || []).forEach(function (x) { if (x && x.id === id && x._inbox) inbox = x._inbox; });
+    var url = REQUESTS_DB_URL + "/" + inbox + "/requests/" + id + ".json";
     return authed(url).then(function (u) {
       return fetch(u, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     }).then(function (r) {
@@ -4868,12 +4888,12 @@
     try { localStorage.setItem("seenReqs", JSON.stringify(seenReqs)); } catch (e) {}
     if (r && status === "accepted" && r.type === "song") {
       if (addCatalogToPool(r.song, r.artist || "", "", "")) {
-        var pool = filledSongs();
+        // find the song's real index in s.songs (NOT the filtered list)
         var pi = -1;
-        pool.forEach(function (x, i) {
-          if (pi < 0 && x.name.toLowerCase() === r.song.toLowerCase() &&
-            (!r.artist || (x.artist || "").toLowerCase() === r.artist.toLowerCase())) pi = i;
-        });
+        for (var i2 = 0; i2 < s.songs.length; i2++) {
+          if (pi < 0 && s.songs[i2].name && s.songs[i2].name.toLowerCase() === r.song.toLowerCase() &&
+            (!r.artist || (s.songs[i2].artist || "").toLowerCase() === r.artist.toLowerCase())) pi = i2;
+        }
         var which = s.setView === "B" ? "B" : "A";
         var placed = false;
         for (var bi = 0; bi < 2 && !placed; bi++) {
@@ -4882,6 +4902,9 @@
           }
         }
         save();
+        flashNew("\u201c" + r.song + "\u201d accepted \u2014 in your pool" + (placed ? " and Set " + which + " (up next)." : " (sets are full \u2014 it's in your pool)."));
+      } else {
+        flashNew("\u201c" + r.song + "\u201d accepted \u2014 already in your pool or it's full.", "fit-low");
       }
     }
     patchRequest(id, { status: status });
@@ -4977,13 +5000,39 @@
       listEl.appendChild(e);
       return;
     }
-    var open = requestsData.filter(function (x) { return x && x.status !== "declined"; });
+    var open = requestsData.filter(function (x) { return x && x.status !== "declined" && !(x.status === "accepted" && x.type === "song"); });
     var sorted = open.slice().sort(function (x, y) {
       var t = ((y.tip ? 1 : 0) - (x.tip ? 1 : 0));
       if (t !== 0) return t;
       var d = requestFit(y.song, y.artist) - requestFit(x.song, x.artist);
       return d !== 0 ? d : (y.ts || 0) - (x.ts || 0);
     });
+    // Accepted song requests — already in your pool and set (up next)
+    var accList = (requestsData || []).filter(function (x) {
+      return x && x.status === "accepted" && x.type === "song";
+    }).sort(function (a, b) { return (b.ts || 0) - (a.ts || 0); });
+    if (accList.length) {
+      var ah = document.createElement("div");
+      ah.className = "purpose";
+      ah.style.cssText = "font-weight:700;margin:14px 0 6px;";
+      ah.textContent = "Accepted \u2014 up next";
+      listEl.appendChild(ah);
+      accList.forEach(function (r) {
+        var arow = document.createElement("div");
+        arow.className = "song";
+        var anm = document.createElement("div");
+        anm.className = "name";
+        anm.textContent = r.song + (r.artist ? " \u2014 " + r.artist : "");
+        var amt = document.createElement("div");
+        amt.className = "artist";
+        amt.textContent = (r.name ? "by " + r.name + " \u00b7 " : "") + "in your pool \u00b7 up next";
+        var aok = document.createElement("span");
+        aok.className = "fit-badge fit-high";
+        aok.textContent = "ACCEPTED";
+        arow.appendChild(anm); arow.appendChild(amt); arow.appendChild(aok);
+        listEl.appendChild(arow);
+      });
+    }
     sorted.forEach(function (r) {
       var isSong = !r.type || r.type === "song";
       var fit = isSong ? requestFit(r.song, r.artist) : -1;
@@ -5010,7 +5059,7 @@
       var badgeCls = "fit-badge ";
       var badgeTxt2;
       if (r.status === "paid") { badgeCls += "fit-high"; badgeTxt2 = "PAID"; }
-      else if (r.status === "accepted" && r.charge) { badgeCls += "fit-med"; badgeTxt2 = "ACCEPTED"; }
+      else if (r.status === "accepted") { badgeCls += "fit-med"; badgeTxt2 = "ACCEPTED"; }
       else { badgeCls += (r.tip ? "tip" : (isSong ? cls : "fit-med")); badgeTxt2 = r.tip ? "TIP · " + badgeTxt : (isSong ? badgeTxt : (r.type === "stay" ? "STAY" : r.type === "packup" ? "PACKUP" : "MORE")); }
       badgeEl.className = badgeCls;
       badgeEl.textContent = badgeTxt2;

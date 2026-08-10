@@ -94,11 +94,13 @@
   // when they sign in with links set). When available, paid/tip buttons open the
   // payment page immediately; otherwise we fall back to the "we'll send a link" flow.
   var pubLinks = { tip: "", extra: "" };
+  var stageName = "";
   if (MUSICIAN && FIREBASE_URL) {
     fetch(FIREBASE_URL + "/users/" + encodeURIComponent(MUSICIAN) + "/public")
       .then(function (r) { return r.json(); })
       .then(function (d) {
         if (d && d.links) pubLinks = { tip: String(d.links.tip || ""), extra: String(d.links.extra || "") };
+        if (d && d.stageName) stageName = String(d.stageName);
       }).catch(function () {});
   }
 
@@ -270,15 +272,17 @@
   paidButton("£" + PRICE_STAY + " — stay longer", { type: "stay", charge: PRICE_STAY }, "More time requested — we'll send a payment link.");
   paidButton("£" + PRICE_PACKUP + " — pack up and go home", { type: "packup", charge: PRICE_PACKUP }, "Ha! Request sent — the band will be in touch.", "fun wide");
 
-  if (REVIEW_LINK) {
-    var rv = document.createElement("button");
-    rv.type = "button";
-    rv.textContent = "Leave a review";
-    rv.addEventListener("click", function () {
-      if (window.open) window.open(REVIEW_LINK, "_blank"); else location.href = REVIEW_LINK;
-    });
-    optsEl.appendChild(rv);
-  }
+  // Leave a review — always available; opens your review link when set, else
+  // a Google search for the band so punters can still find where to review.
+  var rv = document.createElement("button");
+  rv.type = "button";
+  rv.textContent = "Leave a review";
+  rv.className = "wide";
+  rv.addEventListener("click", function () {
+    var url = REVIEW_LINK || ("https://www.google.com/search?q=" + encodeURIComponent((stageName || "TOOLGIG band") + " review"));
+    if (window.open) window.open(url, "_blank"); else location.href = url;
+  });
+  optsEl.appendChild(rv);
 </script>
 </body>
 </html>
