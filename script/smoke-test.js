@@ -116,11 +116,41 @@ function check(name, cond, extra) {
   const detailText = doc.getElementById("list").textContent;
   check("pack detail opens", detailText.includes("Dinner & cocktails") || detailText.includes("Set A"), "pack sets shown");
 
-  // Tools tab: install card present
+  // Tools tab: install card + Get More Gigs course card present
   clickTab("tabTools");
   await new Promise((r) => setTimeout(r, 400));
   check("tools tab has install card", doc.getElementById("list").textContent.includes("Install this app"));
   check("tools tab has tuner", doc.getElementById("list").textContent.includes("Chromatic tuner"));
+  const toolsText = doc.getElementById("list").textContent;
+  check("Get More Gigs card present", toolsText.includes("Get More Gigs") && toolsText.includes("50 extra gigs"));
+
+  // unlock the course with the dev code -> guide opens
+  const haveBtn = [...doc.querySelectorAll("button")].find((b) => b.textContent === "I've paid / have a code" && b.style.marginLeft);
+  if (haveBtn) haveBtn.dispatchEvent(new window.Event("click", { bubbles: true }));
+  await new Promise((r) => setTimeout(r, 300));
+  const codeInp = [...doc.querySelectorAll("input")].find((i) => i.placeholder === "Or paste your code");
+  if (codeInp) {
+    codeInp.value = "GRATIS-GIGS-2026";
+    // the gigs modal button lives inside .sheet (the Pro card's same-named button is in #list)
+    const unlockBtn = [...doc.querySelectorAll("button")].find((b) => b.textContent === "Unlock with code" && b.parentElement && String(b.parentElement.className).includes("sheet"));
+    if (unlockBtn) unlockBtn.dispatchEvent(new window.Event("click", { bubbles: true }));
+  }
+  await new Promise((r) => setTimeout(r, 400));
+  // close the unlock modal, re-render tools, open the guide
+  doc.querySelectorAll(".modal-bg").forEach((m) => { m.style.display = "none"; });
+  clickTab("tabSongs");
+  await new Promise((r) => setTimeout(r, 200));
+  clickTab("tabTools");
+  await new Promise((r) => setTimeout(r, 400));
+  const toolsText2 = doc.getElementById("list").textContent;
+  check("course shows unlocked state", toolsText2.includes("Get More Gigs — unlocked"));
+  const openGuide = [...doc.querySelectorAll("button")].find((b) => b.textContent === "Open the 9-step guide");
+  if (openGuide) openGuide.dispatchEvent(new window.Event("click", { bubbles: true }));
+  await new Promise((r) => setTimeout(r, 300));
+  const guideText = [...doc.querySelectorAll(".modal-bg")].map((m) => m.textContent).join(" ");
+  check("guide opens with 9 steps", guideText.includes("Step 1") && guideText.includes("Step 9"));
+  check("guide has core advice", guideText.includes("Business cards") && guideText.includes("open mic"));
+  doc.querySelectorAll(".modal-bg").forEach((m) => { m.style.display = "none"; });
 
   // Songs tab again (regression)
   clickTab("tabSongs");

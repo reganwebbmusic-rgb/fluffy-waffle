@@ -426,6 +426,12 @@
   // free — change it whenever you want.
   var PACKS_KEY = "sb2packs";
   var PACK_DEV_CODE = "GRATIS-PACKS-2026";
+  // Get More Gigs course — paid step-by-step guide, £10 once, unlocked through
+  // the same order flow as Pro (order type "gigs"). Same Revolut link for now.
+  var GIGS_PRICE = 10;
+  var GIGS_KEY = "sb2gigs";
+  var GIGS_LINK = PRO_LINK; // swap for a dedicated Revolut link if you make one
+  var GIGS_DEV_CODE = "GRATIS-GIGS-2026";
   // Free Pro test account: anyone signing in with this email gets Pro
   // automatically (password set up in Firebase Auth — see DEPLOY-GUIDE).
   var TEST_EMAIL = "test@test.com";
@@ -6703,6 +6709,7 @@
     { t: "Backup & reset", d: "Export a backup file, import one (merge or replace), or start fresh. Backups stay free for everyone." },
     { t: "Gig Packs", d: "Ready-made setlists to play straight away or sell: Wedding, Party, Country, British Pub and Restaurant \u2014 567 songs in all, every one with lyrics. Buy a pack (\u00a39.99), unlock it with your code, and songs drop into your pool with key and BPM pre-filled." },
     { t: "Setlist Pro", d: "\u00a310 once: 500-song pool, gig archive, band sync and more. Unlimited removes the song limit entirely. Purchases are approved by the app owner in Tools \u2192 Pro sales." },
+    { t: "Get More Gigs", d: "A paid 9-step system from a working musician (500+ gigs in 24 months) for booking 50+ extra gigs a year \u2014 business cards, open mics, showreel, venue visits, socials, undercutting and multi-bookings. \u00a310 once, in Tools." },
     { t: "Band sync", d: "Start a session, share the 6-letter code, and every phone follows the same song in real time \u2014 no more shouting setlists across the stage." }
   ];
   function openTutorial() {
@@ -7098,6 +7105,42 @@
     }
     inst.appendChild(steps);
     listEl.appendChild(inst);
+
+    // Get More Gigs course card
+    var gig = document.createElement("section");
+    gig.className = "card";
+    gig.style.padding = "16px";
+    var gh = document.createElement("h3");
+    gh.textContent = "Get More Gigs \u2014 " + (isGigsUnlocked() ? "unlocked" : "\u00a3" + GIGS_PRICE + " once");
+    gh.style.background = "none"; gh.style.padding = "0 0 6px"; gh.style.border = "0";
+    gig.appendChild(gh);
+    var gp = document.createElement("div");
+    gp.className = "purpose";
+    gp.textContent = "The step-by-step system from a working musician who's played 500+ gigs in the last 24 months \u2014 how to book a minimum of 50 extra gigs every year: business cards, open mics, showreel, venues, socials, and multi-bookings.";
+    gig.appendChild(gp);
+    if (isGigsUnlocked()) {
+      var gOpen = document.createElement("button");
+      gOpen.type = "button"; gOpen.className = "btn save";
+      gOpen.textContent = "Open the 9-step guide";
+      gOpen.addEventListener("click", openGigsGuide);
+      gig.appendChild(gOpen);
+    } else {
+      var gBuy = document.createElement("button");
+      gBuy.type = "button"; gBuy.className = "btn save";
+      gBuy.textContent = "Buy \u2014 \u00a3" + GIGS_PRICE;
+      gBuy.addEventListener("click", function () {
+        if (!GIGS_LINK) { flashNew("Payment link not set yet \u2014 ask the app owner.", "fit-low"); return; }
+        if (window.open) window.open(GIGS_LINK, "_blank"); else location.href = GIGS_LINK;
+      });
+      gig.appendChild(gBuy);
+      var gHave = document.createElement("button");
+      gHave.type = "button"; gHave.className = "btn ug";
+      gHave.textContent = "I've paid / have a code";
+      gHave.style.marginLeft = "8px";
+      gHave.addEventListener("click", showGigsUnlock);
+      gig.appendChild(gHave);
+    }
+    listEl.appendChild(gig);
 
     var tun = document.createElement("section");
     tun.className = "card";
@@ -7792,6 +7835,7 @@
     if (!t) return "Pro";
     if (t === "ul") return "Unlimited";
     if (t === "pro") return "Pro";
+    if (t === "gigs") return "Get More Gigs";
     if (t.indexOf("pack:") === 0) {
       var pid = t.slice(5), pn = null;
       if (PACKS) for (var i = 0; i < PACKS.length; i++) if (PACKS[i].id === pid) pn = PACKS[i].name;
@@ -7931,6 +7975,137 @@
     cl.addEventListener("click", function () { closeSheet(bg); });
     box.appendChild(cl);
     bg.appendChild(box);
+    bg.addEventListener("click", function (e) { if (e.target === bg) closeSheet(bg); });
+    document.body.appendChild(bg);
+  }
+
+  // ---------- Get More Gigs course (paid guide) ----------
+  function gigsRecord() { try { var g = JSON.parse(localStorage.getItem(GIGS_KEY)); return (g && g.code) ? g : null; } catch (e) { return null; } }
+  function isGigsUnlocked() { return !!gigsRecord(); }
+  function setGigsUnlocked(code, email) { try { localStorage.setItem(GIGS_KEY, JSON.stringify({ code: code || "", email: email || "", at: Date.now() })); } catch (e) {} }
+  var GIGS_INTRO = "From a working musician who has played 500+ gigs in the last 24 months \u2014 a proven, step-by-step system to book a minimum of 50 extra gigs every year. Follow it in order, do every step, and the bookings follow.";
+  var GIGS_STEPS = [
+    { t: "Step 1 \u2014 Business cards (the foundation)", d: "Every gig starts with a card. People forget names and faces within a day \u2014 a card is the physical reminder that turns a good conversation into a booking. Print 500 (about \u00a320), and put them everywhere: guitar case, wallet, car, pocket. Your card needs your name, phone, WhatsApp, socials and a booking link, with a photo of you holding your instrument. Never leave home without them." },
+    { t: "Step 2 \u2014 Work the open mic nights", d: "Find every open mic within reach \u2014 check venue posters, Facebook groups and local listings. Go to play, but also to network. Announce that you're a musician looking for gigs, hand out your cards, ask people's names and get their numbers. This is where you build your confidence for the real gigs and build your local name at the same time." },
+    { t: "Step 3 \u2014 Showreel, then visit every venue within 10 miles", d: "Film short clips at open mics \u2014 your phone is fine, 30\u201360 seconds each with decent light and sound \u2014 and cut them into a 60\u201390 second showreel. Put it on YouTube and keep it WhatsApp-ready, because this is your opening message to any venue. Then take those business cards and spend a week going round every venue within 10 miles, in person, during quiet hours (mid-afternoon), ask for the manager, and leave a card plus your showreel link. It pays off \u2014 in person beats email every single time." },
+    { t: "Step 4 \u2014 Social media and local music groups", d: "Post your clips, join music groups in your area and be active \u2014 comment, support, share. Then go and watch other musicians' gigs. Watch what they play, how they hold a crowd, what they charge, how they finish a night. Learn from what works and what doesn't \u2014 it's free education." },
+    { t: "Step 5 \u2014 Study your network and undercut", d: "Remember all those people you networked with in step 2? Look at their pages. Find out what they charge and where they play. Then message the venues they play at and offer better value \u2014 undercut them by a sensible margin. Some people may think this is harsh, but this is just business. Don't badmouth anyone \u2014 just be the smarter, better-value option." },
+    { t: "Step 6 \u2014 Secure your first gig", d: "Within a few days of working the list, you should definitely secure your first gig. Get everything in writing \u2014 date, time, load-in, sound, fee and who pays \u2014 so there are no surprises on the night." },
+    { t: "Step 7 \u2014 Make the first gig your moment", d: "Treat it like the biggest show of your career. Arrive early, sound-check properly, look the part, play your best set. Before the gig, during the break and after the last song, hand your business cards to the audience. Be friendly. Be professional the whole time \u2014 every single person in that room is a potential booking." },
+    { t: "Step 8 \u2014 Lock in future dates", d: "Before you leave the venue, ask for another date and offer a multi-booking discount \u2014 book three gigs and one comes at a reduced rate. Venues love certainty and you love guaranteed income. One visit becomes three bookings." },
+    { t: "Step 9 \u2014 Enjoy the extra gigs", d: "Fifty-plus extra gigs a year is life-changing income and stage time. Keep the cycle going \u2014 cards, open mics, showreel, venues, socials \u2014 and it compounds. Repeat the system every season and watch the calendar fill." }
+  ];
+  function showGigsUnlock() {
+    var bg = document.createElement("div");
+    bg.className = "modal-bg pop";
+    var box = document.createElement("div");
+    box.className = "sheet";
+    box.style.cssText = "padding:16px;";
+    var h = document.createElement("h3"); h.textContent = "Unlock \u2014 Get More Gigs";
+    box.appendChild(h);
+    var note = document.createElement("div");
+    note.className = "notes";
+    note.textContent = "Paid via the buy button? Enter the email you paid with, or paste the code you were sent.";
+    box.appendChild(note);
+    var mail = document.createElement("input");
+    mail.type = "email"; mail.placeholder = "Email you paid with";
+    box.appendChild(mail);
+    var stat = document.createElement("div"); stat.className = "rec-note"; stat.style.marginTop = "6px";
+    box.appendChild(stat);
+    var wantType = "gigs";
+    var check = document.createElement("button");
+    check.type = "button"; check.className = "btn save"; check.textContent = "I've paid \u2014 get my code";
+    check.addEventListener("click", function () {
+      var em = mail.value.trim().toLowerCase();
+      if (!em) { stat.textContent = "Enter the email you paid with."; return; }
+      stat.textContent = "Checking\u2026";
+      dbGet(REQUESTS_DB_URL + "/orders.json").then(function (r) { return r.json(); }).then(function (d) {
+        var o = null;
+        if (d) for (var k in d) { if (d[k] && d[k].type === wantType && d[k].email && String(d[k].email).toLowerCase() === em && d[k].status === "approved" && d[k].code) { o = d[k]; break; } }
+        if (o) { setGigsUnlocked(o.code, em); closeSheet(bg); render(); flashNew("Get More Gigs unlocked!"); return; }
+        var hasPending = d && Object.keys(d).some(function (k) { return d[k] && d[k].type === wantType && d[k].email && String(d[k].email).toLowerCase() === em && d[k].status === "pending"; });
+        if (!hasPending) {
+          fetch(REQUESTS_DB_URL + "/orders.json", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: em, status: "pending", type: wantType, ts: Date.now() }) }).catch(function () {});
+        }
+        stat.textContent = "Payment not verified yet \u2014 checking every few seconds\u2026";
+        var tries = 0;
+        var poll = setInterval(function () {
+          tries++;
+          dbGet(REQUESTS_DB_URL + "/orders.json").then(function (r) { return r.json(); }).then(function (dd) {
+            if (!dd) return;
+            for (var kk in dd) {
+              var x = dd[kk];
+              if (x && x.type === wantType && x.email && String(x.email).toLowerCase() === em && x.status === "approved" && x.code) {
+                clearInterval(poll);
+                setGigsUnlocked(x.code, em); closeSheet(bg); render();
+                flashNew("Get More Gigs unlocked!");
+                return;
+              }
+            }
+            if (tries > 75) { clearInterval(poll); stat.textContent = "Still no approval \u2014 you can re-check here later."; }
+          }).catch(function () {});
+        }, 4000);
+      }).catch(function () { stat.textContent = "Couldn't check \u2014 make sure the database rules are published."; });
+    });
+    box.appendChild(check);
+    var code = document.createElement("input");
+    code.type = "text"; code.placeholder = "Or paste your code";
+    code.style.marginTop = "8px";
+    box.appendChild(code);
+    var unc = document.createElement("button");
+    unc.type = "button"; unc.className = "btn ug"; unc.textContent = "Unlock with code";
+    unc.style.marginTop = "6px";
+    unc.addEventListener("click", function () {
+      var c = code.value.trim().toUpperCase();
+      if (!c) { stat.textContent = "Type your code first."; return; }
+      if (GIGS_DEV_CODE && c === GIGS_DEV_CODE) { setGigsUnlocked("dev", ""); closeSheet(bg); render(); flashNew("Get More Gigs unlocked (developer code)."); return; }
+      dbGet(REQUESTS_DB_URL + "/orders.json").then(function (r) { return r.json(); }).then(function (d) {
+        var found = null;
+        if (d) for (var k in d) { if (d[k] && d[k].status === "approved" && d[k].code === c) { found = d[k]; break; } }
+        if (found && found.type === wantType) { setGigsUnlocked(c, found.email || ""); closeSheet(bg); render(); flashNew("Get More Gigs unlocked!"); }
+        else stat.textContent = "That code isn't valid for this course \u2014 check it and try again.";
+      }).catch(function () { stat.textContent = "Couldn't check the code \u2014 try again."; });
+    });
+    box.appendChild(unc);
+    var cl = document.createElement("button");
+    cl.type = "button"; cl.className = "btn del"; cl.textContent = "Close"; cl.style.marginTop = "8px";
+    cl.addEventListener("click", function () { closeSheet(bg); });
+    box.appendChild(cl);
+    bg.appendChild(box);
+    bg.addEventListener("click", function (e) { if (e.target === bg) closeSheet(bg); });
+    document.body.appendChild(bg);
+  }
+  function openGigsGuide() {
+    var bg = document.createElement("div");
+    bg.className = "modal-bg";
+    var sheet = document.createElement("div");
+    sheet.className = "sheet";
+    sheet.style.cssText = "max-width:480px;";
+    var h = document.createElement("h3"); h.textContent = "Get More Gigs \u2014 the 9-step system";
+    sheet.appendChild(h);
+    var intro = document.createElement("div");
+    intro.className = "purpose";
+    intro.style.cssText = "line-height:1.6;margin:8px 0 4px;";
+    intro.textContent = GIGS_INTRO;
+    sheet.appendChild(intro);
+    GIGS_STEPS.forEach(function (st) {
+      var sec = document.createElement("div");
+      sec.style.cssText = "margin:14px 0;";
+      var t = document.createElement("div");
+      t.style.cssText = "font-weight:700;color:#1f6feb;font-size:15px;";
+      t.textContent = st.t;
+      var d = document.createElement("div");
+      d.className = "purpose";
+      d.style.cssText = "line-height:1.6;margin-top:3px;";
+      d.textContent = st.d;
+      sec.appendChild(t); sec.appendChild(d);
+      sheet.appendChild(sec);
+    });
+    var close = document.createElement("button");
+    close.type = "button"; close.className = "btn save"; close.textContent = "Close";
+    close.addEventListener("click", function () { closeSheet(bg); });
+    sheet.appendChild(close);
+    bg.appendChild(sheet);
     bg.addEventListener("click", function (e) { if (e.target === bg) closeSheet(bg); });
     document.body.appendChild(bg);
   }
