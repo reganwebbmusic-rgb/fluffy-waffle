@@ -1,6 +1,6 @@
 {
-  "name": "Setlist Builder — Gig Toolkit",
-  "short_name": "Setlists",
+  "name": "TOOLGIG — Gig Toolkit",
+  "short_name": "TOOLGIG",
   "description": "Gig setlist builder with chords, lyrics and play mode for gigging musicians.",
   "start_url": "./setlist-builder.html",
   "scope": "./",

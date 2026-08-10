@@ -12,7 +12,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<title>Setlist Builder — The Gigging Musician's Toolkit</title>
+<title>TOOLGIG — The Gigging Musician's Toolkit</title>
 <style>
   * { box-sizing: border-box; }
   body {
@@ -250,6 +250,29 @@
     .wrap { max-width: none; padding: 0; }
     .card { box-shadow: none; border: 1px solid #ccc; break-inside: avoid; }
   }
+
+  /* TOOLGIG refresh — modern, easy on the eye */
+  body { background: linear-gradient(180deg, #f2f6fa 0%, #e9f0f6 100%); background-attachment: fixed; }
+  header h1 { font-size: 30px; letter-spacing: 2.5px; font-weight: 800; }
+  .tabs { background: #e3ebf3; border-radius: 16px; padding: 4px; gap: 4px; }
+  .tab { border: 0; background: transparent; border-radius: 12px; font-weight: 600; }
+  .tab.active { background: #4da3ff; color: #0f1a24; box-shadow: 0 2px 6px rgba(77,163,255,.35); }
+  section.card { box-shadow: 0 4px 14px rgba(20,30,45,.08); }
+  .btn, .tab { transition: transform .08s ease, box-shadow .15s ease; }
+  .btn:active, .tab:active { transform: scale(.97); }
+  .tab.tab-new { background: #f0c987; color: #0f1a24; font-weight: 700; box-shadow: 0 2px 6px rgba(240,201,135,.45); }
+  .req-count { display: inline-block; background: #fff; color: #0f1a24; border-radius: 10px; font-size: 11px; font-weight: 700; padding: 1px 6px; margin-left: 5px; vertical-align: middle; }
+  #tutOverlay { display: none; position: fixed; inset: 0; z-index: 60; background: rgba(10,16,24,.86); align-items: center; justify-content: center; padding: 20px; }
+  #tutOverlay .tut-card { background: #fff; color: #1c2733; border-radius: 18px; max-width: 420px; width: 100%; padding: 24px; box-shadow: 0 10px 40px rgba(0,0,0,.4); }
+  #tutOverlay h1 { font-size: 24px; margin: 0 0 4px; letter-spacing: 1.5px; }
+  #tutOverlay .tut-sub { color: #5c6b7a; font-size: 14px; margin: 0 0 16px; }
+  #tutOverlay .tut-item { margin: 12px 0; text-align: left; }
+  #tutOverlay .tut-item b { color: #1c2733; }
+  #tutOverlay .tut-item span { color: #41505e; font-size: 14px; line-height: 1.5; }
+  #tutOverlay .tut-btns { display: flex; gap: 10px; margin-top: 18px; }
+  #tutOverlay button { flex: 1; padding: 13px; border: 0; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  #tutOverlay .btn-primary { background: #4da3ff; color: #0f1a24; }
+  #tutOverlay .btn-ghost { background: #eef3f8; color: #41505e; }
 </style>
 </head>
 <body>
@@ -275,7 +298,7 @@
 </div>
 <div class="wrap">
   <header>
-    <h1>Setlist Builder</h1>
+    <h1>TOOLGIG</h1>
     <p id="catCount">30-song pool · 4 × 45-min sets · 2,341-song catalog</p>
     <div id="authBar"></div>
   </header>
@@ -295,7 +318,7 @@
   <div class="tabs">
     <button class="tab active" id="tabSongs" type="button">Songs</button>
     <button class="tab" id="tabSets" type="button">Sets</button>
-    <button class="tab" id="tabRequests" type="button">Requests</button>
+    <button class="tab" id="tabRequests" type="button">Requests<span id="reqCount" class="req-count" style="display:none"></span></button>
     <button class="tab" id="tabTools" type="button">Tools</button>
   </div>
 
@@ -305,6 +328,21 @@
     <input type="file" id="importFile" accept="application/json,.json" style="display:none">
     <p class="note">Everything is saved on this device — close the page and it's still there.</p>
   </footer>
+
+  <div id="tutOverlay">
+    <div class="tut-card">
+      <h1>Welcome to TOOLGIG</h1>
+      <p class="tut-sub">Your whole gig, in one app. 60-second tour:</p>
+      <div class="tut-item"><div><b>Songs</b><br><span>Add from 12,000+ songs, search, get suggestions</span></div></div>
+      <div class="tut-item"><div><b>Sets</b><br><span>Build 45-min sets, auto-fill, play mode with count-in</span></div></div>
+      <div class="tut-item"><div><b>Requests</b><br><span>Live song requests from your audience (yours only)</span></div></div>
+      <div class="tut-item"><div><b>Tools</b><br><span>Tuner, tip jar, stage sign QR, backup, Pro unlock</span></div></div>
+      <div class="tut-btns">
+        <button type="button" class="btn-primary" id="tutGot">Got it</button>
+        <button type="button" class="btn-ghost" id="tutSkip">Skip</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script src="firebase-config.js"></script>
@@ -3030,6 +3068,7 @@
   });
 
   var seenReqs = {};
+  var reqReadAt = 0; // timestamp of when the Requests tab was last opened (for the yellow badge)
   try { seenReqs = JSON.parse(localStorage.getItem("seenReqs")) || {}; } catch (e) {}
   var activePopup = null;
   var popupBg = null;
@@ -4386,12 +4425,28 @@
       }
     }
     if (hadNew && s.tab === "requests") flashNew();
+    updateReqBadge();
+  }
+
+  // yellow unread indicator on the Requests tab (clears when you open it)
+  function updateReqBadge() {
+    var btn = document.getElementById("tabRequests");
+    var cnt = document.getElementById("reqCount");
+    if (!btn) return;
+    var unseen = 0;
+    (requestsData || []).forEach(function (r) {
+      if (r && r.status !== "declined" && (r.ts || 0) > reqReadAt) unseen++;
+    });
+    var show = unseen > 0 && s.tab !== "requests";
+    btn.classList.toggle("tab-new", show);
+    if (cnt) { cnt.style.display = show ? "inline-block" : "none"; cnt.textContent = unseen > 9 ? "9+" : String(unseen); }
   }
 
   function loadRequests() {
     if (!HOSTED) { renderRequests(); return; }
-    if (!me) {
-      reqNote = "Sign in to receive live requests.";
+    // privacy: each musician only ever sees their OWN requests — no shared inbox
+    if (!cloudOn()) {
+      reqNote = "Sign in to receive your own live requests \u2014 you'll never see other musicians'.";
       if (s.tab === "requests") renderRequests();
       return;
     }
@@ -4406,8 +4461,9 @@
   }
 
   function loadRequestsFirebase() {
-    var url = cloudOn() ? userPath() + "/requests.json" : REQUESTS_DB_URL + "/requests.json";
-    var doFetch = function (u) {
+    // only ever the signed-in musician's own inbox — never the shared node
+    var url = userPath() + "/requests.json";
+    authed(url).then(function (u) {
       return fetch(u).then(function (r) { return r.json(); }).then(function (obj) {
         var list = [];
         if (obj && typeof obj === "object") {
@@ -4418,13 +4474,11 @@
         }
         list.sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
         processRequests(list);
-      }).catch(function () {
-        reqNote = "Can't reach the request database. Check REQUESTS_DB_URL is set to your Firebase URL.";
-        if (s.tab === "requests") renderRequests();
       });
-    };
-    if (cloudOn()) authed(url).then(doFetch);
-    else doFetch(url);
+    }).catch(function () {
+      reqNote = "Can't reach the request database. Check REQUESTS_DB_URL is set to your Firebase URL.";
+      if (s.tab === "requests") renderRequests();
+    });
   }
 
   function setlistNames() {
@@ -4574,34 +4628,43 @@
     } catch (e) {}
   }
   function showStageSign() {
-    var w = window.open("", "_blank");
-    if (!w || !w.document) return;
+    // In-app overlay (no popup window — popups get closed/blocked on phones,
+    // which is why the QR used to vanish). Stays open until dismissed.
     var pageUrl = myRequestsUrl();
     var tip = effTipLink();
-    var d = w.document;
-    d.title = "Scan to request a song";
-    var style = d.createElement("style");
-    style.textContent = "body{font-family:Arial,sans-serif;text-align:center;padding:40px;color:#1c2733;}h1{font-size:64px;margin:20px 0;}p{font-size:32px;color:#5c6b7a;margin:14px 0;}img{width:420px;margin:10px;}hr{border:0;border-top:2px solid #dde6ee;margin:30px 0;}sub{font-size:24px;color:#8a97a5;}";
-    d.head.appendChild(style);
-    function el(tag, text) {
-      var n = d.createElement(tag);
-      if (text) n.textContent = text; // never innerHTML — stage name is user input
-      d.body.appendChild(n);
-      return n;
-    }
-    el("h1", stageLabel());
-    el("p", "Scan to request a song");
-    var qr = d.createElement("img");
+    var bg = document.createElement("div");
+    bg.className = "modal-bg";
+    var sheet = document.createElement("div");
+    sheet.className = "sheet sign-sheet";
+    sheet.style.cssText = "max-width:420px;text-align:center;";
+    var h1 = document.createElement("h1");
+    h1.textContent = stageLabel();
+    var p = document.createElement("p");
+    p.textContent = "Scan to request a song";
+    var qr = document.createElement("img");
+    qr.style.cssText = "width:min(70vw,280px);margin:10px auto;display:block;";
     qr.src = "https://api.qrserver.com/v1/create-qr-code/?size=420x420&data=" + encodeURIComponent(pageUrl);
-    d.body.appendChild(qr);
+    sheet.appendChild(h1); sheet.appendChild(p); sheet.appendChild(qr);
     if (tip) {
-      d.body.appendChild(d.createElement("hr"));
-      el("p", "Loved it? Tip the band");
-      var tipQr = d.createElement("img");
+      var hr = document.createElement("hr");
+      hr.style.cssText = "border:0;border-top:2px solid #dde6ee;margin:22px 0;";
+      var p2 = document.createElement("p");
+      p2.textContent = "Loved it? Tip the band";
+      var tipQr = document.createElement("img");
+      tipQr.style.cssText = "width:min(70vw,280px);margin:10px auto;display:block;";
       tipQr.src = "https://api.qrserver.com/v1/create-qr-code/?size=420x420&data=" + encodeURIComponent(tip);
-      d.body.appendChild(tipQr);
+      sheet.appendChild(hr); sheet.appendChild(p2); sheet.appendChild(tipQr);
     }
-    el("sub", pageUrl);
+    var sub = document.createElement("div");
+    sub.className = "sub";
+    sub.style.cssText = "word-break:break-all;margin-top:12px;";
+    sub.textContent = pageUrl;
+    var close = mkBtn("Close", function () { bg.style.display = "none"; });
+    close.style.cssText = "margin-top:16px;width:100%;";
+    sheet.appendChild(sub); sheet.appendChild(close);
+    bg.appendChild(sheet);
+    bg.addEventListener("click", function (e) { if (e.target === bg) bg.style.display = "none"; });
+    document.body.appendChild(bg);
   }
 
   function doClearRequests() {
@@ -5716,6 +5779,7 @@
         document.getElementById(t[0]).classList.toggle("active", t[1] === name);
       });
       if (name === "requests") {
+        reqReadAt = Date.now(); // mark everything seen — clears the yellow badge
         loadRequests();
       }
     });
@@ -5731,7 +5795,7 @@
     if (typeof Blob !== "undefined" && typeof URL !== "undefined" && URL.createObjectURL) {
       var a = document.createElement("a");
       a.href = URL.createObjectURL(new Blob([txt], { type: "application/json" }));
-      a.download = "setlist-backup-" + new Date().toISOString().slice(0, 10) + ".json";
+      a.download = "toolgig-backup-" + new Date().toISOString().slice(0, 10) + ".json";
       document.body.appendChild(a);
       a.click();
       setTimeout(function () { try { URL.revokeObjectURL(a.href); } catch (e) {} }, 2000);
@@ -5833,6 +5897,18 @@
     }
   });
   startReqPolling();
+
+  // first-launch tutorial (dismissed permanently with Got it / Skip)
+  var tutOv = document.getElementById("tutOverlay");
+  function hideTut() { try { localStorage.setItem("sb2tut", "1"); } catch (e) {} if (tutOv) tutOv.style.display = "none"; }
+  var tutSeen = false;
+  try { tutSeen = localStorage.getItem("sb2tut") === "1"; } catch (e) {}
+  if (tutOv && !tutSeen) {
+    tutOv.style.display = "flex";
+    var tg = document.getElementById("tutGot"), ts3 = document.getElementById("tutSkip");
+    if (tg) tg.addEventListener("click", hideTut);
+    if (ts3) ts3.addEventListener("click", hideTut);
+  }
 })();
 </script>
 <script>
