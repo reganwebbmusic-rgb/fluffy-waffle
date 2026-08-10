@@ -420,10 +420,14 @@
   // account then counts as Pro automatically (needed to approve sales). Leave ""
   // until you've set it.
   var SELLER_UID = "Vw7HD41oxoSCpPUDnl5i825QZ3K2";
-  // Referral incentive: refer REF_GOAL friends (who sign in) and Pro unlocks for
-  // free. REF_PRO_ME is cached per session after refreshReferralStatus().
+  // Referral incentive: 3 referrals = Pro, 6 = Unlimited, 10 = all Gig Packs.
+  // Flags are cached per session after refreshReferralStatus().
   var REF_GOAL = 3;
+  var REF_UNLIM_GOAL = 6;
+  var REF_PACK_GOAL = 10;
   var REF_PRO_ME = false;
+  var REF_UNLIM_ME = false;
+  var REF_PACK_ME = false;
   var PRO_KEY = "sb2pro";
   var UL_KEY = "sb2ul";
   // Gig Packs: ready-made setlists sold through the same PayPal + Firebase order
@@ -451,7 +455,7 @@
   function setPro(code, email) { try { localStorage.setItem(PRO_KEY, JSON.stringify({ code: code, email: email || "", at: Date.now() })); } catch (e) {} }
   function clearPro() { try { localStorage.removeItem(PRO_KEY); } catch (e) {} }
   function ulRecord() { try { var p = JSON.parse(localStorage.getItem(UL_KEY)); return p && p.code ? p : null; } catch (e) { return null; } }
-  function isUnlimited() { return !!ulRecord(); }
+  function isUnlimited() { return !!ulRecord() || REF_UNLIM_ME; }
   function setUnlimited(code, email) { try { localStorage.setItem(UL_KEY, JSON.stringify({ code: code, email: email || "", at: Date.now() })); } catch (e) {} }
   function clearUnlimited() { try { localStorage.removeItem(UL_KEY); } catch (e) {} }
   function poolSize() { return isUnlimited() ? UNLIMITED_POOL : (isPro() ? PRO_POOL : POOL); }
@@ -3174,13 +3178,16 @@
     return n;
   }
   function refreshReferralStatus() {
-    if (!me || !me.uid || me.uid === "local") { REF_PRO_ME = false; return; }
+    if (!me || !me.uid || me.uid === "local") { REF_PRO_ME = false; REF_UNLIM_ME = false; REF_PACK_ME = false; return; }
     Promise.all([
       dbGet(REQUESTS_DB_URL + "/refs/" + encodeURIComponent(me.uid) + ".json").then(function (r) { return r.json(); }).catch(function () { return null; }),
       dbGet(REQUESTS_DB_URL + "/users/" + encodeURIComponent(me.uid) + ".json").then(function (r) { return r.json(); }).catch(function () { return null; })
     ]).then(function (both) {
       var n = referralCount(both[0]);
-      REF_PRO_ME = (n >= REF_GOAL) || !!(both[1] && both[1].rewards && both[1].rewards.pro);
+      var rw = (both[1] && both[1].rewards) || {};
+      REF_PRO_ME = (n >= REF_GOAL) || !!rw.pro;
+      REF_UNLIM_ME = (n >= REF_UNLIM_GOAL) || !!rw.unlim;
+      REF_PACK_ME = (n >= REF_PACK_GOAL) || !!rw.packs;
       renderAuthBar();
     });
   }
@@ -7202,12 +7209,12 @@
       inv.className = "card";
       inv.style.padding = "16px";
       var ivh = document.createElement("h3");
-      ivh.textContent = "Invite friends \u2014 get Pro free";
+      ivh.textContent = "Invite friends \u2014 earn rewards";
       ivh.style.background = "none"; ivh.style.padding = "0 0 6px"; ivh.style.border = "0";
       inv.appendChild(ivh);
       var ivp = document.createElement("div");
       ivp.className = "purpose";
-      ivp.textContent = "Share your invite link \u2014 when " + REF_GOAL + " friends sign in, Pro unlocks for you automatically (and the owner can grant it too).";
+      ivp.textContent = "Share your invite link \u2014 " + REF_GOAL + " friends = Pro free, " + REF_UNLIM_GOAL + " = Unlimited, " + REF_PACK_GOAL + " = all Gig Packs unlocked.";
       inv.appendChild(ivp);
       var ivLink = document.createElement("input");
       ivLink.type = "text"; ivLink.readOnly = true;
@@ -7222,17 +7229,65 @@
       var ivStat = document.createElement("div");
       ivStat.className = "rec-note";
       ivStat.style.marginTop = "8px";
-      ivStat.textContent = REF_PRO_ME ? "Pro unlocked via referrals \u2014 nice!" : "Checking your referrals\u2026";
+      var tierLine = function (n) {
+        if (n >= REF_PACK_GOAL) return "All Gig Packs unlocked via referrals \u2014 legend!";
+        if (n >= REF_UNLIM_GOAL) return "Unlimited unlocked via referrals \u2014 " + n + "/" + REF_PACK_GOAL + " to all Gig Packs.";
+        if (n >= REF_GOAL) return "Pro unlocked via referrals \u2014 " + n + "/" + REF_UNLIM_GOAL + " to Unlimited.";
+        return "Referrals: " + n + " of " + REF_GOAL + " joined (Pro) \u00b7 " + REF_UNLIM_GOAL + " (Unlimited) \u00b7 " + REF_PACK_GOAL + " (Gig Packs).";
+      };
+      ivStat.textContent = (REF_PRO_ME || REF_UNLIM_ME || REF_PACK_ME) ? tierLine(99) : "Checking your referrals\u2026";
       inv.appendChild(ivStat);
       listEl.appendChild(inv);
       dbGet(REQUESTS_DB_URL + "/refs/" + encodeURIComponent(me.uid) + ".json")
         .then(function (r) { return r.json(); })
         .then(function (m) {
           var n = referralCount(m);
-          ivStat.textContent = n >= REF_GOAL ? "Pro unlocked via referrals \u2014 nice!" : "Referrals: " + n + " of " + REF_GOAL + " joined.";
-          if (n >= REF_GOAL && !REF_PRO_ME) { REF_PRO_ME = true; renderAuthBar(); }
+          ivStat.textContent = tierLine(n);
+          var before = REF_PRO_ME || REF_UNLIM_ME || REF_PACK_ME;
+          REF_PRO_ME = (n >= REF_GOAL) || REF_PRO_ME;
+          REF_UNLIM_ME = (n >= REF_UNLIM_GOAL) || REF_UNLIM_ME;
+          REF_PACK_ME = (n >= REF_PACK_GOAL) || REF_PACK_ME;
+          if (!before && (REF_PRO_ME || REF_UNLIM_ME || REF_PACK_ME)) renderAuthBar();
         }).catch(function () { ivStat.textContent = "Couldn't check referrals right now."; });
     }
+
+    // Referral leaderboard (everyone can see who's bringing musicians in)
+    var lb = document.createElement("section");
+    lb.className = "card";
+    lb.style.padding = "16px";
+    var lbh = document.createElement("h3");
+    lbh.textContent = "Referral leaderboard \u2014 this month";
+    lbh.style.background = "none"; lbh.style.padding = "0 0 6px"; lbh.style.border = "0";
+    lb.appendChild(lbh);
+    var lbp = document.createElement("div"); lbp.className = "purpose";
+    lbp.textContent = "The top inviters this month \u2014 bring musicians in and climb the board.";
+    lb.appendChild(lbp);
+    var lbList = document.createElement("div");
+    lbList.style.marginTop = "8px";
+    lbList.textContent = "Loading\u2026";
+    lb.appendChild(lbList);
+    listEl.appendChild(lb);
+    dbGet(REQUESTS_DB_URL + "/users.json").then(function (r) { return r.json(); }).then(function (users) {
+      var now = Date.now(), day = 86400000;
+      var byRef = {};
+      if (users) for (var k in users) {
+        var u = users[k];
+        if (u && u.referredBy && u.joinedAt && u.joinedAt >= now - 30 * day) byRef[u.referredBy] = (byRef[u.referredBy] || 0) + 1;
+      }
+      var top = Object.keys(byRef).map(function (id) { return { id: id, n: byRef[id] }; }).sort(function (a, b) { return b.n - a.n; }).slice(0, 5);
+      lbList.innerHTML = "";
+      if (!top.length) { lbList.textContent = "No referrals this month yet \u2014 be the first to share your link."; return; }
+      top.forEach(function (t2, i2) {
+        var r2 = document.createElement("div");
+        r2.className = "req-row";
+        var a2 = document.createElement("div"); a2.style.cssText = "flex:1;";
+        a2.textContent = "#" + (i2 + 1) + " \u00b7 Inviter " + t2.id.slice(0, 6);
+        var b2 = document.createElement("div"); b2.style.cssText = "font-weight:700;";
+        b2.textContent = t2.n + " referral" + (t2.n === 1 ? "" : "s");
+        r2.appendChild(a2); r2.appendChild(b2);
+        lbList.appendChild(r2);
+      });
+    }).catch(function () { lbList.textContent = "Couldn't load the board right now."; });
 
     var tun = document.createElement("section");
     tun.className = "card";
@@ -7911,7 +7966,7 @@
   var PACKS_WAIT = [];
   var PACK_VIEW = null;      // {id} when a pack detail is open
   function packRecord() { try { var p = JSON.parse(localStorage.getItem(PACKS_KEY)); return (p && p.unlocked) ? p : null; } catch (e) { return null; } }
-  function isPackUnlocked(id) { var r = packRecord(); return !!(r && r.unlocked && r.unlocked[id]); }
+  function isPackUnlocked(id) { if (REF_PACK_ME) return true; var r = packRecord(); return !!(r && r.unlocked && r.unlocked[id]); }
   function setPackUnlocked(id, code, email) {
     var r = packRecord() || { unlocked: {} };
     r.unlocked[id] = { code: code || "", email: email || "", at: Date.now() };
@@ -8260,7 +8315,7 @@
       top.forEach(function (t2) {
         var u3 = users[t2.id];
         var email = (u3 && u3.email) || "";
-        rSec.appendChild(adminRow((email || "unknown") + " (uid " + t2.id + ")", t2.n + " of " + REF_GOAL + " for free Pro"));
+        rSec.appendChild(adminRow((email || "unknown") + " (uid " + t2.id + ")", t2.n + " refs \u00b7 Pro@" + REF_GOAL + " \u00b7 Unlimited@" + REF_UNLIM_GOAL + " \u00b7 Packs@" + REF_PACK_GOAL));
       });
       listEl.appendChild(rSec);
       // recent signups
@@ -8279,9 +8334,9 @@
       });
       listEl.appendChild(rec);
       // grant pro
-      var g = adminSection("Grant Pro (manual reward)");
+      var g = adminSection("Grant rewards (manual)");
       var gp = document.createElement("div"); gp.className = "purpose";
-      gp.textContent = "Enter a user's email to give them Pro instantly \u2014 for referrals you want to reward, or as a gift.";
+      gp.textContent = "Enter a user's email to give them Pro, Unlimited or all Gig Packs instantly \u2014 for referrals you want to reward, or as a gift.";
       g.appendChild(gp);
       var gIn = document.createElement("input");
       gIn.type = "email"; gIn.placeholder = "user@email.com";
@@ -8289,24 +8344,27 @@
       g.appendChild(gIn);
       var gMsg = document.createElement("div"); gMsg.className = "rec-note"; gMsg.style.marginTop = "6px";
       g.appendChild(gMsg);
-      var gBtn = document.createElement("button");
-      gBtn.type = "button"; gBtn.className = "btn save"; gBtn.textContent = "Grant Pro";
-      gBtn.style.marginTop = "8px";
-      gBtn.addEventListener("click", function () {
-        var em = gIn.value.trim().toLowerCase();
-        if (!em) { gMsg.textContent = "Enter an email first."; return; }
-        var uid = null;
-        for (var k3 in users) { if (users[k3] && users[k3].email && String(users[k3].email).toLowerCase() === em) { uid = k3; break; } }
-        if (!uid) { gMsg.textContent = "No account found with that email."; return; }
-        var target = users[uid];
-        target.rewards = target.rewards || {};
-        target.rewards.pro = true;
-        authed(REQUESTS_DB_URL + "/users/" + encodeURIComponent(uid) + ".json").then(function (url) {
-          return fetch(url, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(target) });
-        }).then(function () { gMsg.textContent = "Pro granted to " + em + " \u2014 they get it on next sign-in."; })
-          .catch(function () { gMsg.textContent = "Couldn't save \u2014 check database rules."; });
+      [["Grant Pro", "pro"], ["Grant Unlimited", "unlim"], ["Grant Gig Packs", "packs"]].forEach(function (pair) {
+        var gBtn = document.createElement("button");
+        gBtn.type = "button"; gBtn.className = "btn " + (pair[1] === "pro" ? "save" : "ug");
+        gBtn.textContent = pair[0];
+        gBtn.style.margin = "8px 8px 0 0";
+        gBtn.addEventListener("click", function () {
+          var em = gIn.value.trim().toLowerCase();
+          if (!em) { gMsg.textContent = "Enter an email first."; return; }
+          var uid = null;
+          for (var k3 in users) { if (users[k3] && users[k3].email && String(users[k3].email).toLowerCase() === em) { uid = k3; break; } }
+          if (!uid) { gMsg.textContent = "No account found with that email."; return; }
+          var target = users[uid];
+          target.rewards = target.rewards || {};
+          target.rewards[pair[1]] = true;
+          authed(REQUESTS_DB_URL + "/users/" + encodeURIComponent(uid) + ".json").then(function (url) {
+            return fetch(url, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(target) });
+          }).then(function () { gMsg.textContent = pair[0] + " granted to " + em + " \u2014 they get it on next sign-in."; })
+            .catch(function () { gMsg.textContent = "Couldn't save \u2014 check database rules."; });
+        });
+        g.appendChild(gBtn);
       });
-      g.appendChild(gBtn);
       listEl.appendChild(g);
     }).catch(function () {
       var e = document.createElement("div"); e.className = "notes";
