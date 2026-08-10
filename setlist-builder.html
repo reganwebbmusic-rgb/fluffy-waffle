@@ -83,10 +83,11 @@
     background: #fff; border: 1px solid #c8d3dd; border-radius: 10px;
     box-shadow: 0 6px 18px rgba(20,30,45,.14); max-height: 260px; overflow-y: auto;
   }
+  .suggest { max-height: 42vh; overflow-y: auto; }
   .s-item {
     display: flex; justify-content: space-between; align-items: center; gap: 8px;
     width: 100%; text-align: left; background: none; border: 0;
-    padding: 10px 12px; font-size: 15px; font-family: inherit; color: #1c2733;
+    padding: 13px 14px; font-size: 15px; font-family: inherit; color: #1c2733;
     border-bottom: 1px solid #edf1f5; cursor: pointer;
   }
   .s-item:last-child { border-bottom: 0; }
@@ -3304,10 +3305,12 @@
         var btnRow = document.createElement("div");
         btnRow.className = "slot-pick";
         var addB = mkBtn("Add to pool", function () {
-          if (addCatalogToPool(r.title, r.artist, r.key, r.bpm)) {
-            poolRecs = [];
-            ugResults = [];
-            render();
+          if (addSongNoRender(r.title, r.artist, r.key, r.bpm)) {
+            addB.textContent = "Added \u2713";
+            addB.disabled = true;
+            addB.style.opacity = ".55";
+            updatePoolCount();
+            flashNew("\u201c" + r.title + "\u201d added \u2014 tap more to keep adding, no scrolling.");
           }
         });
         btnRow.appendChild(addB);
@@ -3336,15 +3339,34 @@
       var btnRow = document.createElement("div");
       btnRow.className = "slot-pick";
       var addB = mkBtn("Add to pool", function () {
-        if (addCatalogToPool(r.title, r.artist, r.key || "", r.bpm || "")) {
-          ugResults = [];
-          render();
+        if (addSongNoRender(r.title, r.artist, r.key || "", r.bpm || "")) {
+          addB.textContent = "Added \u2713";
+          addB.disabled = true;
+          addB.style.opacity = ".55";
+          updatePoolCount();
         }
       });
       btnRow.appendChild(addB);
       sec.appendChild(btnRow);
       listEl.appendChild(sec);
     });
+  }
+
+  // add a song without re-rendering — lets you tap through several suggestions
+  function addSongNoRender(title, artist, key, bpm) {
+    var idx = -1;
+    for (var i = 0; i < poolSize(); i++) if (!s.songs[i].name) { idx = i; break; }
+    if (idx < 0) { flashNew("Pool is full \u2014 that's a Pro perk to grow it.", "fit-low"); return false; }
+    var dup = s.songs.some(function (x) { return x.name && x.name.toLowerCase() === String(title).toLowerCase(); });
+    if (dup) { flashNew("\u201c" + title + "\u201d is already in your pool."); return false; }
+    s.songs[idx] = { name: title, artist: artist || "", key: key || "", capo: "", bpm: bpm || "", energy: 3, note: "", trans: "", status: "Ready", len: "" };
+    save();
+    return true;
+  }
+  function updatePoolCount() {
+    var filled = filledSongs();
+    if (poolCountEl) poolCountEl.textContent = filled.length;
+    if (barEl) barEl.style.width = (filled.length / poolSize() * 100) + "%";
   }
 
   function emptySongByIdx() {
@@ -3532,6 +3554,11 @@
       e.textContent = "No matches — keep typing, or tap Save to add it as-is";
       sug.appendChild(e);
     } else {
+      var hint = document.createElement("div");
+      hint.className = "s-empty";
+      hint.style.cssText = "font-size:12px;padding:8px 12px;color:#8a97a5;border-bottom:1px solid #edf1f5;";
+      hint.textContent = "Tap a match to fill the song — " + (CATALOG.length) + " songs";
+      sug.appendChild(hint);
       res.forEach(function (r) {
         var b = document.createElement("button");
         b.type = "button";
@@ -4427,9 +4454,10 @@
       if (rr && rr.id && rr.song && !tracked[rr.id]) { tracked[rr.id] = 1; trackRequest(rr); anyTracked = true; }
     }
     if (anyTracked) try { localStorage.setItem("trackedReqs", JSON.stringify(tracked)); } catch (e) {}
-    if (s.tab === "requests") renderRequests();
-    // real-time pop-up for unseen, unhandled requests (one at a time)
-    if (!activePopup) {
+    if (s.tab === "requests" && reqView === "list") renderRequests();
+    // real-time pop-up for unseen, unhandled requests (one at a time);
+    // not while the QR screen or any modal (sheet/stage sign/payment) is open
+    if (!activePopup && reqView !== "qr" && !(document.querySelector && document.querySelector(".modal-bg"))) {
       for (var i = 0; i < list.length; i++) {
         var r = list[i];
         if (!r || !r.id || r.status === "accepted" || r.status === "declined") continue;
@@ -4695,14 +4723,16 @@
 
   function patchRequest(id, body) {
     if (!REQUESTS_DB_URL) return Promise.resolve();
-    var base = cloudOn() ? userPath() : REQUESTS_DB_URL;
-    var url = base + "/requests/" + id + ".json";
-    if (!cloudOn()) {
-      return fetch(url, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch(function () {});
-    }
+    // always this device/account's own inbox (never a shared one)
+    var url = userPath() + "/requests/" + id + ".json";
     return authed(url).then(function (u) {
       return fetch(u, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    }).catch(function () {});
+    }).then(function (r) {
+      if (!r.ok) throw new Error("bad");
+      return r;
+    }).catch(function () {
+      flashNew("Action failed \u2014 try again, or sign in.", "fit-low");
+    });
   }
 
   function typeLabel(r) {
@@ -4832,7 +4862,6 @@
   }
 
   function handleRequest(id, status) {
-    if (!cloudOn()) { flashNew("Sign in to accept or decline requests.", "fit-low"); return; }
     var r = null;
     requestsData.forEach(function (x) { if (x && x.id === id) r = x; });
     if (r) seenReqs[id] = 1;
@@ -4990,12 +5019,7 @@
       sec.appendChild(head);
       var btnRow = document.createElement("div");
       btnRow.className = "req-actions";
-      if (!cloudOn()) {
-        var lock = document.createElement("div");
-        lock.className = "purpose";
-        lock.textContent = "Live view \u2014 sign in to accept, decline and send payment links.";
-        btnRow.appendChild(lock);
-      } else if (r.status === "paid") {
+      if (r.status === "paid") {
         var paidTxt = document.createElement("div");
         paidTxt.className = "purpose";
         paidTxt.textContent = "Paid \u2014 confirmed";

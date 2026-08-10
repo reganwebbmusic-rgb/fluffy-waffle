@@ -41,10 +41,19 @@
   <h1>Request a Song</h1>
   <p class="sub">It's free, but tipping is optional.</p>
   <div id="noBand" style="display:none;background:#243747;border:1px solid #3a4d5f;border-radius:12px;padding:14px;margin:10px 0;color:#9fb0c0;font-size:14px;">
-    This link needs the band's code in it — scan the QR code at the gig (or use the link from the band's app) to request songs.
+    This link is missing the band's code. Open the band's <b>TOOLGIG</b> app → <b>Requests → QR code</b> and scan it (or use that link) to request songs.
   </div>
   <div id="formWrap">
     <input id="song" placeholder="Song title *" autocomplete="off">
+    <div id="odds" style="display:none;margin:-4px 0 12px;text-align:left;">
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:#9fb0c0;margin-bottom:4px;">
+        <span id="oddsLabel">Chance we'll play it</span>
+        <span id="oddsPct" style="font-weight:700;color:#f0c987;">—</span>
+      </div>
+      <div style="height:6px;border-radius:4px;background:#3a4d5f;overflow:hidden;">
+        <div id="oddsBar" style="height:100%;width:0%;border-radius:4px;background:linear-gradient(90deg,#4da3ff,#f0c987);transition:width .3s ease;"></div>
+      </div>
+    </div>
     <input id="artist" placeholder="Artist (optional)" autocomplete="off">
     <input id="note" placeholder="Dedication? (optional)" autocomplete="off">
     <input id="email" type="email" placeholder="Email (for payment links)" autocomplete="email">
@@ -107,6 +116,46 @@
     if (nb) nb.style.display = "block";
     if (fw) fw.style.display = "none";
   }
+
+  // Band odds: a fun, stable estimate of the chance the band plays your song
+  // (based on the song, the artist field, and the queue — not a promise).
+  var oddsEl = document.getElementById("odds");
+  var oddsLabel = document.getElementById("oddsLabel");
+  var oddsPct = document.getElementById("oddsPct");
+  var oddsBar = document.getElementById("oddsBar");
+  var oddsTimer = null;
+  function bandOdds(song, artist) {
+    var s = String(song || "").trim().toLowerCase();
+    if (s.length < 2) return null;
+    var h = 0;
+    for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    var pct = 55 + (h % 31); // 55-85, stable per song
+    if (artist && String(artist).trim()) pct += 8;
+    if (s.length < 14) pct += 5; // punchy titles are singalong gold
+    var dup = queueSnapshot.some(function (q) { return q.song && q.song.toLowerCase() === s; });
+    if (dup) return { pct: 100, dup: true };
+    return { pct: Math.min(97, pct), dup: false };
+  }
+  function updateOdds() {
+    var song = document.getElementById("song").value;
+    var artist = document.getElementById("artist").value;
+    var o = bandOdds(song, artist);
+    if (!o || !oddsEl) { if (oddsEl) oddsEl.style.display = "none"; return; }
+    oddsEl.style.display = "block";
+    oddsPct.textContent = o.dup ? "already requested" : (o.pct + "%");
+    oddsLabel.textContent = o.dup ? "Already in the queue" : "Chance we'll play it";
+    oddsBar.style.width = (o.dup ? 100 : o.pct) + "%";
+  }
+  var songInp = document.getElementById("song");
+  if (songInp) songInp.addEventListener("input", function () {
+    clearTimeout(oddsTimer);
+    oddsTimer = setTimeout(updateOdds, 250);
+  });
+  var artistInp = document.getElementById("artist");
+  if (artistInp) artistInp.addEventListener("input", function () {
+    clearTimeout(oddsTimer);
+    oddsTimer = setTimeout(updateOdds, 250);
+  });
 
   // Live queue: songs already requested by the audience (public read).
   var queueSnapshot = [];

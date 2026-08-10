@@ -58,11 +58,12 @@ private data to themselves, and stop anonymous deletion of requests.
         ".read": "$uid === auth.uid",
         ".write": "$uid === auth.uid",
         "requests": {
-          // public queue: the audience sees songs already requested, and the
-          // musician's app reads its own inbox even before sign-in (device id).
-          // Create stays open (audience posts); edit/delete needs a musician.
+          // Public queue by design: the audience sees already-requested songs,
+          // and the musician accepts/declines straight from their own inbox —
+          // works before sign-in too (device inbox ids are unguessable random
+          // strings). Anyone with the ?m= id can edit — fine for pub gigs.
           ".read": true,
-          ".write": "auth != null || !data.exists()"
+          ".write": true
         },
         // "public" (the old name was public.json — dots aren't allowed in
         // rule keys, hence the rename): the audience request page reads this
