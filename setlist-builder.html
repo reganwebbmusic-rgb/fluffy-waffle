@@ -6685,18 +6685,24 @@
     return sec;
   }
   var TUT_SLIDES = [
-    { t: "TOOLGIG tour", d: "Four tabs: Songs (your pool), Sets (A & B), Requests (live from the audience) and Tools. Tap any card for details." },
-    { t: "Songs tab", d: "Search 12,000+ songs, add to your pool, get suggestions once you have a couple, and tap-tempo any song's BPM." },
-    { t: "Sets tab", d: "Auto-fill your 45-min sets by energy, play them with count-in and metronome, share to the community, or sync the whole band." },
-    { t: "Requests tab", d: "Live audience requests pop up in real time. Accept (adds to pool + up next), decline, or clear. QR code, stage sign and print sign for the venue." },
+    { t: "TOOLGIG tour", d: "Five tabs: Songs (your pool), Sets (A & B), Requests (live from the audience), Packs (ready-made setlists) and Tools. Tap any song anywhere and the chords & lyrics sheet opens from the built-in offline lyric book." },
+    { t: "Songs tab", d: "Search the 12,341-song catalog and add songs to your pool (30 free, 500 with Pro). Each song carries a key, BPM, capo, energy level and status \u2014 Learning, Ready or Retire. Tap-tempo the BPM by tapping along. Wishlist and Top 50 help you shortlist." },
+    { t: "Recommend", d: "Add two songs and the app recommends the best next picks from the whole catalog. It scores every song: +15 if the lyrics are ready to open, +10 if it's an artist you already play, +8 if your pool is missing high-energy songs or calm ones. Top 6 picks, with the reasons shown." },
+    { t: "Smart auto-fill", d: "The real brain: each 45-minute set block follows a pro gig shape \u2014 an energy curve with a purpose per slot (big opener, singalong banger, let-the-room-breathe, dance block, closer). Auto-fill reads each slot's target energy and purpose, then scores every unused pool song: right energy = 300 points, one step away = 150, two steps = 0; +10 if Ready, \u221230 if still Learning; a penalty for energy mismatch. It never overwrites a song you picked manually and never repeats one." },
+    { t: "Fast, mid or slow", d: "The energy engine works out each song's kind from its BPM \u2014 fast at 120+, mid 95\u2013119, slow below \u2014 falls back to your energy slider (1\u20135), and always honours a manual Type override in the song editor. Slot purposes nudge it too: \u201cbanger\u201d or \u201cdance\u201d pushes a slot fast, \u201cballad\u201d or \u201cdinner\u201d pulls it slow." },
+    { t: "Arrange & fine-tune", d: "Run Auto on a set block, then swap songs, adjust slot lengths and re-run Arrange any time \u2014 the 45-minute template adds up automatically and your manual picks always stay put." },
+    { t: "Chords & lyrics sheet", d: "Tap any song: the sheet opens instantly with lyrics from the built-in offline book (~12,000 songs, no internet needed). Transpose the key \u00b1 semitones, auto-scroll at your favourite speed, zoom A+/A\u2212, go fullscreen, and connect a Bluetooth page-turner pedal." },
+    { t: "Your own sheets", d: "No chords in the book? Paste your own chords & lyrics in the song editor (your custom sheet wins over everything), or open the Ultimate Guitar link to grab a chart. Songbook XML files import too \u2014 lyrics, chords and setlists in one go." },
+    { t: "Play mode", d: "Play a whole set hands-free: count-in, metronome, one song per row, and a \u201cnext up\u201d prompt as each song ends. The live set clock counts down from your gig start time so you always know where you are." },
+    { t: "Requests tab", d: "Show the QR code or print the stage sign: the audience requests songs from their own phones and they pop up live. Accept one \u2014 it goes into your pool and up-next \u2014 or decline and clear. Most-requested stats tell you what to learn next." },
     { t: "Tuner", d: "Chromatic tuner with capo detection \u2014 tap the note to tune each string." },
-    { t: "Gig timers", d: "Soundcheck / interval / set countdowns so you never run over." },
-    { t: "Gig details", d: "Venue, soundcheck, start time and notes \u2014 the start time also drives the live set clock." },
-    { t: "Share & export", d: "Share tonight's setlist, export gigs to your calendar (.ics), or grab the CSV report for tax season." },
-    { t: "Practice streak", d: "Tap \u201cI practiced today\u201d to keep a daily streak alive." },
+    { t: "Gig timers & details", d: "Soundcheck, interval and set countdowns so you never run over. Gig details (venue, soundcheck, start time, notes) drive the live set clock." },
+    { t: "Share & export", d: "Share tonight's setlist as text, export the gig to your calendar (.ics), or grab the CSV report for tax season." },
+    { t: "Practice streak", d: "Tap \u201cI practiced today\u201d to keep a daily streak alive \u2014 tiny habit, big difference." },
     { t: "Backup & reset", d: "Export a backup file, import one (merge or replace), or start fresh. Backups stay free for everyone." },
-    { t: "Setlist Pro", d: "\u00a310 once: 300-song pool, gig archive with photos, band sync, and more. Use the developer code if you have one." },
-    { t: "Band sync", d: "Start a session, share the 6-letter code, and every phone follows the same song in real time." }
+    { t: "Gig Packs", d: "Ready-made setlists to play straight away or sell: Wedding, Party, Country, British Pub and Restaurant \u2014 567 songs in all, every one with lyrics. Buy a pack (\u00a39.99), unlock it with your code, and songs drop into your pool with key and BPM pre-filled." },
+    { t: "Setlist Pro", d: "\u00a310 once: 500-song pool, gig archive, band sync and more. Unlimited removes the song limit entirely. Purchases are approved by the app owner in Tools \u2192 Pro sales." },
+    { t: "Band sync", d: "Start a session, share the 6-letter code, and every phone follows the same song in real time \u2014 no more shouting setlists across the stage." }
   ];
   function openTutorial() {
     var bg = document.createElement("div");
