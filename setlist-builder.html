@@ -3459,7 +3459,7 @@
           s.songSort = opt[0];
           save();
           closeSongSort();
-          renderPool(filledSongs());
+          render(); // full re-render: applies the new order immediately
         });
         sb.appendChild(b);
       });
@@ -4454,6 +4454,88 @@
     setClockTimer = setInterval(tick, 15000);
   }
 
+  // multi-select song picker: tick several songs, add them all to the set
+  function openPickSheet(which, bi, slotIdx) {
+    var bg = document.createElement("div");
+    bg.className = "modal-bg";
+    bg.style.zIndex = "75";
+    var sheet = document.createElement("div");
+    sheet.className = "sheet";
+    sheet.style.cssText = "max-height:86vh;display:flex;flex-direction:column;";
+    var h = document.createElement("h3");
+    h.textContent = "Add to Set " + which + " \u00b7 Set " + (bi + 1);
+    var sub = document.createElement("div");
+    sub.className = "sub";
+    sub.textContent = "Tick one or more songs \u2014 they fill this slot and the free ones after it. The list is alphabetical.";
+    var search = document.createElement("input");
+    search.type = "search";
+    search.placeholder = "Search your pool\u2026";
+    search.style.cssText = "width:100%;font-size:15px;padding:10px 12px;border:1px solid #c8d3dd;border-radius:10px;font-family:inherit;margin:6px 0 8px;";
+    var listWrap = document.createElement("div");
+    listWrap.style.cssText = "flex:1;overflow-y:auto;min-height:140px;";
+    var footer = document.createElement("div");
+    footer.style.cssText = "display:flex;gap:10px;margin-top:12px;";
+    var addBtn = document.createElement("button");
+    addBtn.type = "button"; addBtn.className = "btn save"; addBtn.textContent = "Add to set";
+    var doneBtn = document.createElement("button");
+    doneBtn.type = "button"; doneBtn.className = "btn ug"; doneBtn.textContent = "Done";
+    footer.appendChild(addBtn); footer.appendChild(doneBtn);
+    sheet.appendChild(h); sheet.appendChild(sub); sheet.appendChild(search); sheet.appendChild(listWrap); sheet.appendChild(footer);
+    bg.appendChild(sheet);
+    document.body.appendChild(bg);
+
+    var checked = {};
+    function draw() {
+      var q = search.value.trim().toLowerCase();
+      var pool = filledSongs().slice().sort(function (a, b) { return String(a.name || "").localeCompare(String(b.name || "")); });
+      var usedIdx = {};
+      s.sets[which].forEach(function (b2) { b2.forEach(function (v) { if (v >= 0) usedIdx[v] = 1; }); });
+      listWrap.innerHTML = "";
+      pool.forEach(function (song) {
+        var pi = s.songs.indexOf(song);
+        if (q && (song.name + " " + (song.artist || "")).toLowerCase().indexOf(q) < 0) return;
+        var row = document.createElement("label");
+        row.style.cssText = "display:flex;align-items:center;gap:10px;padding:10px 2px;border-bottom:1px solid #edf1f5;";
+        var cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.checked = !!checked[pi];
+        cb.style.cssText = "width:20px;height:20px;flex-shrink:0;";
+        cb.addEventListener("change", function () { if (cb.checked) checked[pi] = 1; else delete checked[pi]; draw(); });
+        var t = document.createElement("span");
+        t.style.cssText = "flex:1;font-size:15px;" + (usedIdx[pi] ? "color:#8a97a5;" : "");
+        t.textContent = song.name + (song.artist ? " \u2014 " + song.artist : "") + (usedIdx[pi] ? " (already in set)" : "");
+        row.appendChild(cb); row.appendChild(t);
+        listWrap.appendChild(row);
+      });
+      var n = Object.keys(checked).length;
+      addBtn.textContent = n ? "Add " + n + " to set" : "Add to set";
+      addBtn.disabled = n === 0;
+    }
+    search.addEventListener("input", draw);
+    addBtn.addEventListener("click", function () {
+      var keys = Object.keys(checked);
+      if (!keys.length) return;
+      var idxs = keys.map(Number).sort(function (a, b) { return a - b; });
+      var target = s.sets[which][bi];
+      target[slotIdx] = idxs[0]; // first pick fills the tapped slot
+      var placed = 1, skipped = 0;
+      for (var k = 1; k < idxs.length; k++) {
+        var done = false;
+        for (var si = slotIdx + 1; si < SET_SLOTS; si++) {
+          if (target[si] < 0) { target[si] = idxs[k]; placed++; done = true; break; }
+        }
+        if (!done) skipped++;
+      }
+      save();
+      bg.style.display = "none";
+      render();
+      flashNew(placed + " song" + (placed === 1 ? "" : "s") + " added to Set " + which + (skipped ? " \u00b7 " + skipped + " skipped (no free slots)" : ""));
+    });
+    doneBtn.addEventListener("click", function () { bg.style.display = "none"; });
+    bg.addEventListener("click", function (e) { if (e.target === bg) bg.style.display = "none"; });
+    draw();
+  }
+
   function renderSet(which) {
     var lens = which === "A" ? SET_A_LEN : SET_B_LEN;
     var engs = which === "A" ? SET_A_ENG : SET_B_ENG;
@@ -4511,23 +4593,26 @@
 
         var pickWrap = document.createElement("div");
         pickWrap.className = "slot-pick";
-        var sel = document.createElement("select");
-        var none = document.createElement("option");
-        none.value = "-1"; none.textContent = "— none —";
-        if (assigned < 0) none.selected = true;
-        sel.appendChild(none);
-        pool.forEach(function (song, pi) {
-          var op = document.createElement("option");
-          op.value = pi;
-          op.textContent = song.name + (song.artist ? " — " + song.artist : "");
-          if (pi === assigned) op.selected = true;
-          sel.appendChild(op);
-        });
-        sel.addEventListener("change", function () {
-          block[i] = parseInt(sel.value, 10);
-          save(); render();
-        });
-        pickWrap.appendChild(sel);
+        pickWrap.style.cssText = "display:flex;gap:8px;";
+        var pickB = document.createElement("button");
+        pickB.type = "button";
+        pickB.className = "btn ug";
+        pickB.style.cssText = "flex:1;";
+        pickB.textContent = "\u270e " + (assigned >= 0 ? "Change / add more\u2026" : "Choose songs\u2026");
+        pickB.addEventListener("click", function () { openPickSheet(which, bi, i); });
+        pickWrap.appendChild(pickB);
+        if (assigned >= 0) {
+          var clearB = document.createElement("button");
+          clearB.type = "button";
+          clearB.className = "btn ug";
+          clearB.style.cssText = "flex:0 0 auto;";
+          clearB.textContent = "\u2715";
+          clearB.addEventListener("click", function () {
+            block[i] = -1;
+            save(); render();
+          });
+          pickWrap.appendChild(clearB);
+        }
         sec.appendChild(pickWrap);
         listEl.appendChild(sec);
       });
