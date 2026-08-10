@@ -4802,7 +4802,7 @@
     });
     var book = { stageName: stageLabel(), sets: setNames, pool: pool.map(function (x) { return x.name; }) };
     if (s.links) book.links = { tip: s.links.tip || "", extra: s.links.extra || "" };
-    var pubUrl = userPath() + "/public.json";
+    var pubUrl = userPath() + "/public";
     authed(pubUrl).then(function (u) {
       return fetch(u, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(book) });
     }).catch(function () {});

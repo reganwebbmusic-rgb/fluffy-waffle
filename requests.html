@@ -74,12 +74,12 @@
     MUSICIAN = (qs.get("m") || "").replace(/[^A-Za-z0-9_-]/g, "");
   } catch (e) {}
 
-  // Payment links published by the musician (the app writes users/<uid>/public.json
+  // Payment links published by the musician (the app writes users/<uid>/public
   // when they sign in with links set). When available, paid/tip buttons open the
   // payment page immediately; otherwise we fall back to the "we'll send a link" flow.
   var pubLinks = { tip: "", extra: "" };
   if (MUSICIAN && FIREBASE_URL) {
-    fetch(FIREBASE_URL + "/users/" + encodeURIComponent(MUSICIAN) + "/public.json")
+    fetch(FIREBASE_URL + "/users/" + encodeURIComponent(MUSICIAN) + "/public")
       .then(function (r) { return r.json(); })
       .then(function (d) {
         if (d && d.links) pubLinks = { tip: String(d.links.tip || ""), extra: String(d.links.extra || "") };

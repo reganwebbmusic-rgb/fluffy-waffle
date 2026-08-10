@@ -60,14 +60,12 @@ private data to themselves, and stop anonymous deletion of requests.
         "requests": {
           ".write": "auth != null || !data.exists()"
         },
-        // Every other child (data.json, public.json, ...) is owner-only,
-        // EXCEPT public.json which the audience request page reads (no
-        // login) to show the musician's tip / payment links instantly.
-        // NOTE: literal keys can't contain ".", so public.json must be
-        // matched with a $child wildcard (literal "requests" above still
-        // wins over this wildcard — Firebase picks the most specific rule).
-        "$child": {
-          ".read": "auth != null || $child === 'public.json'",
+        // "public" (the old name was public.json — dots aren't allowed in
+        // rule keys, hence the rename): the audience request page reads this
+        // (no login) to show the musician's tip / payment links instantly.
+        // Everything else under $uid stays owner-only.
+        "public": {
+          ".read": true,
           ".write": "$uid === auth.uid"
         }
       }
