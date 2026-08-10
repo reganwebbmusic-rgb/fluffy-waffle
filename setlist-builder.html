@@ -5921,7 +5921,11 @@
     var nextBtn = document.createElement("button"); nextBtn.type = "button"; nextBtn.className = "btn save"; nextBtn.textContent = "Next";
     nextBtn.addEventListener("click", function () {
       if (idx < TUT_SLIDES.length - 1) { idx++; draw(); }
-      else { bg.style.display = "none"; }
+      else {
+        // finishing the tour on the last slide counts as done — no more auto pop-ups
+        try { localStorage.setItem("sb2tutDone", "1"); } catch (e) {}
+        bg.style.display = "none";
+      }
     });
     function draw() {
       title.textContent = TUT_SLIDES[idx].t;
@@ -6774,8 +6778,12 @@
   });
   startReqPolling();
 
-  // Full tutorial pops up on EVERY launch — skip it any time with the Skip button.
-  openTutorial();
+  // Tutorial pops up on every launch until you finish it once (Done on the last
+  // slide marks it complete; Skip keeps it coming back). Always available again
+  // from Tools → Tutorial.
+  var tutDone = false;
+  try { tutDone = localStorage.getItem("sb2tutDone") === "1"; } catch (e) {}
+  if (!tutDone) openTutorial();
 })();
 </script>
 <script>
