@@ -5896,7 +5896,7 @@
     var rms = 0;
     for (var i = 0; i < SIZE; i++) rms += buf[i] * buf[i];
     rms = Math.sqrt(rms / SIZE);
-    if (rms < 0.01) return -1;
+    if (rms < 0.0035) return -1; // quiet phone mics still register (input is boosted x3)
     var r1 = 0, r2 = SIZE - 1, thres = 0.2;
     for (var i = 0; i < SIZE / 2; i++) if (Math.abs(buf[i]) < thres) { r1 = i; break; }
     for (var i = 1; i < SIZE / 2; i++) if (Math.abs(buf[SIZE - i]) < thres) { r2 = SIZE - i; break; }
@@ -5930,16 +5930,29 @@
     stopTuner();
     var AC = window.AudioContext || window.webkitAudioContext;
     var ctx = new AC();
-    navigator.mediaDevices.getUserMedia({
+    // iOS/Safari start a fresh AudioContext SUSPENDED — unless it's resumed the
+    // analyser hears pure silence. Resume now AND after the stream arrives.
+    if (ctx.state === "suspended") ctx.resume().catch(function () {});
+    var tryStart = function (constraints) {
+      return navigator.mediaDevices.getUserMedia(constraints).then(function (stream) {
+        var src = ctx.createMediaStreamSource(stream);
+        // boost quiet phone mics so the pitch detector can actually see the note
+        var g = ctx.createGain();
+        g.gain.value = 3;
+        var an = ctx.createAnalyser();
+        an.fftSize = 2048;
+        src.connect(g); g.connect(an);
+        if (ctx.state === "suspended") ctx.resume().catch(function () {});
+        tuner = { ctx: ctx, analyser: an, stream: stream, buf: new Float32Array(an.fftSize), gain: g };
+        setTunerStatus("Listening \u2014 play a string");
+        tunerLoop();
+      });
+    };
+    tryStart({
       audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
-    }).then(function (stream) {
-      var src = ctx.createMediaStreamSource(stream);
-      var an = ctx.createAnalyser();
-      an.fftSize = 2048;
-      src.connect(an);
-      tuner = { ctx: ctx, analyser: an, stream: stream, buf: new Float32Array(an.fftSize) };
-      setTunerStatus("Listening \u2014 play a string");
-      tunerLoop();
+    }).catch(function () {
+      // some phones reject the "raw" mic constraints — fall back to plain audio
+      return tryStart({ audio: true });
     }).catch(function () {
       setTunerStatus("Microphone blocked \u2014 allow it in your browser settings, then tap Tuner again.");
     });
@@ -5981,7 +5994,10 @@
     } else {
       tunerRefs.note.textContent = "\u2014";
       tunerRefs.note.style.color = "#1c2733";
-      tunerRefs.status.textContent = "Listening\u2026";
+      // tell the difference between "no mic signal" and "sound, but no clear pitch"
+      var rms2 = 0;
+      try { for (var bi = 0; bi < tuner.buf.length; bi++) rms2 += tuner.buf[bi] * tuner.buf[bi]; rms2 = Math.sqrt(rms2 / tuner.buf.length); } catch (e) {}
+      tunerRefs.status.textContent = rms2 > 0.003 ? "Hearing sound \u2014 play a clear note" : "Listening\u2026";
     }
     if (tuner) {
       if (typeof requestAnimationFrame !== "undefined") tuner.raf = requestAnimationFrame(tunerLoop);
