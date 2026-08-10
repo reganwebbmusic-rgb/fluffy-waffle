@@ -5335,10 +5335,14 @@
   }
 
   function handleRequest(id, status) {
+    try {
     var r = null;
     requestsData.forEach(function (x) { if (x && x.id === id) r = x; });
     if (r) seenReqs[id] = 1;
     try { localStorage.setItem("seenReqs", JSON.stringify(seenReqs)); } catch (e) {}
+    // optimistic UI: show the result instantly, then let the write confirm it
+    if (r && r.status !== status) { r.status = status; }
+    if (s.tab === "requests" && reqView === "list") renderRequests();
     if (r && status === "accepted" && r.type === "song") {
       if (addCatalogToPool(r.song, r.artist || "", "", "")) {
         // find the song's real index in s.songs (NOT the filtered list)
@@ -5360,14 +5364,16 @@
         flashNew("\u201c" + r.song + "\u201d accepted \u2014 already in your pool or it's full.", "fit-low");
       }
     }
-    patchRequest(id, { status: status });
+    patchRequest(id, { status: status }); // reloads the list once the write lands
     closePopup();
     // charged extra-time requests: accept first, then send the payment link
     if (r && r.charge && status === "accepted") {
       activePopup = null;
       showPaymentPopup(r);
     }
-    loadRequests();
+    } catch (e) {
+      flashNew("Something went wrong \u2014 try again.", "fit-low");
+    }
   }
 
   function syncSongbook() {
