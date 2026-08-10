@@ -375,11 +375,17 @@
   // Fall back to "" so the app still boots if that file is missing (e.g. fresh clone).
   var FIREBASE_API_KEY = window.FIREBASE_API_KEY || "";
   var POOL = 30;
-  var PRO_POOL = 300;
+  var PRO_POOL = 500;
+  var UNLIMITED_POOL = 10000;
   var PRO_PRICE = 10;
+  var UNLIM_PRICE = 5;
   // Your PayPal payment link for the one-time £10 Pro unlock (see DEPLOY-GUIDE "Pro sales").
   // PayPal "no-code payment" link: dashboard → Payments → Payment links → create.
   var PRO_LINK = "https://www.paypal.com/ncp/payment/AP7CGWT5R7ASQ";
+  // Your £5 PayPal payment link for the unlimited-songs unlock. Create a second
+  // payment link in PayPal set to £5 and paste it here; until then the button
+  // tells buyers the link isn't live yet.
+  var UNLIM_LINK = "";
   // Secret developer code: enter it in "Unlock with code" to get Pro free.
   // Use it for yourself and to gift Pro to anyone. Lives in the source, so
   // treat it as secret-ish — change it whenever you want.
@@ -389,6 +395,7 @@
   // until you've set it.
   var SELLER_UID = "";
   var PRO_KEY = "sb2pro";
+  var UL_KEY = "sb2ul";
   function proRecord() { try { var p = JSON.parse(localStorage.getItem(PRO_KEY)); return p && p.code ? p : null; } catch (e) { return null; } }
   function isPro() {
     if (proRecord()) return true;
@@ -397,7 +404,11 @@
   }
   function setPro(code, email) { try { localStorage.setItem(PRO_KEY, JSON.stringify({ code: code, email: email || "", at: Date.now() })); } catch (e) {} }
   function clearPro() { try { localStorage.removeItem(PRO_KEY); } catch (e) {} }
-  function poolSize() { return isPro() ? PRO_POOL : POOL; }
+  function ulRecord() { try { var p = JSON.parse(localStorage.getItem(UL_KEY)); return p && p.code ? p : null; } catch (e) { return null; } }
+  function isUnlimited() { return !!ulRecord(); }
+  function setUnlimited(code, email) { try { localStorage.setItem(UL_KEY, JSON.stringify({ code: code, email: email || "", at: Date.now() })); } catch (e) {} }
+  function clearUnlimited() { try { localStorage.removeItem(UL_KEY); } catch (e) {} }
+  function poolSize() { return isUnlimited() ? UNLIMITED_POOL : (isPro() ? PRO_POOL : POOL); }
   var SET_SLOTS = 12; // slots per set block (SET_A_LEN / SET_B_LEN total 45 min each)
   var SET_A_LEN = [4, 4, 3, 4, 3, 4, 4, 3, 4, 4, 4, 4];
   var SET_B_LEN = [4, 4, 4, 3, 4, 4, 3, 4, 4, 4, 3, 4];
@@ -3227,9 +3238,10 @@
   function chipsFor(song) {
     var wrap = document.createElement("div");
     wrap.className = "chips";
+    var kind = songKind(song);
     [["key", song.key], [null, song.capo ? "capo " + song.capo : ""],
-     [null, song.bpm ? song.bpm + " bpm" : ""], [null, lastPlayedLabel(song)],
-     ["status-" + song.status.toLowerCase(), song.status]]
+     [null, song.bpm ? song.bpm + " bpm" : ""], [null, kind === "mid" ? "" : kind],
+     [null, lastPlayedLabel(song)], ["status-" + song.status.toLowerCase(), song.status]]
       .forEach(function (c) {
         if (!c[1]) return;
         var ch = document.createElement("span");
@@ -3618,6 +3630,21 @@
     sel.addEventListener("change", function () { song.status = sel.value; save(); });
     st.appendChild(stTxt); st.appendChild(sel);
     row4.appendChild(st);
+    // song type — what auto-fill reads when it builds a set
+    var ty = document.createElement("label");
+    ty.style.cssText = "flex:1;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#5c6b7a;";
+    var tyTxt = document.createElement("span");
+    tyTxt.textContent = "Type (for auto-fill)";
+    var tySel = document.createElement("select");
+    [["", "Auto (from BPM)"], ["slow", "Slow / ballad"], ["mid", "Mid-tempo"], ["fast", "Fast / dance"]].forEach(function (o) {
+      var op = document.createElement("option");
+      op.value = o[0]; op.textContent = o[1];
+      if (song.kind === o[0]) op.selected = true;
+      tySel.appendChild(op);
+    });
+    tySel.addEventListener("change", function () { song.kind = tySel.value; save(); });
+    ty.appendChild(tyTxt); ty.appendChild(tySel);
+    row4.appendChild(ty);
     box.appendChild(row4);
 
     // custom chords & lyrics — your own sheet for this song (shown instead of
@@ -4783,6 +4810,29 @@
     save(); render();
   }
 
+  // What kind of song is this, really? Reads the song's BPM first (fast >= 120,
+  // mid 95-119, slow < 95), falls back to the energy slider when there's no BPM,
+  // and always honours a manual Type set in the song editor.
+  function songKind(song) {
+    if (song && song.kind) return song.kind;
+    var bpm = parseInt(song && song.bpm, 10);
+    if (bpm >= 120) return "fast";
+    if (bpm >= 95) return "mid";
+    if (bpm > 0) return "slow";
+    var e = parseInt(song && song.energy, 10) || 3;
+    if (e >= 4) return "fast";
+    if (e <= 2) return "slow";
+    return "mid";
+  }
+  function kindForSlot(purpose, eng) {
+    var p = String(purpose || "").toLowerCase();
+    // keywords only nudge the energy signal — never override it hard
+    if (/dance|banger|anthem|momentum|build back up|high point|closer|biggest/.test(p) && eng >= 3) return "fast";
+    if (/ballad|breathe|quiet|soft|dinner|conversation/.test(p) && eng <= 3) return "slow";
+    if (eng >= 4) return "fast";
+    if (eng <= 2) return "slow";
+    return "mid";
+  }
   function autoFill(which, bi) {
     var engs = which === "A" ? SET_A_ENG : SET_B_ENG;
     var purps = which === "A" ? SET_A_PURP : SET_B_PURP;
@@ -4793,19 +4843,21 @@
         block.forEach(function (v) { if (v >= 0) used[v] = true; });
       });
     });
-    var kw = { singalong: 20, dance: 20, quiet: 18, ballad: 18, breather: 15, build: 10, block: 10, opener: 8, closer: 8, request: 8, banter: 5 };
     var filled = 0;
     for (var i = 0; i < SET_SLOTS; i++) {
       if (s.sets[which][bi][i] >= 0) continue; // never overwrite a manual pick
+      var target = kindForSlot(purps[i], engs[i]);
       var best = -1, bestScore = -Infinity;
       pool.forEach(function (song, pi) {
         if (used[pi] || song.status === "Retire") return;
-        var score = 100 - Math.abs((song.energy || 3) - engs[i]) * 15;
+        var k = songKind(song);
+        // a dance slot should never take a slow song while anything else exists:
+        // score by kind distance (match 300, one step away 150, two steps away 0)
+        var dist = target === k ? 0 : (target === "mid" || k === "mid" ? 1 : 2);
+        var score = 300 - dist * 150;
         if (song.status === "Learning") score -= 30;
-        var p = purps[i].toLowerCase(), n = (song.note || "").toLowerCase();
-        Object.keys(kw).forEach(function (k) {
-          if (p.indexOf(k) >= 0 && n.indexOf(k) >= 0) score += kw[k];
-        });
+        if (song.status === "Ready") score += 10;
+        score -= Math.abs((parseInt(song.energy, 10) || 3) - engs[i]) * 12;
         if (score > bestScore) { bestScore = score; best = pi; }
       });
       if (best < 0) break;
@@ -7176,28 +7228,42 @@
     proh.textContent = "Setlist Pro";
     proh.style.background = "none"; proh.style.padding = "0 0 6px"; proh.style.border = "0";
     pro.appendChild(proh);
-    if (isPro()) {
-      var pr2 = proRecord();
+    if (isPro() || isUnlimited()) {
+      var pr2 = proRecord(), ul2 = ulRecord();
       var pOk = document.createElement("div");
       pOk.className = "purpose";
-      pOk.textContent = pr2 ? ("Pro unlocked \u00b7 code " + pr2.code + (pr2.email ? " \u00b7 " + pr2.email : "")) : "Pro unlocked (owner account).";
+      pOk.textContent = pr2 ? ("Pro unlocked \u00b7 500 songs \u00b7 code " + pr2.code + (pr2.email ? " \u00b7 " + pr2.email : "")) : "Pro unlocked (owner account).";
+      if (ul2) pOk.textContent += " \u00b7 Unlimited songs active \u00b7 code " + ul2.code;
       var pRem = document.createElement("button");
       pRem.type = "button"; pRem.className = "btn ug";
       pRem.textContent = "Remove Pro on this device";
-      pRem.addEventListener("click", function () { clearPro(); render(); renderAuthBar(); flashNew("Pro removed on this device."); });
+      pRem.addEventListener("click", function () { clearPro(); clearUnlimited(); render(); renderAuthBar(); flashNew("Pro removed on this device."); });
       pro.appendChild(pOk); pro.appendChild(pRem);
     } else {
       var pp = document.createElement("div");
       pp.className = "purpose";
-      pp.textContent = "Free: 30-song pool, 2 sets, requests & tips, backups. Pro: 300-song pool, gig archive \u2014 \u00a3" + PRO_PRICE + " once, yours forever.";
+      pp.textContent = "Free: 30-song pool, 2 sets, requests & tips, backups. Pro: 500-song pool, gig archive \u2014 \u00a3" + PRO_PRICE + " once, yours forever. Unlimited: no song limit \u2014 \u00a3" + UNLIM_PRICE + " once.";
+      var lastBuy = "pro"; // which purchase the "I've paid" check applies to
       var pBuy = document.createElement("button");
       pBuy.type = "button"; pBuy.className = "btn save";
-      pBuy.textContent = "Buy Pro \u2014 \u00a3" + PRO_PRICE;
+      pBuy.textContent = "Buy Pro \u2014 \u00a3" + PRO_PRICE + " (500 songs)";
       pBuy.addEventListener("click", function () {
         if (!PRO_LINK) { flashNew("Payment link not set yet \u2014 ask the app owner.", "fit-low"); return; }
+        lastBuy = "pro";
         if (window.open) window.open(PRO_LINK, "_blank"); else location.href = PRO_LINK;
       });
-      pro.appendChild(pp); pro.appendChild(pBuy);
+      var pBuyUl = document.createElement("button");
+      pBuyUl.type = "button"; pBuyUl.className = "btn ug";
+      pBuyUl.textContent = "Buy Unlimited \u2014 \u00a3" + UNLIM_PRICE + " (no song limit)";
+      pBuyUl.addEventListener("click", function () {
+        if (!UNLIM_LINK) { flashNew("The \u00a3" + UNLIM_PRICE + " payment link isn't set up yet \u2014 ask the app owner.", "fit-low"); return; }
+        lastBuy = "ul";
+        if (window.open) window.open(UNLIM_LINK, "_blank"); else location.href = UNLIM_LINK;
+      });
+      var pBuyRow = document.createElement("div");
+      pBuyRow.className = "req-actions";
+      pBuyRow.appendChild(pBuy); pBuyRow.appendChild(pBuyUl);
+      pro.appendChild(pp); pro.appendChild(pBuyRow);
       var pMail = document.createElement("input");
       pMail.type = "email"; pMail.placeholder = "Email you paid with";
       var pCheck = document.createElement("button");
@@ -7214,13 +7280,12 @@
           var o = null, id = null;
           if (d) for (var k in d) { if (d[k] && d[k].email && String(d[k].email).toLowerCase() === em && d[k].status === "approved" && d[k].code) { o = d[k]; id = k; break; } }
           if (o) {
-            setPro(o.code, em);
-            render(); renderAuthBar();
-            flashNew("Pro unlocked! Code " + o.code);
+            if (o.type === "ul") { setUnlimited(o.code, em); render(); renderAuthBar(); flashNew("Unlimited unlocked! No song limit. Code " + o.code); }
+            else { setPro(o.code, em); render(); renderAuthBar(); flashNew("Pro unlocked! 500 songs. Code " + o.code); }
           } else {
             var hasPending = d && Object.keys(d).some(function (k) { return d[k] && d[k].email && String(d[k].email).toLowerCase() === em && d[k].status === "pending"; });
             if (!hasPending) {
-              fetch(REQUESTS_DB_URL + "/orders.json", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: em, status: "pending", ts: Date.now() }) }).catch(function () {});
+              fetch(REQUESTS_DB_URL + "/orders.json", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: em, status: "pending", type: lastBuy || "pro", ts: Date.now() }) }).catch(function () {});
             }
             pStat.textContent = "Payment not verified yet \u2014 checking every few seconds\u2026";
             var tries = 0;
@@ -7232,9 +7297,8 @@
                   var x = dd[kk];
                   if (x && x.email && String(x.email).toLowerCase() === em && x.status === "approved" && x.code) {
                     clearInterval(poll);
-                    setPro(x.code, em);
-                    render(); renderAuthBar();
-                    flashNew("Pro unlocked! Code " + x.code);
+                    if (x.type === "ul") { setUnlimited(x.code, em); render(); renderAuthBar(); flashNew("Unlimited unlocked! No song limit. Code " + x.code); }
+                    else { setPro(x.code, em); render(); renderAuthBar(); flashNew("Pro unlocked! 500 songs. Code " + x.code); }
                     return;
                   }
                 }
@@ -7258,7 +7322,10 @@
         dbGet(REQUESTS_DB_URL + "/orders.json").then(function (r) { return r.json(); }).then(function (d) {
           var found = null;
           if (d) for (var k in d) { if (d[k] && d[k].status === "approved" && d[k].code === c) { found = d[k]; break; } }
-          if (found) { setPro(c, found.email || ""); render(); renderAuthBar(); flashNew("Pro unlocked!"); }
+          if (found) {
+            if (found.type === "ul") { setUnlimited(c, found.email || ""); render(); renderAuthBar(); flashNew("Unlimited unlocked!"); }
+            else { setPro(c, found.email || ""); render(); renderAuthBar(); flashNew("Pro unlocked!"); }
+          }
           else flashNew("That code isn't valid \u2014 check it and try again.", "fit-low");
         }).catch(function () { flashNew("Couldn't check the code \u2014 try again.", "fit-low"); });
       });
@@ -7537,10 +7604,11 @@
         var clean = songs.map(function (song) {
           var out = emptySong();
           if (song && typeof song === "object") {
-            ["name", "artist", "key", "capo", "bpm", "note", "trans", "status", "len"].forEach(function (k) {
+            ["name", "artist", "key", "capo", "bpm", "note", "trans", "status", "len", "custom", "kind"].forEach(function (k) {
               if (typeof song[k] === "string") out[k] = song[k];
             });
             if (typeof song.energy === "number") out.energy = song.energy;
+            if (typeof song.played === "number") out.played = song.played;
           }
           return out;
         });
