@@ -193,7 +193,7 @@
   .lyr-ctrl span { font-size: 12px; color: #5c6b7a; }
   .modal-bg.max { align-items: stretch; }
   .modal-bg.max .sheet { max-width: none; border-radius: 0; height: 100%; display: flex; flex-direction: column; }
-  .modal-bg.max .chords { flex: 1; max-height: none; }
+  .modal-bg.max .chords { flex: 1; max-height: none; min-height: 0; overflow-y: auto; }
   .req-row .fit-badge { flex-shrink: 0; font-size: 12px; font-weight: 600; border-radius: 99px; padding: 4px 10px; }
   .fit-high { background: #e4f2e6; color: #237a3b; }
   .fit-med { background: #fdf3dd; color: #8a6a1c; }
@@ -2926,6 +2926,13 @@
   function renderAuthBar() {
     var bar = document.getElementById("authBar");
     bar.innerHTML = "";
+    if (isPro()) {
+      var chip = document.createElement("span");
+      chip.className = "pro-chip";
+      chip.style.cssText = "font-size:12px;font-weight:700;color:#0f1a24;background:#f0c987;border-radius:8px;padding:4px 8px;margin-right:6px;";
+      chip.textContent = "Pro \u2713";
+      bar.appendChild(chip);
+    }
     if (!me) return;
     var span = document.createElement("span");
     span.className = "ab-name";
@@ -5469,7 +5476,7 @@
       var pRem = document.createElement("button");
       pRem.type = "button"; pRem.className = "btn ug";
       pRem.textContent = "Remove Pro on this device";
-      pRem.addEventListener("click", function () { clearPro(); render(); });
+      pRem.addEventListener("click", function () { clearPro(); render(); renderAuthBar(); flashNew("Pro removed on this device."); });
       pro.appendChild(pOk); pro.appendChild(pRem);
     } else {
       var pp = document.createElement("div");
@@ -5500,8 +5507,8 @@
           if (d) for (var k in d) { if (d[k] && d[k].email && String(d[k].email).toLowerCase() === em && d[k].status === "approved" && d[k].code) { o = d[k]; id = k; break; } }
           if (o) {
             setPro(o.code, em);
-            pStat.textContent = "Pro unlocked! Code " + o.code;
-            render();
+            render(); renderAuthBar();
+            flashNew("Pro unlocked! Code " + o.code);
           } else {
             var hasPending = d && Object.keys(d).some(function (k) { return d[k] && d[k].email && String(d[k].email).toLowerCase() === em && d[k].status === "pending"; });
             if (!hasPending) {
@@ -5518,8 +5525,8 @@
                   if (x && x.email && String(x.email).toLowerCase() === em && x.status === "approved" && x.code) {
                     clearInterval(poll);
                     setPro(x.code, em);
-                    pStat.textContent = "Pro unlocked! Code " + x.code;
-                    render();
+                    render(); renderAuthBar();
+                    flashNew("Pro unlocked! Code " + x.code);
                     return;
                   }
                 }
@@ -5539,11 +5546,11 @@
         var c = pCode.value.trim().toUpperCase();
         if (!c) { flashNew("Type your code first.", "fit-low"); return; }
         // secret developer code — free Pro for you and anyone you gift it to
-        if (DEV_CODE && c === DEV_CODE) { setPro("dev", ""); flashNew("Pro unlocked (developer code)."); render(); return; }
+        if (DEV_CODE && c === DEV_CODE) { setPro("dev", ""); render(); renderAuthBar(); flashNew("Pro unlocked (developer code)."); return; }
         fetch(REQUESTS_DB_URL + "/orders.json").then(function (r) { return r.json(); }).then(function (d) {
           var found = null;
           if (d) for (var k in d) { if (d[k] && d[k].status === "approved" && d[k].code === c) { found = d[k]; break; } }
-          if (found) { setPro(c, found.email || ""); flashNew("Pro unlocked!"); render(); }
+          if (found) { setPro(c, found.email || ""); render(); renderAuthBar(); flashNew("Pro unlocked!"); }
           else flashNew("That code isn't valid \u2014 check it and try again.", "fit-low");
         }).catch(function () { flashNew("Couldn't check the code \u2014 try again.", "fit-low"); });
       });
@@ -5583,8 +5590,8 @@
               return fetch(u, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: code, status: "approved", approvedBy: me.uid, approvedAt: Date.now() }) });
             }).then(function (r) {
               if (!r.ok) throw new Error("bad");
-              flashNew("Approved \u2014 code " + code + ". It's been delivered to their app; copy it to email them if needed.");
-              render();
+              render(); renderAuthBar();
+              flashNew("Approved \u2014 code " + code + ". Delivered to their app; copy it to email them if needed.");
             }).catch(function () { flashNew("Approve failed \u2014 are you signed in?", "fit-low"); });
           });
           row.appendChild(lbl); row.appendChild(app);
@@ -5626,15 +5633,24 @@
       if (btn) btn.textContent = "Auto-scroll";
       return;
     }
+    // find the real scroll container (chords; in fullscreen flex layout the
+    // sheet could be the scroller) — walk up until something actually scrolls
     scrollEl = el;
+    var node = el;
+    while (node && node !== document.body && node.scrollHeight <= node.clientHeight + 1 && node.parentNode) node = node.parentNode;
+    if (node && node.scrollHeight > node.clientHeight + 1) scrollEl = node;
     var last = null;
+    var acc = 0;
     function step(ts) {
       if (!scrollEl || !scrollEl.parentNode) { stopScroll(); return; }
       if (document.hidden) { scrollTimer = requestAnimationFrame(step); return; } // pause when tab hidden
       if (last === null) last = ts;
       var dt = Math.min(100, ts - last); // clamp long gaps (tab switches)
       last = ts;
-      scrollEl.scrollTop = (scrollEl.scrollTop || 0) + scrollSpeed * dt / 1000;
+      // accumulate fractional pixels so slow speeds scroll smoothly
+      acc += scrollSpeed * dt / 1000;
+      var px = Math.floor(acc);
+      if (px >= 1) { acc -= px; scrollEl.scrollTop = (scrollEl.scrollTop || 0) + px; }
       if (scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 4) {
         stopScroll();
         if (btn) btn.textContent = "Auto-scroll";
