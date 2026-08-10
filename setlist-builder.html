@@ -4575,8 +4575,10 @@
         if (assigned >= 0 && pool[assigned]) {
           name.className = "name tappable";
           name.title = "tap for chords & lyrics";
-          name.addEventListener("click", (function (sng) {
-            return function () { openSheet(sng); };
+          // the whole slot card opens the full-screen chords & lyrics sheet
+          head.style.cursor = "pointer";
+          head.addEventListener("click", (function (sng) {
+            return function () { openSheet(sng, true); };
           })(pool[assigned]));
         }
         var time = document.createElement("div");
@@ -4697,7 +4699,7 @@
     return "https://www.ultimate-guitar.com/search.php?search_type=title&order=my&value=" + encodeURIComponent(q);
   }
 
-  function openSheet(song) {
+  function openSheet(song, autoFull) {
     if (!song) return;
     stopScroll();
     var bg = document.createElement("div");
@@ -4890,11 +4892,22 @@
       bg.appendChild(floats);
     } else {
       sheet.appendChild(notes);
+      var hint = document.createElement("div");
+      hint.className = "notes";
+      hint.style.cssText = "color:#8a97a5;font-size:13px;";
+      hint.textContent = "No saved lyrics for this song yet \u2014 grab them from Ultimate Guitar below, or add your own sheet in the song editor (Custom chords & lyrics).";
+      sheet.appendChild(hint);
     }
     sheet.appendChild(btns);
     bg.appendChild(sheet);
     bg.addEventListener("click", function (e) { if (e.target === bg) closeSheet(bg); });
     document.body.appendChild(bg);
+    if (autoFull) {
+      // straight to full-screen chords & lyrics — no scrolling to find them
+      toggleExpand(bg);
+      var fbtns = bg.querySelectorAll(".float-btn");
+      for (var fi = 0; fi < fbtns.length; fi++) if (fbtns[fi].textContent === "Full") fbtns[fi].textContent = "Exit";
+    }
   }
 
   function isChordToken(t) {
@@ -5240,7 +5253,7 @@
       var card = document.createElement("div");
       card.className = "pcard";
       card.style.cursor = "pointer";
-      card.addEventListener("click", function () { openSheet(song); });
+      card.addEventListener("click", function () { openSheet(song, true); });
       var pn = document.createElement("div"); pn.className = "pname"; pn.textContent = song.name || "—";
       var pa = document.createElement("div"); pa.className = "partist"; pa.textContent = song.artist || "";
       var chips = document.createElement("div"); chips.className = "pchips";
