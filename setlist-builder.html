@@ -4502,9 +4502,11 @@
   }
 
   function loadRequestsFirebase() {
-    // Poll BOTH inboxes (account + this device) and merge — so requests show
-    // up in real time no matter which QR/link was used or sign-in state.
-    var inboxes = ["users/" + encodeURIComponent(myId())];
+    // Poll every inbox this band could receive into and merge — account inbox,
+    // this device's inbox, and the shared fallback (older links/QR codes post
+    // there). Requests show up in real time no matter which link was used.
+    var inboxes = ["requests"]; // shared/legacy inbox (this DB's own)
+    inboxes.push("users/" + encodeURIComponent(myId()));
     if (me && me.uid) {
       var dev = myDeviceId();
       if (dev && dev !== me.uid) inboxes.push("users/" + encodeURIComponent(dev));
@@ -4738,6 +4740,19 @@
     }
   }
   function clearAllRequests() { showGigSummary(); }
+
+  function deleteRequest(id) {
+    if (!REQUESTS_DB_URL) return;
+    var inbox = "users/" + encodeURIComponent(myId());
+    (requestsData || []).forEach(function (x) { if (x && x.id === id && x._inbox) inbox = x._inbox; });
+    var url = REQUESTS_DB_URL + "/" + inbox + "/requests/" + id + ".json";
+    authed(url).then(function (u) {
+      return fetch(u, { method: "DELETE" });
+    }).then(function (r) {
+      if (r.ok) { loadRequests(); flashNew("Request cleared."); }
+      else flashNew("Couldn't clear \u2014 try again.", "fit-low");
+    }).catch(function () { flashNew("Couldn't clear \u2014 try again.", "fit-low"); });
+  }
 
   function patchRequest(id, body) {
     if (!REQUESTS_DB_URL) return Promise.resolve();
@@ -5073,6 +5088,10 @@
         paidTxt.className = "purpose";
         paidTxt.textContent = "Paid \u2014 confirmed";
         btnRow.appendChild(paidTxt);
+        var clr1 = document.createElement("button");
+        clr1.type = "button"; clr1.className = "btn ug"; clr1.textContent = "Clear";
+        clr1.addEventListener("click", function () { deleteRequest(r.id); });
+        btnRow.appendChild(clr1);
       } else if (r.status === "accepted" && r.charge) {
         var markP = document.createElement("button");
         markP.type = "button"; markP.className = "btn save"; markP.textContent = "Mark as paid";
@@ -5080,7 +5099,10 @@
         var pay = document.createElement("button");
         pay.type = "button"; pay.className = "btn ug"; pay.textContent = "Send payment link";
         pay.addEventListener("click", function () { showPaymentPopup(r); });
-        btnRow.appendChild(markP); btnRow.appendChild(pay);
+        var clr2 = document.createElement("button");
+        clr2.type = "button"; clr2.className = "btn ug"; clr2.textContent = "Clear";
+        clr2.addEventListener("click", function () { deleteRequest(r.id); });
+        btnRow.appendChild(markP); btnRow.appendChild(pay); btnRow.appendChild(clr2);
       } else if (r.status !== "accepted") {
         var acc = document.createElement("button");
         acc.type = "button"; acc.className = "btn save"; acc.textContent = "Accept";
@@ -5093,7 +5115,10 @@
         var ok = document.createElement("div");
         ok.className = "purpose";
         ok.textContent = "Accepted";
-        btnRow.appendChild(ok);
+        var clr3 = document.createElement("button");
+        clr3.type = "button"; clr3.className = "btn ug"; clr3.textContent = "Clear";
+        clr3.addEventListener("click", function () { deleteRequest(r.id); });
+        btnRow.appendChild(ok); btnRow.appendChild(clr3);
       }
       sec.appendChild(btnRow);
       if (r.note) {
