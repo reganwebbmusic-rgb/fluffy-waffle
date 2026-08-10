@@ -40,14 +40,20 @@
   <div style="font-size:12px;letter-spacing:3px;color:#7c8fa1;margin-bottom:8px;font-weight:700;">TOOLGIG</div>
   <h1>Request a Song</h1>
   <p class="sub">It's free, but tipping is optional.</p>
-  <input id="song" placeholder="Song title *" autocomplete="off">
-  <input id="artist" placeholder="Artist (optional)" autocomplete="off">
-  <input id="note" placeholder="Dedication? (optional)" autocomplete="off">
-  <input id="email" type="email" placeholder="Email (for payment links)" autocomplete="email">
-  <button id="send" type="button">Send request</button>
+  <div id="noBand" style="display:none;background:#243747;border:1px solid #3a4d5f;border-radius:12px;padding:14px;margin:10px 0;color:#9fb0c0;font-size:14px;">
+    This link needs the band's code in it — scan the QR code at the gig (or use the link from the band's app) to request songs.
+  </div>
+  <div id="formWrap">
+    <input id="song" placeholder="Song title *" autocomplete="off">
+    <input id="artist" placeholder="Artist (optional)" autocomplete="off">
+    <input id="note" placeholder="Dedication? (optional)" autocomplete="off">
+    <input id="email" type="email" placeholder="Email (for payment links)" autocomplete="email">
+    <button id="send" type="button">Send request</button>
 
-  <div class="divider">Keep the night going</div>
-  <div class="opt" id="opts"></div>
+    <div class="divider">Keep the night going</div>
+    <div class="opt" id="opts"></div>
+  </div>
+  <div id="queue"></div>
   <div id="msg"></div>
 </main>
 <script>
@@ -90,7 +96,58 @@
   var sendBtn = document.getElementById("send");
   var optsEl = document.getElementById("opts");
   var msgEl = document.getElementById("msg");
+  var queueEl = document.getElementById("queue");
   var busy = false;
+
+  // No ?m= in the link: there's no band to send to — explain instead of posting
+  // to an invisible shared inbox.
+  if (!MUSICIAN) {
+    var nb = document.getElementById("noBand");
+    var fw = document.getElementById("formWrap");
+    if (nb) nb.style.display = "block";
+    if (fw) fw.style.display = "none";
+  }
+
+  // Live queue: songs already requested by the audience (public read).
+  var queueSnapshot = [];
+  function renderQueue(list) {
+    if (!queueEl) return;
+    queueEl.innerHTML = "";
+    var rows = (list || []).filter(function (r) {
+      return r && r.status !== "declined" && r.status !== "paid" && r.song;
+    });
+    if (!rows.length) { queueEl.style.display = "none"; return; }
+    queueEl.style.display = "block";
+    rows.sort(function (a, b) { return (b.ts || 0) - (a.ts || 0); });
+    var h = document.createElement("div");
+    h.style.cssText = "font-size:12px;font-weight:700;color:#9fb0c0;margin:20px 0 8px;text-align:left;letter-spacing:1.5px;";
+    h.textContent = "ALREADY REQUESTED";
+    queueEl.appendChild(h);
+    rows.forEach(function (r) {
+      var row = document.createElement("div");
+      row.style.cssText = "text-align:left;padding:9px 12px;margin:6px 0;background:#243747;border:1px solid #3a4d5f;border-radius:10px;";
+      var t = document.createElement("div");
+      t.style.cssText = "font-weight:600;font-size:15px;";
+      t.textContent = r.song;
+      var a = document.createElement("div");
+      a.style.cssText = "font-size:13px;color:#9fb0c0;";
+      a.textContent = (r.artist || "") + (r.status === "accepted" ? " \u00b7 accepted!" : "");
+      row.appendChild(t); row.appendChild(a);
+      queueEl.appendChild(row);
+    });
+  }
+  if (MUSICIAN && FIREBASE_URL) {
+    setInterval(function () {
+      fetch(FIREBASE_URL + "/users/" + encodeURIComponent(MUSICIAN) + "/requests.json")
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          var list = [];
+          if (d && typeof d === "object") Object.keys(d).forEach(function (k) { if (d[k] && typeof d[k] === "object") { d[k].id = k; list.push(d[k]); } });
+          queueSnapshot = list;
+          renderQueue(list);
+        }).catch(function () {});
+    }, 5000);
+  }
 
   function say(txt) { msgEl.textContent = txt; }
   function mail() { return document.getElementById("email").value.trim().slice(0, 120); }
@@ -127,13 +184,14 @@
   sendBtn.addEventListener("click", function () {
     var song = document.getElementById("song").value.trim();
     if (!song) { say("Type a song first!"); return; }
+    var dup = queueSnapshot.some(function (q) { return q.song && q.song.toLowerCase() === song.toLowerCase(); });
     post({
       song: song.slice(0, 80),
       artist: document.getElementById("artist").value.trim().slice(0, 80),
       note: document.getElementById("note").value.trim().slice(0, 200),
       email: mail(),
       ts: Date.now()
-    }, "Got it — thanks! We'll see what we can do.");
+    }, dup ? "That's already in the queue — we'll get to it!" : "Got it — thanks! We'll see what we can do.");
   });
 
   function paidButton(label, payload, doneMsg, cls) {

@@ -2922,13 +2922,24 @@
     });
   }
   function userPath() {
-    if (!me) return "";
-    return REQUESTS_DB_URL + "/users/" + encodeURIComponent(me.uid);
+    return REQUESTS_DB_URL + "/users/" + encodeURIComponent(myId());
+  }
+  // identity: your signed-in uid, or a persistent device id so requests work
+  // even before you sign in — each device gets its own private inbox
+  var DEVICE_ID = null;
+  function myId() {
+    if (me && me.uid) return me.uid;
+    if (!DEVICE_ID) {
+      try {
+        DEVICE_ID = localStorage.getItem("sb2dev");
+        if (!DEVICE_ID) { DEVICE_ID = "d" + Math.random().toString(36).slice(2, 10); localStorage.setItem("sb2dev", DEVICE_ID); }
+      } catch (e) { DEVICE_ID = "d" + Math.random().toString(36).slice(2, 10); }
+    }
+    return DEVICE_ID;
   }
   function stageLabel() { return (me && me.stage) || STAGE_NAME || (me && me.email) || ""; }
   function myRequestsUrl() {
-    if (!me) return REQUESTS_PAGE_URL;
-    return REQUESTS_PAGE_URL + (REQUESTS_PAGE_URL.indexOf("?") >= 0 ? "&" : "?") + "m=" + encodeURIComponent(me.uid);
+    return REQUESTS_PAGE_URL + (REQUESTS_PAGE_URL.indexOf("?") >= 0 ? "&" : "?") + "m=" + encodeURIComponent(myId());
   }
   function myInviteUrl() {
     var base = (typeof location !== "undefined" && location.href) ? location.href.split("?")[0] : "setlist-builder.html";
@@ -2983,7 +2994,10 @@
     });
     bar.appendChild(ren);
     var inv = document.createElement("button"); inv.type = "button"; inv.textContent = "Invite musician";
-    inv.addEventListener("click", function () { copyText(myInviteUrl()); });
+    inv.addEventListener("click", function () {
+      copyText(myInviteUrl());
+      flashNew("Invite link copied \u2014 send it to another musician.");
+    });
     bar.appendChild(inv);
     var pay = document.createElement("button"); pay.type = "button"; pay.textContent = "Payments";
     pay.addEventListener("click", showPaymentsSheet);
@@ -3077,6 +3091,7 @@
   var ugResults = [];
   var ugNote = "";
   var requestsData = [];
+  var reqView = "list"; // "list" or "qr" — so polling never wipes the QR view
   var requestsTimer = null;
   var reqNote = "";
   var scrollTimer = null;
@@ -4443,13 +4458,8 @@
   }
 
   function loadRequests() {
-    if (!HOSTED) { renderRequests(); return; }
-    // privacy: each musician only ever sees their OWN requests — no shared inbox
-    if (!cloudOn()) {
-      reqNote = "Sign in to receive your own live requests \u2014 you'll never see other musicians'.";
-      if (s.tab === "requests") renderRequests();
-      return;
-    }
+    if (!HOSTED) { if (reqView === "list") renderRequests(); return; }
+    // privacy: this device/account only ever reads its OWN inbox — never a shared one
     if (REQUESTS_DB_URL) { loadRequestsFirebase(); return; }
     fetch(API_BASE + "/.netlify/functions/requests").then(function (r) { return r.json(); }).then(function (list) {
       if (!Array.isArray(list)) throw new Error("bad response");
@@ -4461,23 +4471,21 @@
   }
 
   function loadRequestsFirebase() {
-    // only ever the signed-in musician's own inbox — never the shared node
+    // this device/account's own inbox only — public read, so it works before sign-in
     var url = userPath() + "/requests.json";
-    authed(url).then(function (u) {
-      return fetch(u).then(function (r) { return r.json(); }).then(function (obj) {
-        var list = [];
-        if (obj && typeof obj === "object") {
-          Object.keys(obj).forEach(function (k) {
-            var v = obj[k];
-            if (v && typeof v === "object") { v.id = k; list.push(v); }
-          });
-        }
-        list.sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
-        processRequests(list);
-      });
+    fetch(url).then(function (r) { return r.json(); }).then(function (obj) {
+      var list = [];
+      if (obj && typeof obj === "object") {
+        Object.keys(obj).forEach(function (k) {
+          var v = obj[k];
+          if (v && typeof v === "object") { v.id = k; list.push(v); }
+        });
+      }
+      list.sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
+      processRequests(list);
     }).catch(function () {
-      reqNote = "Can't reach the request database. Check REQUESTS_DB_URL is set to your Firebase URL.";
-      if (s.tab === "requests") renderRequests();
+      reqNote = "Can't reach the request database \u2014 check it's hosted and the rules are published.";
+      if (s.tab === "requests" && reqView === "list") renderRequests();
     });
   }
 
@@ -4880,6 +4888,7 @@
 
   function renderRequests() {
     listEl.innerHTML = "";
+    reqView = "list";
     if (s.tab !== "requests") return;
     var tb = document.createElement("div");
     tb.className = "toolbar";
@@ -4980,7 +4989,12 @@
       sec.appendChild(head);
       var btnRow = document.createElement("div");
       btnRow.className = "req-actions";
-      if (r.status === "paid") {
+      if (!cloudOn()) {
+        var lock = document.createElement("div");
+        lock.className = "purpose";
+        lock.textContent = "Live view \u2014 sign in to accept, decline and send payment links.";
+        btnRow.appendChild(lock);
+      } else if (r.status === "paid") {
         var paidTxt = document.createElement("div");
         paidTxt.className = "purpose";
         paidTxt.textContent = "Paid \u2014 confirmed";
@@ -5055,6 +5069,7 @@
 
   function showQR() {
     listEl.innerHTML = "";
+    reqView = "qr"; // polling must not wipe this view
     var sec = document.createElement("section");
     sec.className = "card qr-box";
     sec.style.padding = "20px 16px";
