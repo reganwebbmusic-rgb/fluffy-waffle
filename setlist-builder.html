@@ -2953,8 +2953,9 @@
     return myDeviceId();
   }
   function stageLabel() { return (me && me.stage) || STAGE_NAME || (me && me.email) || ""; }
+  var APP_VER = 7; // bump when the request page changes — every QR scan then loads a fresh copy for everyone
   function myRequestsUrl() {
-    return REQUESTS_PAGE_URL + (REQUESTS_PAGE_URL.indexOf("?") >= 0 ? "&" : "?") + "m=" + encodeURIComponent(myId());
+    return REQUESTS_PAGE_URL + (REQUESTS_PAGE_URL.indexOf("?") >= 0 ? "&" : "?") + "m=" + encodeURIComponent(myId()) + "&v=" + APP_VER;
   }
   function myInviteUrl() {
     var base = (typeof location !== "undefined" && location.href) ? location.href.split("?")[0] : "setlist-builder.html";
