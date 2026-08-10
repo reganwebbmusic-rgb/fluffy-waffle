@@ -7,3 +7,8 @@ Thumbs.db
 
 # local-only config / backups
 *.local.json
+
+# lyric build artifacts (regenerate with script/harvest.js + script/chunk-book.js)
+script/lyricbook.json
+script/catalog.json
+script/probe-*.js

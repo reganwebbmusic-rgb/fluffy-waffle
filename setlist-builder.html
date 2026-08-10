@@ -2921,6 +2921,51 @@
     x.send();
   })();
 
+  // Offline lyric book: chunked JSON files (lyricbook/0.json … 7.json) keyed by
+  // "title|artist". Each chunk loads lazily on the first tap of a song in it and
+  // stays in memory — no server, no API key, works on GitHub Pages, offline-capable.
+  var LYRICBOOK_CHUNKS = 8;
+  var LYRICBOOK_CACHE = {};   // chunkIdx -> { "title|artist": {text, src} } (or null if failed)
+  var LYRICBOOK_PENDING = {}; // chunkIdx -> [callbacks]
+  function lyricHash(s) {
+    var h = 5381;
+    for (var i2 = 0; i2 < s.length; i2++) h = ((h << 5) + h + s.charCodeAt(i2)) >>> 0;
+    return h % LYRICBOOK_CHUNKS;
+  }
+  function ensureLyricbook(song, cb) {
+    var chunk = lyricHash(lyricKey(song.name, song.artist));
+    if (LYRICBOOK_CACHE[chunk]) { cb(); return; }
+    if (LYRICBOOK_CACHE[chunk] === null) { cb(); return; } // already failed — skip to live fetch
+    (LYRICBOOK_PENDING[chunk] = LYRICBOOK_PENDING[chunk] || []).push(cb);
+    if (LYRICBOOK_PENDING[chunk].length > 1) return; // one fetch per chunk
+    var x = new XMLHttpRequest();
+    x.open("GET", "./lyricbook/" + chunk + ".json", true);
+    x.onload = function () {
+      try {
+        if (x.status === 200) LYRICBOOK_CACHE[chunk] = JSON.parse(x.responseText);
+      } catch (e) { LYRICBOOK_CACHE[chunk] = null; }
+      var w = LYRICBOOK_PENDING[chunk]; LYRICBOOK_PENDING[chunk] = [];
+      w.forEach(function (f) { try { f(); } catch (e) {} });
+    };
+    x.onerror = function () {
+      LYRICBOOK_CACHE[chunk] = null;
+      var w = LYRICBOOK_PENDING[chunk]; LYRICBOOK_PENDING[chunk] = [];
+      w.forEach(function (f) { try { f(); } catch (e) {} });
+    };
+    x.send();
+  }
+  function lyricNorm(s) {
+    return String(s || "").replace(/\s+/g, " ").replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"').trim().toLowerCase();
+  }
+  function lyricKey(name, artist) { return lyricNorm(name) + "|" + lyricNorm(artist); }
+  function bookLyricsFor(song) {
+    if (!song) return null;
+    var chunk = LYRICBOOK_CACHE[lyricHash(lyricKey(song.name, song.artist))];
+    if (!chunk) return null;
+    var hit = chunk[lyricKey(song.name, song.artist)];
+    return (hit && hit.text) ? hit : null;
+  }
+
   var KEY = "setlist-builder-v1";
   var DEF = function () {
     return {
@@ -4738,10 +4783,14 @@
     var chords = null;
     // the musician's own sheet wins; otherwise fall back to the built-in book
     var sheetText = (song.custom && String(song.custom).trim()) ? song.custom : null;
+    var cb = null;
+    var bookHit = null;
     if (!sheetText) {
-      var cb = CHORDBOOK[(song.name || "") + "|" + (song.artist || "")];
+      cb = CHORDBOOK[(song.name || "") + "|" + (song.artist || "")];
       if (cb && cb.text) sheetText = cb.text;
     }
+    if (!sheetText) bookHit = bookLyricsFor(song);
+    if (!sheetText && bookHit) sheetText = bookHit.text;
     if (sheetText) {
       chords = document.createElement("div");
       chords.className = "chords";
@@ -4854,7 +4903,9 @@
 
       var srcLine = document.createElement("div");
       srcLine.className = "notes";
-      srcLine.textContent = "Offline chord sheet for personal gig use · source: " + cb.url;
+      var srcTxt = (cb && cb.url) ? cb.url
+        : (bookHit ? "built-in lyric book (" + (bookHit.src || "offline") + ")" : "your custom sheet");
+      srcLine.textContent = "Offline chord sheet for personal gig use · source: " + srcTxt;
       sheet.appendChild(srcLine);
 
       // floating controls (visible in fullscreen)
@@ -4892,33 +4943,72 @@
       bg.appendChild(floats);
     } else {
       sheet.appendChild(notes);
-      // pull the lyrics in live so tapping a song always shows something
+      // every song gets lyrics: offline lyric book first, then live sources
       var lyrBox = document.createElement("div");
       lyrBox.className = "chords";
       lyrBox.style.cssText = "min-height:60px;";
       lyrBox.textContent = "Loading lyrics\u2026";
       sheet.appendChild(lyrBox);
       (function (song, box) {
-        var key = (song.name || "") + "|" + (song.artist || "");
+        var key = lyricKey(song.name, song.artist);
         if (song.lyrCache && song.lyrCache.t === key) {
-          box.textContent = song.lyrCache.text;
+          box.innerHTML = "";
+          box.appendChild(renderChordSheet(song.lyrCache.text, song));
           return;
         }
-        var artist = String(song.artist || "").split(" ft")[0].split(" feat")[0].split(" featuring")[0].trim() || "Unknown";
-        fetch("https://api.lyrics.ovh/v1/" + encodeURIComponent(artist) + "/" + encodeURIComponent(song.name || ""))
-          .then(function (r) { if (!r.ok) throw new Error("nf"); return r.json(); })
-          .then(function (d) {
-            if (d && d.lyrics) {
-              box.textContent = d.lyrics;
-              song.lyrCache = { t: key, text: d.lyrics };
-            } else box.textContent = "No lyrics found online for this one.";
-          })
-          .catch(function () { box.textContent = "Couldn't load lyrics right now \u2014 try Ultimate Guitar below."; });
+        function show(text) {
+          box.innerHTML = "";
+          box.appendChild(renderChordSheet(text, song));
+          song.lyrCache = { t: key, text: text };
+        }
+        function showFail() {
+          box.textContent = "Couldn't find lyrics for this one anywhere \u2014 tap \u201cChords & lyrics (Ultimate Guitar)\u201d below, or add your own sheet in the song editor.";
+        }
+        function liveFetch() {
+          var artist = String(song.artist || "").split(" ft")[0].split(" feat")[0].split(" featuring")[0].trim() || "Unknown";
+          var title = String(song.name || "");
+          var tries = [
+            // LRCLIB — free, no key, synced lyrics
+            function () {
+              return fetch("https://lrclib.net/api/get?artist_name=" + encodeURIComponent(artist) + "&track_name=" + encodeURIComponent(title))
+                .then(function (r) { if (!r.ok) throw new Error("nf"); return r.json(); })
+                .then(function (d) { var t = (d && (d.syncedLyrics || d.plainLyrics)) || ""; if (!t) throw new Error("nf"); return t; });
+            },
+            // LRCLIB search — catches variant titles ("STAY (with Justin Bieber)" etc.)
+            function () {
+              return fetch("https://lrclib.net/api/search?q=" + encodeURIComponent(artist + " " + title))
+                .then(function (r) { if (!r.ok) throw new Error("nf"); return r.json(); })
+                .then(function (arr) {
+                  if (!arr || !arr.length) throw new Error("nf");
+                  for (var i3 = 0; i3 < arr.length; i3++) {
+                    var t3 = (arr[i3] && (arr[i3].syncedLyrics || arr[i3].plainLyrics)) || "";
+                    if (t3) return t3;
+                  }
+                  throw new Error("nf");
+                });
+            },
+            // lyrics.ovh — free fallback
+            function () {
+              return fetch("https://api.lyrics.ovh/v1/" + encodeURIComponent(artist) + "/" + encodeURIComponent(title))
+                .then(function (r) { if (!r.ok) throw new Error("nf"); return r.json(); })
+                .then(function (d) { if (!d || !d.lyrics) throw new Error("nf"); return d.lyrics; });
+            }
+          ];
+          var p = tries[0]();
+          for (var i2 = 1; i2 < tries.length; i2++) p = p.catch(tries[i2]);
+          p.then(function (text) { show(text); }).catch(function () { showFail(); });
+        }
+        // offline book loads once per chunk and is cached in memory
+        ensureLyricbook(song, function () {
+          var hit = bookLyricsFor(song);
+          if (hit) show(hit.text);
+          else liveFetch();
+        });
       })(song, lyrBox);
       var hint = document.createElement("div");
       hint.className = "notes";
       hint.style.cssText = "color:#8a97a5;font-size:13px;";
-      hint.textContent = "No saved chords for this song yet \u2014 grab them from Ultimate Guitar below, or add your own sheet in the song editor (Custom chords & lyrics).";
+      hint.textContent = "Lyrics come from the built-in offline lyric book, or live from LRCLIB / lyrics.ovh when the book has no entry. Add chords in the song editor for a full chord chart.";
       sheet.appendChild(hint);
     }
     sheet.appendChild(btns);
@@ -5392,7 +5482,7 @@
       if (have[(c[0] + "|" + c[1]).toLowerCase()]) return;
       var score = 50;
       var reasons = [];
-      if (CHORDBOOK[c[0] + "|" + c[1]]) { score += 15; reasons.push("lyrics ready"); }
+      if (CHORDBOOK[c[0] + "|" + c[1]] || bookLyricsFor({ name: c[0], artist: c[1] })) { score += 15; reasons.push("lyrics ready"); }
       if (artists[c[1].toLowerCase()]) { score += 10; reasons.push("you play " + c[1]); }
       if (energyCount.high === 0) { score += 8; reasons.push("adds high energy"); }
       if (energyCount.low === 0) { score += 8; reasons.push("adds a calm song"); }
