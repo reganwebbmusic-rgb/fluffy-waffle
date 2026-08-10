@@ -6323,26 +6323,88 @@
     if (idx < 0) return false;
     var dup = s.songs.some(function (x) { return x.name && x.name.toLowerCase() === String(song.name).toLowerCase(); });
     if (dup) return false;
-    s.songs[idx] = { name: song.name, artist: song.artist || "", key: song.key || "", capo: song.capo || "", bpm: song.bpm || "", energy: 3, note: "", trans: "", status: "Ready", len: "", played: 0, custom: song.custom || "" };
+    s.songs[idx] = { name: song.name, artist: song.artist || "", key: song.key || "", capo: song.capo || "", bpm: song.bpm || "", energy: 3, note: song.note || "", trans: "", status: "Ready", len: "", played: 0, custom: song.custom || "" };
     return true;
+  }
+  // Songbook Pro full-library backup (.sbpbackup): ZIP > dataFile.txt >
+  // "1.0\r\n" + JSON {songs:[{Id, name, author, key(0-11), Capo, TempoInt,
+  // content, NotesText, Deleted}], sets:[{details:{name,Deleted},
+  // contents:[{Order, SongId, Deleted}]}]}
+  var SB_NOTES = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
+  function sbpKeyName(k) {
+    var n = parseInt(k, 10);
+    if (isNaN(n) || n < 0 || n > 11) return "";
+    return SB_NOTES[n];
+  }
+  function sbpContentToCustom(content) {
+    var t = String(content || "");
+    t = t.replace(/\{(soc|start_of_chorus)\}/gi, "[Chorus]");
+    t = t.replace(/\{(soi|start_of_intro)\}/gi, "[Intro]");
+    t = t.replace(/\{(sob|start_of_bridge)\}/gi, "[Bridge]");
+    t = t.replace(/\{(sov|start_of_verse)\}/gi, "[Verse]");
+    t = t.replace(/\{(so[^}]*)\}/gi, "[Section]");
+    t = t.replace(/\{(e[^}]*)\}/gi, "");
+    t = t.replace(/\{(c|comment)\s*:\s*([^}]*)\}/gi, "[$2]");
+    t = t.replace(/\{(c|comment)\}/gi, "");
+    return t.replace(/\n{3,}/g, "\n\n").trim();
+  }
+  function parseSBPBackup(text) {
+    var body = String(text || "");
+    if (body.indexOf("1.0") === 0) {
+      var nl = body.indexOf("{", body.indexOf("\n"));
+      if (nl >= 0) body = body.slice(nl);
+    }
+    var d = null;
+    try { d = JSON.parse(body); } catch (e) { return { songs: [], sets: [] }; }
+    var songs = [], sets = [], byId = {};
+    (d.songs || []).forEach(function (sng) {
+      if (!sng || sng.Deleted) return;
+      var nm = String(sng.name || "").trim();
+      if (!nm) return;
+      songs.push({
+        name: nm.slice(0, 80),
+        artist: String(sng.author || sng.subTitle || "").trim().slice(0, 80),
+        key: sbpKeyName(sng.key),
+        capo: sng.Capo ? String(sng.Capo) : "",
+        bpm: sng.TempoInt ? String(sng.TempoInt) : "",
+        custom: sbpContentToCustom(sng.content),
+        note: String(sng.NotesText || "").slice(0, 200)
+      });
+      if (sng.Id !== undefined) byId[sng.Id] = nm;
+    });
+    (d.sets || []).forEach(function (setObj) {
+      var det = setObj.details || {};
+      if (det.Deleted) return;
+      var entries = (setObj.contents || []).slice().sort(function (a, b) { return (a.Order || 0) - (b.Order || 0); });
+      var names = [];
+      entries.forEach(function (e) {
+        if (!e || e.Deleted) return;
+        var nm = byId[e.SongId] || String(e.name || "").trim();
+        if (nm) names.push(nm);
+      });
+      if (names.length) sets.push({ name: String(det.name || "Imported set").trim(), songs: names });
+    });
+    return { songs: songs, sets: sets };
   }
   function placeImportedSet(setObj) {
     var pool = filledSongs();
     var byName = {};
     pool.forEach(function (x, i) { if (x && x.name) byName[x.name.toLowerCase()] = i; });
     var placed = 0, missing = 0;
-    var which = /set\s*b/i.test(setObj.name) ? "B" : "A";
+    var order = ["A", "B"];
     setObj.songs.forEach(function (title) {
       var pi = byName[String(title).toLowerCase()];
       if (pi === undefined) { missing++; return; }
       var done = false;
-      for (var bi = 0; bi < 2 && !done; bi++) {
-        for (var si = 0; si < SET_SLOTS; si++) {
-          if (s.sets[which][bi][si] < 0) { s.sets[which][bi][si] = pi; placed++; done = true; break; }
+      for (var oi = 0; oi < order.length && !done; oi++) {
+        for (var bi = 0; bi < 2 && !done; bi++) {
+          for (var si = 0; si < SET_SLOTS; si++) {
+            if (s.sets[order[oi]][bi][si] < 0) { s.sets[order[oi]][bi][si] = pi; placed++; done = true; break; }
+          }
         }
       }
     });
-    return { placed: placed, missing: missing, which: which };
+    return { placed: placed, missing: missing };
   }
   function inflateRaw(bytes) {
     if (typeof DecompressionStream === "undefined") return Promise.reject(new Error("inflate unavailable"));
@@ -6398,7 +6460,7 @@
     var p = document.createElement("div");
     p.className = "rec-note";
     p.style.cssText = "margin:10px 14px 0;line-height:1.6;";
-    p.innerHTML = "Works with what Songbook Pro can export:<br>\u2022 <b>ChordPro song files</b> (.pro, .chopro, .cho, .crd, .chord, .txt) \u2014 chords, key, capo and tempo come across<br>\u2022 <b>SongBook XML</b> (classic LinkeSoft export) \u2014 songs and setlists<br>\u2022 <b>.sbp / .sbpbackup / .zip</b> \u2014 the archive is unpacked and any ChordPro/XML inside is imported<br>Pick as many files as you like \u2014 duplicates are skipped.";
+    p.innerHTML = "Works with what Songbook Pro can export:<br>\u2022 <b>SongbookPro backup</b> (.sbpbackup) \u2014 the whole library: all songs, chords, keys, capos and every setlist<br>\u2022 <b>ChordPro song files</b> (.pro, .chopro, .cho, .crd, .chord, .txt) \u2014 chords, key, capo and tempo come across<br>\u2022 <b>SongBook XML</b> (classic LinkeSoft export) \u2014 songs and setlists<br>\u2022 <b>.sbp / .zip</b> \u2014 unpacked, and any ChordPro/XML/backup inside is imported<br>Pick as many files as you like \u2014 duplicates are skipped.";
     var inp = document.createElement("input");
     inp.type = "file";
     inp.multiple = true;
@@ -6421,8 +6483,15 @@
       status.textContent = "Importing " + files.length + " file(s)\u2026";
       var songs = [], sets = [], errors = 0, total = files.length, done = 0;
       function finish() {
+        // songs used by your setlists go in first, so the gig-ready ones make
+        // the pool even when it can't hold the whole library
+        var wanted = {};
+        sets.forEach(function (setObj) { setObj.songs.forEach(function (n) { wanted[String(n).toLowerCase()] = 1; }); });
+        var ordered = [];
+        songs.forEach(function (song) { if (wanted[String(song.name).toLowerCase()]) ordered.push(song); });
+        songs.forEach(function (song) { if (!wanted[String(song.name).toLowerCase()]) ordered.push(song); });
         var added = 0;
-        songs.forEach(function (song) { if (importSongIntoPool(song)) added++; });
+        ordered.forEach(function (song) { if (importSongIntoPool(song)) added++; });
         var setAdded = 0, setMiss = 0;
         sets.forEach(function (setObj) {
           var r = placeImportedSet(setObj);
@@ -6430,6 +6499,7 @@
         });
         save(); render();
         var msg = "Imported " + added + " song" + (added === 1 ? "" : "s") + " into your pool";
+        if (added < songs.length) msg += " \u00b7 pool full: " + (songs.length - added) + " skipped (Pro has 300 slots)";
         if (setAdded) msg += " \u00b7 " + setAdded + " placed into your sets" + (setMiss ? " (" + setMiss + " not found)" : "");
         if (errors) msg += " \u00b7 " + errors + " file(s) skipped";
         flashNew(msg);
@@ -6441,14 +6511,24 @@
           file.arrayBuffer().then(function (buf) {
             var entries = readZipEntries(buf);
             var jobs = [];
-            entries.forEach(function (en) {
-              if (/\.(pro|chopro|cho|crd|chord|txt|xml)$/i.test(en.name)) {
-                jobs.push(readZipEntryData(buf, en).then(function (bytes) {
-                  var res = handleText(decodeText(bytes), en.name.split("/").pop());
-                  songs = songs.concat(res.songs); sets = sets.concat(res.sets);
-                }).catch(function () { errors++; }));
-              }
-            });
+            var libEntry = null;
+            entries.forEach(function (en) { if (en.name.indexOf("dataFile.txt") >= 0) libEntry = en; });
+            if (libEntry) {
+              // full SongbookPro library backup — parse it, skip the rest
+              jobs.push(readZipEntryData(buf, libEntry).then(function (bytes) {
+                var res = parseSBPBackup(decodeText(bytes));
+                songs = songs.concat(res.songs); sets = sets.concat(res.sets);
+              }).catch(function () { errors++; }));
+            } else {
+              entries.forEach(function (en) {
+                if (/\.(pro|chopro|cho|crd|chord|txt|xml)$/i.test(en.name)) {
+                  jobs.push(readZipEntryData(buf, en).then(function (bytes) {
+                    var res = handleText(decodeText(bytes), en.name.split("/").pop());
+                    songs = songs.concat(res.songs); sets = sets.concat(res.sets);
+                  }).catch(function () { errors++; }));
+                }
+              });
+            }
             Promise.all(jobs).then(doneFile).catch(doneFile);
           }).catch(function () { errors++; doneFile(); });
         } else {
