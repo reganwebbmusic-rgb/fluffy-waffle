@@ -273,6 +273,33 @@
   .tab.tab-new { background: #f0c987; color: #0f1a24; font-weight: 700; box-shadow: 0 2px 6px rgba(240,201,135,.45); }
   .req-count { display: inline-block; background: #fff; color: #0f1a24; border-radius: 10px; font-size: 11px; font-weight: 700; padding: 1px 6px; margin-left: 5px; vertical-align: middle; }
 
+  /* arrange sidebar — slides in from the left to reorder the Songs tab */
+  .sidebar-bg { position: fixed; inset: 0; background: rgba(20,30,45,.45); z-index: 55; display: none; }
+  .sidebar-bg.open { display: block; }
+  .sidebar {
+    position: fixed; left: 0; top: 0; bottom: 0; width: min(300px, 82vw);
+    background: #fff; z-index: 56; padding: 22px 18px;
+    box-shadow: 2px 0 18px rgba(0,0,0,.28);
+    transform: translateX(-105%); transition: transform .18s ease; overflow-y: auto;
+  }
+  .sidebar.open { transform: none; }
+  .sidebar h3 { margin: 0 0 4px; font-size: 19px; color: #1c2733; }
+  .sidebar .sub { color: #5c6b7a; font-size: 13px; margin: 0 0 12px; }
+  .sb-opt {
+    display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+    background: none; border: 0; padding: 13px 10px; font-size: 15px; font-family: inherit;
+    color: #1c2733; border-radius: 10px; cursor: pointer;
+  }
+  .sb-opt:active { background: #eef3f7; }
+  .sb-opt.on { background: #eaf2fb; color: #1f5fa8; font-weight: 600; }
+  .sb-opt .ck { margin-left: auto; font-weight: 700; }
+  body.dark .sidebar { background: #16202b; }
+  body.dark .sidebar h3 { color: #e8eef4; }
+  body.dark .sidebar .sub { color: #9fb0c0; }
+  body.dark .sb-opt { color: #dbe4ec; }
+  body.dark .sb-opt:active { background: #1d2a37; }
+  body.dark .sb-opt.on { background: #1c2f45; color: #7fb8ff; }
+
   /* dark mode — stage-friendly low-light theme */
   body.dark { background: linear-gradient(180deg, #111820 0%, #0c1218 100%); background-attachment: fixed; color: #dbe4ec; }
   body.dark .progress-card { background: #18222e; }
@@ -2898,7 +2925,7 @@
   var DEF = function () {
     return {
       songs: [], sets: { A: [], B: [] },
-      tab: "songs", setView: "A", expanded: -1,
+      tab: "songs", setView: "A", expanded: -1, songSort: "newest",
       wishlist: [], links: { tip: "", extra: "", review: "" },
       upNext: [], gigCheck: { items: [] }, dark: false, setLib: []
     };
@@ -2917,6 +2944,7 @@
       if (!Array.isArray(s.upNext)) s.upNext = [];
       if (!s.gigCheck || !Array.isArray(s.gigCheck.items)) s.gigCheck = { items: [] };
       if (!Array.isArray(s.setLib)) s.setLib = [];
+      if (!s.songSort) s.songSort = "newest";
       if (s.dark === undefined) s.dark = false;
       while (s.songs.length < poolSize()) s.songs.push(emptySong()); // older saves may have fewer songs
       // re-tab migration: old tabs (pool / Set A / Set B) map onto Songs / Sets
@@ -2930,7 +2958,7 @@
   } catch (e) {}
 
   function emptySong() {
-    return { name: "", artist: "", key: "", capo: "", bpm: "", energy: 3, note: "", trans: "", status: "Ready", len: "", played: 0, custom: "" };
+    return { name: "", artist: "", key: "", capo: "", bpm: "", energy: 3, note: "", trans: "", status: "Ready", len: "", played: 0, custom: "", kind: "", addedAt: 0 };
   }
 
   var pushTimer = null;
@@ -3379,9 +3407,85 @@
     listEl.appendChild(sec);
   }
 
+  var SORT_OPTIONS = [
+    ["newest", "Newest added"],
+    ["az", "Alphabetical (A\u2013Z)"],
+    ["za", "Alphabetical (Z\u2013A)"],
+    ["played", "Last played"],
+    ["pool", "Pool order"]
+  ];
+  function sortLabel() {
+    for (var i = 0; i < SORT_OPTIONS.length; i++) if (SORT_OPTIONS[i][0] === s.songSort) return SORT_OPTIONS[i][1];
+    return "Newest added";
+  }
+  function compareSongs(a, b) {
+    var ia = s.songs.indexOf(a), ib = s.songs.indexOf(b);
+    switch (s.songSort) {
+      case "az": return String(a.name || "").localeCompare(String(b.name || "")) || (ia - ib);
+      case "za": return String(b.name || "").localeCompare(String(a.name || "")) || (ia - ib);
+      case "recent": return ((b.addedAt || 0) - (a.addedAt || 0)) || (ia - ib);
+      case "played": return ((b.played || 0) - (a.played || 0)) || (ia - ib);
+      default: return ia - ib;
+    }
+  }
+  function closeSongSort() {
+    var bg = document.getElementById("songSortBg");
+    var sb = document.getElementById("songSortBar");
+    if (bg) bg.classList.remove("open");
+    if (sb) sb.classList.remove("open");
+  }
+  function openSongSort() {
+    var bg = document.getElementById("songSortBg");
+    var sb = document.getElementById("songSortBar");
+    if (!bg) {
+      bg = document.createElement("div");
+      bg.className = "sidebar-bg";
+      bg.id = "songSortBg";
+      sb = document.createElement("div");
+      sb.className = "sidebar";
+      sb.id = "songSortBar";
+      var h = document.createElement("h3"); h.textContent = "Arrange songs";
+      var sub = document.createElement("div"); sub.className = "sub";
+      sub.textContent = "How the Songs tab is ordered.";
+      sb.appendChild(h); sb.appendChild(sub);
+      SORT_OPTIONS.forEach(function (opt) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "sb-opt";
+        var t = document.createElement("span"); t.textContent = opt[1];
+        var ck = document.createElement("span"); ck.className = "ck";
+        b.appendChild(t); b.appendChild(ck);
+        b.addEventListener("click", function () {
+          s.songSort = opt[0];
+          save();
+          closeSongSort();
+          renderPool(filledSongs());
+        });
+        sb.appendChild(b);
+      });
+      var done = document.createElement("button");
+      done.type = "button"; done.className = "btn ug";
+      done.style.cssText = "width:100%;margin-top:14px;";
+      done.textContent = "Done";
+      done.addEventListener("click", closeSongSort);
+      sb.appendChild(done);
+      bg.appendChild(sb);
+      bg.addEventListener("click", function (e) { if (e.target === bg) closeSongSort(); });
+      document.body.appendChild(bg);
+    }
+    var opts = sb.querySelectorAll(".sb-opt");
+    SORT_OPTIONS.forEach(function (opt, i) {
+      var on = s.songSort === opt[0];
+      opts[i].className = "sb-opt" + (on ? " on" : "");
+      opts[i].querySelector(".ck").textContent = on ? "\u2713" : "";
+    });
+    bg.classList.add("open");
+    sb.classList.add("open");
+  }
   function renderPool(filled) {
     var tb = document.createElement("div");
     tb.className = "toolbar";
+    tb.appendChild(mkBtn("Arrange \u25be", openSongSort));
     tb.appendChild(mkBtn("Top 50", renderTop50));
     tb.appendChild(mkBtn("Recommend", function () { recommendSongs(); }));
     tb.appendChild(mkBtn("Wishlist", renderWishlist));
@@ -3418,13 +3522,18 @@
       listEl.appendChild(un);
     }
 
+    var count = document.createElement("div");
+    count.className = "songs-count";
+    count.textContent = filled.length + (filled.length === 1 ? " song" : " songs") + " \u00b7 " + sortLabel();
+    listEl.appendChild(count);
+
     var shown = filled;
     if (songsQuery) {
       shown = filled.filter(function (song) {
         return (song.name + " " + (song.artist || "")).toLowerCase().indexOf(songsQuery) >= 0;
       });
     }
-    shown.forEach(function (song) {
+    shown.slice().sort(compareSongs).forEach(function (song) {
       listEl.appendChild(songCard(s.songs.indexOf(song)));
     });
     // show the empty song being edited even though it has no name yet
@@ -3536,7 +3645,7 @@
     if (idx < 0) { flashNew("Pool is full \u2014 that's a Pro perk to grow it.", "fit-low"); return false; }
     var dup = s.songs.some(function (x) { return x.name && x.name.toLowerCase() === String(title).toLowerCase(); });
     if (dup) { flashNew("\u201c" + title + "\u201d is already in your pool."); return false; }
-    s.songs[idx] = { name: title, artist: artist || "", key: key || "", capo: "", bpm: bpm || "", energy: 3, note: "", trans: "", status: "Ready", len: "" };
+    s.songs[idx] = { name: title, artist: artist || "", key: key || "", capo: "", bpm: bpm || "", energy: 3, note: "", trans: "", status: "Ready", len: "", played: 0, custom: "", kind: "", addedAt: Date.now() };
     save();
     return true;
   }
@@ -3681,6 +3790,8 @@
           if (!song.artist) song.artist = hit[1];
           if (!song.key) song.key = hit[2] || "";
         }
+        // first time this song gets a name counts as "newest added"
+        if (!song.addedAt) song.addedAt = Date.now();
       }
       s.expanded = -1; save(); render();
     });
@@ -5182,7 +5293,7 @@
     var idx = -1;
     for (var i = 0; i < poolSize(); i++) if (!s.songs[i].name) { idx = i; break; }
     if (idx < 0) return false;
-    s.songs[idx] = { name: title, artist: artist || "", key: key || "", capo: "", bpm: bpm || "", energy: 3, note: "", trans: "", status: "Ready", len: "" };
+    s.songs[idx] = { name: title, artist: artist || "", key: key || "", capo: "", bpm: bpm || "", energy: 3, note: "", trans: "", status: "Ready", len: "", played: 0, custom: "", kind: "", addedAt: Date.now() };
     save();
     // auto-suggest similar songs once the pool has a couple of entries
     if (filledSongs().length >= 2) recommendSongs(); else render();
@@ -6497,7 +6608,7 @@
     if (idx < 0) return false;
     var dup = s.songs.some(function (x) { return x.name && x.name.toLowerCase() === String(song.name).toLowerCase(); });
     if (dup) return false;
-    s.songs[idx] = { name: song.name, artist: song.artist || "", key: song.key || "", capo: song.capo || "", bpm: song.bpm || "", energy: 3, note: song.note || "", trans: "", status: "Ready", len: "", played: 0, custom: song.custom || "" };
+    s.songs[idx] = { name: song.name, artist: song.artist || "", key: song.key || "", capo: song.capo || "", bpm: song.bpm || "", energy: 3, note: song.note || "", trans: "", status: "Ready", len: "", played: 0, custom: song.custom || "", kind: song.kind || "", addedAt: Date.now() };
     return true;
   }
   // Songbook Pro full-library backup (.sbpbackup): ZIP > dataFile.txt >
