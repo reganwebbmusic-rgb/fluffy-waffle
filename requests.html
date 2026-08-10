@@ -59,6 +59,7 @@
     <div class="divider">Keep the night going</div>
     <div class="opt" id="opts"></div>
   </div>
+  <div id="myStatus" style="display:none;border-radius:12px;padding:12px 14px;font-weight:600;margin:14px 0;text-align:left;"></div>
   <div id="queue"></div>
   <div id="msg"></div>
 </main>
@@ -78,6 +79,9 @@
   var PRICE_2_EXTRA = 10;   // 2 extra songs
   var PRICE_STAY = 20;      // stay longer
   var PRICE_PACKUP = 200;   // pack up and go home (the fun one)
+
+  // Your PayPal payment link — the paid/tip buttons open this automatically.
+  var PAYPAL_LINK = "https://www.paypal.com/ncp/payment/AP7CGWT5R7ASQ";
 
   // The app's QR code adds ?m=<uid> to this page's URL. When present, requests
   // go straight to that musician's private inbox; otherwise to the shared inbox.
@@ -184,9 +188,35 @@
           if (d && typeof d === "object") Object.keys(d).forEach(function (k) { if (d[k] && typeof d[k] === "object") { d[k].id = k; list.push(d[k]); } });
           queueSnapshot = list;
           renderQueue(list);
+          // update the audience member's own request status (accepted/declined)
+          if (myReq) {
+            var hit = null;
+            list.forEach(function (x) {
+              if (!hit && x && x.song && String(x.song).toLowerCase() === String(myReq.song).toLowerCase() && x.status) hit = x;
+            });
+            if (hit) {
+              myReq.status = hit.status;
+              try { localStorage.setItem("sb2myreq", JSON.stringify(myReq)); } catch (e) {}
+              renderMyStatus();
+            }
+          }
         }).catch(function () {});
     }, 5000);
   }
+
+  // your own request's status — the band accepts/declines and this updates live
+  var myReq = null;
+  try { myReq = JSON.parse(localStorage.getItem("sb2myreq")) || null; } catch (e) {}
+  var myStatusEl = document.getElementById("myStatus");
+  function renderMyStatus() {
+    if (!myStatusEl) return;
+    if (!myReq) { myStatusEl.style.display = "none"; return; }
+    myStatusEl.style.display = "block";
+    if (myReq.status === "accepted") { myStatusEl.style.background = "#9fd8a8"; myStatusEl.style.color = "#1c2733"; myStatusEl.textContent = "\u2713 Accepted \u2014 you'll hear it soon!"; }
+    else if (myReq.status === "declined") { myStatusEl.style.background = "#c05a50"; myStatusEl.style.color = "#fff"; myStatusEl.textContent = "\u2717 Declined this time \u2014 try another!"; }
+    else { myStatusEl.style.background = "#f0c987"; myStatusEl.style.color = "#1c2733"; myStatusEl.textContent = "\u2022 Waiting for the band\u2026 stay on this screen and we'll update it here."; }
+  }
+  renderMyStatus();
 
   function say(txt) { msgEl.textContent = txt; }
   function mail() { return document.getElementById("email").value.trim().slice(0, 120); }
@@ -210,6 +240,11 @@
     }).then(function (res) {
       if (!res.ok) throw new Error("bad status");
       say(doneMsg || "Got it — thanks!");
+      if (payload.song) {
+        myReq = { song: String(payload.song).slice(0, 80), ts: payload.ts || Date.now(), status: "" };
+        try { localStorage.setItem("sb2myreq", JSON.stringify(myReq)); } catch (e) {}
+        renderMyStatus();
+      }
       document.getElementById("song").value = "";
       document.getElementById("artist").value = "";
       document.getElementById("note").value = "";
@@ -230,7 +265,7 @@
       note: document.getElementById("note").value.trim().slice(0, 200),
       email: mail(),
       ts: Date.now()
-    }, dup ? "That's already in the queue — we'll get to it!" : "Got it — thanks! We'll see what we can do.");
+    }, dup ? "That's already in the queue — we'll get to it!" : "Got it — thanks! Stay on this screen and we'll update it when the band replies.");
   });
 
   function paidButton(label, payload, doneMsg, cls) {
@@ -241,12 +276,13 @@
     b.addEventListener("click", function () {
       payload.email = mail();
       payload.ts = Date.now();
-      var pay = payload.charge ? pubLinks.extra : (payload.tip ? pubLinks.tip : "");
+      // always open the band's PayPal link (per-purpose links win if set,
+      // otherwise the PayPal link configured below) and still tell the band
+      var pay = payload.charge ? (pubLinks.extra || PAYPAL_LINK) : (payload.tip ? (pubLinks.tip || PAYPAL_LINK) : "");
       if (pay) {
-        // open the payment page right away, then tell the band
         var u = payload.charge ? pay.replace("{{AMOUNT}}", payload.charge) : pay;
         if (window.open) window.open(u, "_blank"); else location.href = u;
-        post(payload, "Payment page opened — thanks!");
+        post(payload, "Payment page opened \u2014 thanks!");
       } else {
         post(payload, doneMsg);
       }
