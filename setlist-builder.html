@@ -6243,6 +6243,228 @@
     draw();
   }
 
+  // ---------- import from Songbook Pro / ChordPro / SongBook XML ----------
+  function decodeEntities(s) {
+    return String(s || "")
+      .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&#39;/g, "'").replace(/&amp;/g, "&");
+  }
+  // ChordPro (.pro/.chopro/.cho/.crd/.chord/.txt) and classic @Directive: files
+  function parseChordPro(text, filename) {
+    var out = { name: "", artist: "", key: "", capo: "", bpm: "", custom: "" };
+    var lines = String(text || "").split(/\r?\n/);
+    var keep = [];
+    for (var i = 0; i < lines.length; i++) {
+      var ln = lines[i];
+      var dm = ln.match(/^\s*\{([a-zA-Z_]+)(?::([^}]*))?\}\s*$/);
+      if (dm) {
+        var k = dm[1].toLowerCase(), v = (dm[2] || "").trim();
+        if (k === "title" || k === "t") out.name = out.name || v;
+        else if (k === "artist" || k === "a") out.artist = out.artist || v;
+        else if (k === "subtitle") { if (!out.artist) out.artist = v; }
+        else if (k === "key") out.key = v;
+        else if (k === "capo") out.capo = v;
+        else if (k === "tempo" || k === "bpm") out.bpm = v;
+        else if (/^start_of_/.test(k)) keep.push("[" + k.replace(/^start_of_/, "") + "]");
+        else if (/^end_of_/.test(k)) { /* drop the closing marker */ }
+        else if (v) keep.push(ln);
+        continue;
+      }
+      var am = ln.match(/^\s*@(Title|Artist|Key|Capo|Tempo|BPM|Subtitle)\s*:\s*(.*)$/i);
+      if (am) {
+        var ak = am[1].toLowerCase(), av = am[2].trim();
+        if (ak === "title") out.name = out.name || av;
+        else if (ak === "artist") out.artist = out.artist || av;
+        else if (ak === "subtitle") { if (!out.artist) out.artist = av; }
+        else if (ak === "key") out.key = av;
+        else if (ak === "capo") out.capo = av;
+        else if (ak === "tempo" || ak === "bpm") out.bpm = av;
+        continue;
+      }
+      keep.push(ln);
+    }
+    if (!out.name) out.name = (filename || "Imported song").replace(/\.(pro|chopro|cho|crd|chord|txt)$/i, "").trim();
+    out.custom = keep.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+    return out;
+  }
+  // Classic LinkeSoft SongBook XML: <SongBook><Song><Title>…<Lyrics>…, plus setlists
+  function parseSongBookXML(text) {
+    var songs = [], sets = [];
+    var songBlocks = String(text || "").match(/<Song\b[^>]*>([\s\S]*?)<\/Song>/gi) || [];
+    songBlocks.forEach(function (blk) {
+      function tag(name) {
+        var m = blk.match(new RegExp("<" + name + "\\b[^>]*>([\\s\\S]*?)<\\/" + name + ">", "i"));
+        return m ? decodeEntities(m[1]).trim() : "";
+      }
+      var name = tag("Title");
+      if (!name) return;
+      songs.push({ name: name.slice(0, 80), artist: tag("Artist").slice(0, 80), key: tag("Key").slice(0, 8), capo: tag("Capo").slice(0, 8), bpm: (tag("Tempo") || tag("BPM")).slice(0, 8), custom: tag("Lyrics") });
+    });
+    var setBlocks = String(text || "").match(/<SetList\b[^>]*>([\s\S]*?)<\/SetList>/gi) || [];
+    setBlocks.forEach(function (blk) {
+      var nm = "";
+      var nmM = blk.match(/<Name\b[^>]*>([\s\S]*?)<\/Name>/i) || blk.match(/<SetList\b[^>]*name="([^"]*)"/i);
+      if (nmM) nm = decodeEntities(nmM[1]).trim();
+      var entries = [];
+      var em = blk.match(/<SetListEntry\b[^>]*>([\s\S]*?)<\/SetListEntry>/gi) || blk.match(/<Song\b[^>]*>([\s\S]*?)<\/Song>/gi) || [];
+      em.forEach(function (e) {
+        var t = e.replace(/<[^>]+>/g, "").trim();
+        if (t) entries.push(t);
+      });
+      if (entries.length) sets.push({ name: nm || "Imported set", songs: entries });
+    });
+    return { songs: songs, sets: sets };
+  }
+  function importSongIntoPool(song) {
+    // like addSongNoRender, but also carries capo + the custom chord sheet
+    var idx = -1;
+    for (var i = 0; i < poolSize(); i++) if (!s.songs[i].name) { idx = i; break; }
+    if (idx < 0) return false;
+    var dup = s.songs.some(function (x) { return x.name && x.name.toLowerCase() === String(song.name).toLowerCase(); });
+    if (dup) return false;
+    s.songs[idx] = { name: song.name, artist: song.artist || "", key: song.key || "", capo: song.capo || "", bpm: song.bpm || "", energy: 3, note: "", trans: "", status: "Ready", len: "", played: 0, custom: song.custom || "" };
+    return true;
+  }
+  function placeImportedSet(setObj) {
+    var pool = filledSongs();
+    var byName = {};
+    pool.forEach(function (x, i) { if (x && x.name) byName[x.name.toLowerCase()] = i; });
+    var placed = 0, missing = 0;
+    var which = /set\s*b/i.test(setObj.name) ? "B" : "A";
+    setObj.songs.forEach(function (title) {
+      var pi = byName[String(title).toLowerCase()];
+      if (pi === undefined) { missing++; return; }
+      var done = false;
+      for (var bi = 0; bi < 2 && !done; bi++) {
+        for (var si = 0; si < SET_SLOTS; si++) {
+          if (s.sets[which][bi][si] < 0) { s.sets[which][bi][si] = pi; placed++; done = true; break; }
+        }
+      }
+    });
+    return { placed: placed, missing: missing, which: which };
+  }
+  function inflateRaw(bytes) {
+    if (typeof DecompressionStream === "undefined") return Promise.reject(new Error("inflate unavailable"));
+    return new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer();
+  }
+  // minimal ZIP reader (for .sbp / .sbpbackup / .zip best-effort extraction)
+  function readZipEntries(buf) {
+    var dv = new DataView(buf), eocd = -1;
+    for (var i = buf.byteLength - 22; i >= 0 && eocd < 0; i--) {
+      if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+    }
+    if (eocd < 0) return [];
+    var count = dv.getUint16(eocd + 10, true);
+    var pos = dv.getUint32(eocd + 16, true);
+    var out = [];
+    for (var n = 0; n < count; n++) {
+      if (dv.getUint32(pos, true) !== 0x02014b50) break;
+      out.push({
+        name: new TextDecoder("utf-8").decode(new Uint8Array(buf, pos + 46, dv.getUint16(pos + 28, true))),
+        method: dv.getUint16(pos + 10, true),
+        csize: dv.getUint32(pos + 20, true),
+        localOff: dv.getUint32(pos + 42, true)
+      });
+      pos += 46 + dv.getUint16(pos + 28, true) + dv.getUint16(pos + 30, true) + dv.getUint16(pos + 32, true);
+    }
+    return out;
+  }
+  function readZipEntryData(buf, entry) {
+    var dv = new DataView(buf), lo = entry.localOff;
+    var dataStart = lo + 30 + dv.getUint16(lo + 26, true) + dv.getUint16(lo + 28, true);
+    var bytes = new Uint8Array(buf, dataStart, entry.csize);
+    if (entry.method === 0) return Promise.resolve(bytes);
+    if (entry.method === 8) return inflateRaw(bytes);
+    return Promise.reject(new Error("method " + entry.method));
+  }
+  function decodeText(bytes) {
+    try { return new TextDecoder("utf-8").decode(bytes); } catch (e) {}
+    try { return new TextDecoder("latin1").decode(bytes); } catch (e) {}
+    return "";
+  }
+  function renderSBImport() {
+    listEl.innerHTML = "";
+    reqView = "list";
+    var tb = document.createElement("div");
+    tb.className = "toolbar";
+    tb.appendChild(mkBtn("Back to tools", renderTools));
+    listEl.appendChild(tb);
+    var sec = document.createElement("section");
+    sec.className = "card";
+    var h = document.createElement("h2");
+    h.textContent = "Import from Songbook Pro";
+    sec.appendChild(h);
+    var p = document.createElement("div");
+    p.className = "rec-note";
+    p.style.cssText = "margin:10px 14px 0;line-height:1.6;";
+    p.innerHTML = "Works with what Songbook Pro can export:<br>\u2022 <b>ChordPro song files</b> (.pro, .chopro, .cho, .crd, .chord, .txt) \u2014 chords, key, capo and tempo come across<br>\u2022 <b>SongBook XML</b> (classic LinkeSoft export) \u2014 songs and setlists<br>\u2022 <b>.sbp / .sbpbackup / .zip</b> \u2014 the archive is unpacked and any ChordPro/XML inside is imported<br>Pick as many files as you like \u2014 duplicates are skipped.";
+    var inp = document.createElement("input");
+    inp.type = "file";
+    inp.multiple = true;
+    inp.accept = ".pro,.chopro,.cho,.crd,.chord,.txt,.xml,.sbp,.sbpbackup,.zip";
+    inp.style.cssText = "display:block;width:calc(100% - 28px);margin:14px 14px 4px;font-size:14px;";
+    var status = document.createElement("div");
+    status.className = "rec-note";
+    status.style.cssText = "margin:10px 14px 14px;";
+    status.textContent = "Nothing imported yet.";
+    sec.appendChild(h); sec.appendChild(p); sec.appendChild(inp); sec.appendChild(status);
+    listEl.appendChild(sec);
+
+    function handleText(text, filename) {
+      if (/<SongBook[\s>]/i.test(text) || /<Song\b/i.test(text)) return parseSongBookXML(text);
+      return { songs: [parseChordPro(text, filename)], sets: [] };
+    }
+    inp.addEventListener("change", function () {
+      var files = Array.prototype.slice.call(inp.files || []);
+      if (!files.length) return;
+      status.textContent = "Importing " + files.length + " file(s)\u2026";
+      var songs = [], sets = [], errors = 0, total = files.length, done = 0;
+      function finish() {
+        var added = 0;
+        songs.forEach(function (song) { if (importSongIntoPool(song)) added++; });
+        var setAdded = 0, setMiss = 0;
+        sets.forEach(function (setObj) {
+          var r = placeImportedSet(setObj);
+          setAdded += r.placed; setMiss += r.missing;
+        });
+        save(); render();
+        var msg = "Imported " + added + " song" + (added === 1 ? "" : "s") + " into your pool";
+        if (setAdded) msg += " \u00b7 " + setAdded + " placed into your sets" + (setMiss ? " (" + setMiss + " not found)" : "");
+        if (errors) msg += " \u00b7 " + errors + " file(s) skipped";
+        flashNew(msg);
+      }
+      files.forEach(function (file) {
+        var isZip = /\.(sbp|sbpbackup|zip)$/i.test(file.name);
+        var doneFile = function () { done++; if (done === total) finish(); };
+        if (isZip) {
+          file.arrayBuffer().then(function (buf) {
+            var entries = readZipEntries(buf);
+            var jobs = [];
+            entries.forEach(function (en) {
+              if (/\.(pro|chopro|cho|crd|chord|txt|xml)$/i.test(en.name)) {
+                jobs.push(readZipEntryData(buf, en).then(function (bytes) {
+                  var res = handleText(decodeText(bytes), en.name.split("/").pop());
+                  songs = songs.concat(res.songs); sets = sets.concat(res.sets);
+                }).catch(function () { errors++; }));
+              }
+            });
+            Promise.all(jobs).then(doneFile).catch(doneFile);
+          }).catch(function () { errors++; doneFile(); });
+        } else {
+          var rd = new FileReader();
+          rd.onload = function () {
+            var res = handleText(String(rd.result || ""), file.name);
+            songs = songs.concat(res.songs); sets = sets.concat(res.sets);
+            doneFile();
+          };
+          rd.onerror = function () { errors++; doneFile(); };
+          rd.readAsText(file);
+        }
+      });
+    });
+  }
+
   function renderTools() {
     listEl.innerHTML = "";
     var tb = document.createElement("div");
@@ -6250,6 +6472,7 @@
     tb.appendChild(mkBtn("Tuner", startTuner, true));
     tb.appendChild(mkBtn("Stop", stopTuner));
     tb.appendChild(mkBtn("Tutorial", openTutorial));
+    tb.appendChild(mkBtn("SB Pro import", renderSBImport));
     listEl.appendChild(tb);
 
     var tun = document.createElement("section");
