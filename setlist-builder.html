@@ -443,7 +443,15 @@
       "users": {
         ".read": true,
         "$uid": {
-          ".write": "auth != null && ($uid === auth.uid || root.child('admins/' + auth.uid).exists())"
+          ".write": "auth != null && ($uid === auth.uid || root.child('admins/' + auth.uid).exists())",
+          "requests": {
+            ".read": true,
+            ".write": true
+          },
+          "public": {
+            ".read": true,
+            ".write": "$uid === auth.uid"
+          }
         }
       },
       "refs": {
