@@ -3787,12 +3787,12 @@
   }
 
   // add a song without re-rendering — lets you tap through several suggestions
-  function addSongNoRender(title, artist, key, bpm) {
+  function addSongNoRender(title, artist, key, bpm, quiet) {
     var idx = -1;
     for (var i = 0; i < poolSize(); i++) if (!s.songs[i].name) { idx = i; break; }
-    if (idx < 0) { flashNew("Pool is full \u2014 that's a Pro perk to grow it.", "fit-low"); return false; }
+    if (idx < 0) { if (!quiet) flashNew("Pool is full \u2014 that's a Pro perk to grow it.", "fit-low"); return false; }
     var dup = s.songs.some(function (x) { return x.name && x.name.toLowerCase() === String(title).toLowerCase(); });
-    if (dup) { flashNew("\u201c" + title + "\u201d is already in your pool."); return false; }
+    if (dup) { if (!quiet) flashNew("\u201c" + title + "\u201d is already in your pool."); return false; }
     s.songs[idx] = { name: title, artist: artist || "", key: key || "", capo: "", bpm: bpm || "", energy: 3, note: "", trans: "", status: "Ready", len: "", played: 0, custom: "", kind: "", addedAt: Date.now() };
     save();
     return true;
@@ -4578,12 +4578,12 @@
   }
   function useSharedSet(set) {
     if (!window.confirm("Add \u201c" + (set.name || "this set") + "\u201d to your pool and sets?")) return;
-    var added = 0;
+    var added = 0, skipped = 0;
     function place(which, rows) {
       if (!rows || !rows.length) return;
       rows.forEach(function (row) {
         var idx = poolIndexFor(row.name, row.artist);
-        if (idx < 0) { addSongNoRender(row.name, row.artist, row.key, row.bpm); added++; idx = poolIndexFor(row.name, row.artist); }
+        if (idx < 0) { if (addSongNoRender(row.name, row.artist, row.key, row.bpm, true)) { added++; idx = poolIndexFor(row.name, row.artist); } else { skipped++; return; } }
         if (idx >= 0) {
           for (var b = 0; b < 2; b++) {
             for (var si = 0; si < SET_SLOTS; si++) {
@@ -4596,7 +4596,7 @@
     place("A", set.setA);
     place("B", set.setB);
     save(); render();
-    flashNew("Set added \u2014 " + added + " new song" + (added === 1 ? "" : "s") + " in your pool.");
+    flashNew("Set added \u2014 " + added + " new song" + (added === 1 ? "" : "s") + " in your pool" + (skipped ? " \u2014 " + skipped + " skipped (pool full; Pro grows it)" : "") + ".");
   }
   function renderCommunitySets() {
     listEl.innerHTML = "";
@@ -4610,6 +4610,51 @@
     title.style.cssText = "font-weight:700;margin:8px 0;";
     title.textContent = "Community sets \u2014 other musicians' set ideas";
     listEl.appendChild(title);
+
+    // free-for-everyone sets: British Pub Gig Pack bundled with the app
+    var freeTitle = document.createElement("div");
+    freeTitle.className = "purpose";
+    freeTitle.style.cssText = "font-weight:700;margin:12px 0 4px;";
+    freeTitle.textContent = "British Pub Gig Pack \u2014 free for everyone";
+    listEl.appendChild(freeTitle);
+    var freeNote = document.createElement("div");
+    freeNote.className = "notes";
+    freeNote.textContent = "Three ready-made pub sets (116 songs, lyrics included) \u2014 tap \u201cUse this set\u201d to load one. Normally a \u00a39.99 pack; free here for the community.";
+    listEl.appendChild(freeNote);
+    loadPackDetail("british-pub", function () {
+      var pk = PACKS_DETAIL["british-pub"];
+      if (!pk || !pk.sets) {
+        var ferr = document.createElement("div");
+        ferr.className = "s-empty";
+        ferr.textContent = "Couldn't load the free pub sets \u2014 packs/british-pub.json missing.";
+        listEl.appendChild(ferr);
+        return;
+      }
+      pk.sets.forEach(function (sx) {
+        var rows = (sx.songs || []).map(function (r) { return { name: r[0], artist: r[1] || "", key: r[2] || "", bpm: r[3] || "" }; });
+        var set = { name: "Pub Night \u2014 " + sx.name + " (" + sx.vibe + ")", desc: "British Pub Gig Pack \u00b7 free community set \u00b7 " + sx.songs.length + " songs", setA: rows, setB: [], author: "TOOLGIG", ts: Date.now() };
+        var sec = document.createElement("section");
+        sec.className = "card";
+        sec.style.padding = "14px";
+        var nm = document.createElement("div");
+        nm.className = "name";
+        nm.textContent = set.name;
+        var meta = document.createElement("div");
+        meta.className = "artist";
+        meta.textContent = set.desc;
+        var row = document.createElement("div");
+        row.className = "req-actions";
+        var freeBadge = document.createElement("span");
+        freeBadge.className = "fit-badge";
+        freeBadge.style.cssText = "background:#e4f2e6;color:#237a3b;";
+        freeBadge.textContent = "FREE";
+        row.appendChild(freeBadge);
+        row.appendChild(mkBtn("Use this set", function () { useSharedSet(set); }));
+        sec.appendChild(nm); sec.appendChild(meta); sec.appendChild(row);
+        listEl.appendChild(sec);
+      });
+    });
+
     dbGet(REQUESTS_DB_URL + "/sharedsets.json").then(function (r) { return r.json(); }).then(function (d) {
       var list = [];
       if (d && typeof d === "object") Object.keys(d).forEach(function (k) { if (d[k] && typeof d[k] === "object") { d[k].id = k; list.push(d[k]); } });

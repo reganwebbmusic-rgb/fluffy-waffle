@@ -119,6 +119,17 @@ function check(name, cond, extra) {
   check("lyrics open from set view song", !!sheet2 && sheet2.textContent.includes("Tommy used to work on the docks"));
   doc.querySelectorAll(".modal-bg").forEach((m) => { m.style.display = "none"; });
 
+  // Community sets: free British Pub pack section
+  const setsTab = doc.getElementById("tabSets");
+  if (setsTab) setsTab.dispatchEvent(new window.Event("click", { bubbles: true }));
+  await new Promise((r) => setTimeout(r, 300));
+  const commBtn = [...doc.querySelectorAll("button")].find((b) => b.textContent === "Community sets");
+  if (commBtn) commBtn.dispatchEvent(new window.Event("click", { bubbles: true }));
+  await new Promise((r) => setTimeout(r, 900)); // pack load
+  const commText = doc.getElementById("list").textContent;
+  check("community sets shows free pub pack", commText.includes("British Pub Gig Pack — free for everyone") && commText.includes("Pub Night — Set A") && commText.includes("FREE"));
+  check("pub pack sets all render", (commText.match(/Pub Night — Set /g) || []).length === 3);
+
   // Requests tab
   clickTab("tabRequests");
   await new Promise((r) => setTimeout(r, 400));
