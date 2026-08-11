@@ -4184,6 +4184,88 @@
       renderSetLibrary();
     }
   }
+  // match a saved-set song name to something we can open lyrics for: your pool
+  // first (full details), then the built-in catalog, then a bare title.
+  function matchLibSong(nm) {
+    var n = String(nm || "").trim();
+    var nl = n.toLowerCase();
+    var pool = filledSongs();
+    for (var i = 0; i < pool.length; i++) {
+      if (pool[i].name && String(pool[i].name).toLowerCase() === nl) return pool[i];
+    }
+    for (var j = 0; j < CATALOG.length; j++) {
+      if (CATALOG[j][0] && String(CATALOG[j][0]).toLowerCase() === nl) {
+        return { name: CATALOG[j][0], artist: CATALOG[j][1] || "", key: CATALOG[j][2] || "", bpm: CATALOG[j][3] || "" };
+      }
+    }
+    return { name: n, artist: "" };
+  }
+  // view every song in a saved/imported set, tap any song for chords & lyrics
+  function openSetLibView(idx) {
+    var entry = s.setLib && s.setLib[idx];
+    if (!entry) return;
+    var bg = document.createElement("div");
+    bg.className = "modal-bg";
+    var sheet = document.createElement("div");
+    sheet.className = "sheet";
+    sheet.style.cssText = "max-width:480px;";
+    var h = document.createElement("h3"); h.textContent = entry.name;
+    sheet.appendChild(h);
+    var cnt = document.createElement("div");
+    cnt.className = "purpose";
+    cnt.textContent = entry.songs.length + " song" + (entry.songs.length === 1 ? "" : "s") + " \u2014 tap any song for chords & lyrics.";
+    sheet.appendChild(cnt);
+    entry.songs.forEach(function (nm, i) {
+      var m = matchLibSong(nm);
+      var row = document.createElement("div");
+      row.className = "req-row";
+      row.style.cssText = "align-items:center;cursor:pointer;";
+      var num = document.createElement("div");
+      num.style.cssText = "width:26px;color:#8a97a5;font-size:13px;";
+      num.textContent = (i + 1) + ".";
+      var info = document.createElement("div");
+      info.style.cssText = "flex:1;min-width:0;";
+      var t = document.createElement("div"); t.textContent = nm;
+      var a = document.createElement("div");
+      a.className = "notes"; a.style.cssText = "font-size:12px;color:#8a97a5;";
+      a.textContent = m.artist ? m.artist : "not in your pool or the catalog";
+      info.appendChild(t); info.appendChild(a);
+      row.appendChild(num); row.appendChild(info);
+      var lyr = document.createElement("button");
+      lyr.type = "button"; lyr.className = "btn ug"; lyr.textContent = "Lyrics";
+      lyr.addEventListener("click", function (e) { e.stopPropagation(); openSheet(m, false); });
+      row.appendChild(lyr);
+      row.addEventListener("click", function () { openSheet(m, false); });
+      sheet.appendChild(row);
+    });
+    var acts = document.createElement("div");
+    acts.className = "toolbar";
+    acts.style.cssText = "margin-top:12px;";
+    var toA = mkBtn("\u2192 Set A", function () {
+      var r = loadSetFromLib(idx, "A");
+      flashNew("\u201c" + r.name + "\u201d loaded into Set A \u2014 " + r.placed + " placed" + (r.missing ? ", " + r.missing + " not in pool" : ""));
+      renderSets(); closeSheet(bg);
+    });
+    var toB = mkBtn("\u2192 Set B", function () {
+      var r = loadSetFromLib(idx, "B");
+      flashNew("\u201c" + r.name + "\u201d loaded into Set B \u2014 " + r.placed + " placed" + (r.missing ? ", " + r.missing + " not in pool" : ""));
+      renderSets(); closeSheet(bg);
+    });
+    var del = mkBtn("Delete", function () {
+      if (window.confirm("Delete \u201c" + entry.name + "\u201d from your library?")) { deleteSetFromLib(idx); closeSheet(bg); }
+    });
+    del.classList.add("del");
+    acts.appendChild(toA); acts.appendChild(toB); acts.appendChild(del);
+    sheet.appendChild(acts);
+    var cl = document.createElement("button");
+    cl.type = "button"; cl.className = "btn save"; cl.textContent = "Close";
+    cl.style.marginTop = "10px";
+    cl.addEventListener("click", function () { closeSheet(bg); });
+    sheet.appendChild(cl);
+    bg.appendChild(sheet);
+    bg.addEventListener("click", function (e) { if (e.target === bg) closeSheet(bg); });
+    document.body.appendChild(bg);
+  }
   function renderSetLibrary() {
     listEl.innerHTML = "";
     var tb = document.createElement("div");
@@ -4198,7 +4280,7 @@
     var sub = document.createElement("div");
     sub.className = "rec-note";
     sub.style.cssText = "margin:10px 14px 0;line-height:1.5;";
-    sub.textContent = "Every set you've saved or imported lives here. Load any two onto Set A and Set B \u2014 songs are matched by name, so edits to your pool never break a saved set.";
+    sub.textContent = "Every set you've saved or imported lives here. Tap a set to view its songs and open any song's chords & lyrics, or load any two onto Set A and Set B \u2014 songs are matched by name, so edits to your pool never break a saved set.";
     sec.appendChild(sub);
     var saveRow = document.createElement("div");
     saveRow.className = "toolbar";
@@ -4227,7 +4309,8 @@
     } else {
       lib.forEach(function (entry, i) {
         var row = document.createElement("div");
-        row.style.cssText = "display:flex;align-items:center;gap:8px;padding:11px 14px;border-bottom:1px solid #edf1f5;";
+        row.style.cssText = "display:flex;align-items:center;gap:8px;padding:11px 14px;border-bottom:1px solid #edf1f5;cursor:pointer;";
+        row.addEventListener("click", function () { openSetLibView(i); });
         var info = document.createElement("div");
         info.style.cssText = "flex:1;min-width:0;";
         var nm = document.createElement("div");
@@ -4236,14 +4319,16 @@
         nm.textContent = entry.name;
         var cnt = document.createElement("div");
         cnt.className = "artist";
-        cnt.textContent = entry.songs.length + " song" + (entry.songs.length === 1 ? "" : "s");
+        cnt.textContent = entry.songs.length + " song" + (entry.songs.length === 1 ? "" : "s") + " \u00b7 tap to view";
         info.appendChild(nm); info.appendChild(cnt);
-        var toA = mkBtn("\u2192 A", function () {
+        var toA = mkBtn("\u2192 A", function (e) {
+          e.stopPropagation();
           var r = loadSetFromLib(i, "A");
           flashNew("\u201c" + r.name + "\u201d loaded into Set A \u2014 " + r.placed + " song" + (r.placed === 1 ? "" : "s") + (r.missing ? " (" + r.missing + " not in pool)" : ""));
           renderSets();
         });
-        var toB = mkBtn("\u2192 B", function () {
+        var toB = mkBtn("\u2192 B", function (e) {
+          e.stopPropagation();
           var r = loadSetFromLib(i, "B");
           flashNew("\u201c" + r.name + "\u201d loaded into Set B \u2014 " + r.placed + " song" + (r.placed === 1 ? "" : "s") + (r.missing ? " (" + r.missing + " not in pool)" : ""));
           renderSets();
@@ -4251,7 +4336,8 @@
         var del = document.createElement("button");
         del.type = "button"; del.textContent = "\u2715";
         del.style.cssText = "border:0;background:none;font-size:15px;color:#a03027;padding:6px;";
-        del.addEventListener("click", function () {
+        del.addEventListener("click", function (e) {
+          e.stopPropagation();
           if (window.confirm("Delete \u201c" + entry.name + "\u201d from your library?")) deleteSetFromLib(i);
         });
         row.appendChild(info); row.appendChild(toA); row.appendChild(toB); row.appendChild(del);

@@ -21,7 +21,8 @@ const seed = {
   },
   tab: "songs", setView: "A", expanded: -1, songSort: "newest",
   wishlist: [], links: { tip: "", extra: "", review: "" },
-  upNext: [], gigCheck: { items: [] }, dark: false, setLib: []
+  upNext: [], gigCheck: { items: [] }, dark: false,
+  setLib: [{ name: "Gig Set", songs: ["Livin' On A Prayer", "Wonderwall"] }]
 };
 
 const errors = [];
@@ -99,6 +100,24 @@ function check(name, cond, extra) {
   check("sheet has lyrics", sheetText.includes("Tommy used to work on the docks"), "lyric text found");
   // close
   if (modal) { modal.style.display = "none"; }
+
+  // Set library: view imported set -> tap a song -> lyrics sheet
+  const libBtn = [...doc.querySelectorAll("button")].find((b) => b.textContent === "Set library");
+  if (libBtn) libBtn.dispatchEvent(new window.Event("click", { bubbles: true }));
+  await new Promise((r) => setTimeout(r, 400));
+  const libRow = [...doc.querySelectorAll("div")].find((d) => d.style && d.style.cursor === "pointer" && d.textContent.includes("Gig Set"));
+  check("set library lists imported set", !!libRow);
+  if (libRow) libRow.dispatchEvent(new window.Event("click", { bubbles: true }));
+  await new Promise((r) => setTimeout(r, 400));
+  const libModal = [...doc.querySelectorAll(".modal-bg")].filter((m) => m.style.display !== "none").pop();
+  const libText = libModal ? libModal.textContent : "";
+  check("set view opens with songs", libText.includes("Livin' On A Prayer") && libText.includes("Wonderwall"));
+  const songInLib = libModal && [...libModal.querySelectorAll(".req-row")].find((d) => d.textContent.includes("Livin' On A Prayer"));
+  if (songInLib) songInLib.dispatchEvent(new window.Event("click", { bubbles: true }));
+  await new Promise((r) => setTimeout(r, 1500));
+  const sheet2 = [...doc.querySelectorAll(".modal-bg")].filter((m) => m.style.display !== "none").pop();
+  check("lyrics open from set view song", !!sheet2 && sheet2.textContent.includes("Tommy used to work on the docks"));
+  doc.querySelectorAll(".modal-bg").forEach((m) => { m.style.display = "none"; });
 
   // Requests tab
   clickTab("tabRequests");
