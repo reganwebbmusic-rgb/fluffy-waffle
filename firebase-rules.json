@@ -4,26 +4,22 @@
     "requests": { ".write": true },
     "shouts": { ".write": true },
     "sets": { ".write": true },
-    "orders": { ".read": true, ".write": true },
-    "bandsessions": { ".read": true, ".write": true },
-    "sharedsets": { ".read": true, ".write": true },
+    "orders": { ".write": true },
+    "bandsessions": { ".write": true },
+    "sharedsets": { ".write": true },
     "users": {
       ".read": true,
       "$uid": {
-        ".write": "auth != null && ($uid === auth.uid || root.child('admins/' + auth.uid).exists())"
+        ".write": "auth != null && $uid === auth.uid",
+        "requests": { ".write": true },
+        "public": { ".write": "auth != null && $uid === auth.uid" }
       }
     },
     "refs": {
-      ".read": true,
-      "$uid": {
-        ".write": "auth != null"
-      }
+      "$uid": { ".write": "auth != null" }
     },
-    "admins": {
-      ".read": true,
-      "$uid": {
-        ".write": false
-      }
+    "grants": {
+      "$uid": { ".write": "auth != null && auth.uid === 'Vw7HD41oxoSCpPUDnl5i825QZ3K2'" }
     }
   }
 }

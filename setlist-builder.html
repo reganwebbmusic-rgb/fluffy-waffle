@@ -437,33 +437,25 @@
       "requests": { ".write": true },
       "shouts": { ".write": true },
       "sets": { ".write": true },
-      "orders": { ".read": true, ".write": true },
-      "bandsessions": { ".read": true, ".write": true },
-      "sharedsets": { ".read": true, ".write": true },
+      "orders": { ".write": true },
+      "bandsessions": { ".write": true },
+      "sharedsets": { ".write": true },
       "users": {
         ".read": true,
         "$uid": {
-          ".write": "auth != null && ($uid === auth.uid || root.child('admins/' + auth.uid).exists())",
-          "requests": {
-            ".read": true,
-            ".write": true
-          },
-          "public": {
-            ".read": true,
-            ".write": "$uid === auth.uid"
-          }
+          ".write": "auth != null && $uid === auth.uid",
+          "requests": { ".write": true },
+          "public": { ".write": "auth != null && $uid === auth.uid" }
         }
       },
       "refs": {
-        ".read": true,
-        "$uid": {
-          ".write": "auth != null"
-        }
+        "$uid": { ".write": "auth != null" }
       },
-      "admins": {}
+      "grants": {
+        "$uid": { ".write": "auth != null && auth.uid === '" + SELLER_UID + "'" }
+      }
     }
   };
-  RULES_JSON.rules.admins[SELLER_UID] = true;
   var PRO_KEY = "sb2pro";
   var UL_KEY = "sb2ul";
   // Gig Packs: ready-made setlists sold through the same PayPal + Firebase order
@@ -3217,13 +3209,15 @@
     if (!me || !me.uid || me.uid === "local") { REF_PRO_ME = false; REF_UNLIM_ME = false; REF_PACK_ME = false; return; }
     Promise.all([
       dbGet(REQUESTS_DB_URL + "/refs/" + encodeURIComponent(me.uid) + ".json").then(function (r) { return r.json(); }).catch(function () { return null; }),
-      dbGet(REQUESTS_DB_URL + "/users/" + encodeURIComponent(me.uid) + ".json").then(function (r) { return r.json(); }).catch(function () { return null; })
+      dbGet(REQUESTS_DB_URL + "/users/" + encodeURIComponent(me.uid) + ".json").then(function (r) { return r.json(); }).catch(function () { return null; }),
+      dbGet(REQUESTS_DB_URL + "/grants/" + encodeURIComponent(me.uid) + ".json").then(function (r) { return r.json(); }).catch(function () { return null; })
     ]).then(function (both) {
       var n = referralCount(both[0]);
       var rw = (both[1] && both[1].rewards) || {};
-      REF_PRO_ME = (n >= REF_GOAL) || !!rw.pro;
-      REF_UNLIM_ME = (n >= REF_UNLIM_GOAL) || !!rw.unlim;
-      REF_PACK_ME = (n >= REF_PACK_GOAL) || !!rw.packs;
+      var g = both[2] || {};
+      REF_PRO_ME = (n >= REF_GOAL) || !!rw.pro || !!g.pro;
+      REF_UNLIM_ME = (n >= REF_UNLIM_GOAL) || !!rw.unlim || !!g.unlim;
+      REF_PACK_ME = (n >= REF_PACK_GOAL) || !!rw.packs || !!g.packs;
       renderAuthBar();
     });
   }
@@ -8551,11 +8545,13 @@
           var uid = null;
           for (var k3 in users) { if (users[k3] && users[k3].email && String(users[k3].email).toLowerCase() === em) { uid = k3; break; } }
           if (!uid) { gMsg.textContent = "No account found with that email."; return; }
-          var target = users[uid];
-          target.rewards = target.rewards || {};
-          target.rewards[pair[1]] = true;
-          authed(REQUESTS_DB_URL + "/users/" + encodeURIComponent(uid) + ".json").then(function (url) {
-            return fetch(url, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(target) });
+          var g2 = {};
+          try { g2 = JSON.parse(localStorage.getItem("sb2grantcache") || "{}"); } catch (e) {}
+          g2[uid] = g2[uid] || {};
+          g2[uid][pair[1]] = true;
+          try { localStorage.setItem("sb2grantcache", JSON.stringify(g2)); } catch (e) {}
+          authed(REQUESTS_DB_URL + "/grants/" + encodeURIComponent(uid) + ".json").then(function (url) {
+            return fetch(url, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(g2[uid]) });
           }).then(function () { gMsg.textContent = pair[0] + " granted to " + em + " \u2014 they get it on next sign-in."; })
             .catch(function () { gMsg.textContent = "Couldn't save \u2014 check database rules."; });
         });
