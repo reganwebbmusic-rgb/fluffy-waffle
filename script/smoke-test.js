@@ -114,6 +114,18 @@ function check(name, cond, extra) {
   const sheetText = modal ? modal.textContent : "";
   check("song sheet opens from set slot", !!modal);
   check("sheet has lyrics", sheetText.includes("Tommy used to work on the docks"), "lyric text found");
+  // swipe left on the open sheet -> next song in the set
+  if (modal) {
+    const tStart = new window.Event("touchstart");
+    tStart.touches = [{ clientX: 300, clientY: 300 }];
+    modal.dispatchEvent(tStart);
+    const tEnd = new window.Event("touchend");
+    tEnd.changedTouches = [{ clientX: 60, clientY: 320 }];
+    modal.dispatchEvent(tEnd);
+  }
+  await new Promise((r) => setTimeout(r, 1500));
+  const modalSw = [...doc.querySelectorAll(".modal-bg")].filter((m) => m.style.display !== "none").pop();
+  check("swipe left opens next song", !!modalSw && modalSw.textContent.includes("Wonderwall"));
   // tapping a nav tab closes the open sheet and navigates
   clickTab("tabRequests");
   await new Promise((r) => setTimeout(r, 400));
@@ -236,16 +248,16 @@ function check(name, cond, extra) {
   const doc2 = dom2.window.document;
   const click2 = (el) => el.dispatchEvent(new dom2.window.Event("click", { bubbles: true }));
   await new Promise((r) => setTimeout(r, 800));
-  const tabAdmin = doc2.getElementById("tabAdmin");
-  check("Admin tab visible for owner", tabAdmin && tabAdmin.style.display !== "none");
+  const adminBtn = [...doc2.querySelectorAll("button")].find((b) => b.textContent === "Admin");
+  check("Admin button in Tools for owner", !!adminBtn);
   // Tools invite card: link carries the owner uid
   const invInput = [...doc2.querySelectorAll("input")].find((i) => i.readOnly && i.value && i.value.indexOf("invite=1") >= 0);
   check("invite link carries referrer uid", !!invInput && invInput.value.indexOf("r=" + OWNER) >= 0, invInput && invInput.value.slice(0, 80));
-  // Admin tab renders without crashing
-  if (tabAdmin) click2(tabAdmin);
+  // Admin screen renders without crashing
+  if (adminBtn) click2(adminBtn);
   await new Promise((r) => setTimeout(r, 500));
   const adminText = doc2.getElementById("list").textContent;
-  check("admin tab renders", adminText.length > 0 && (adminText.includes("User stats") || adminText.includes("Couldn't load user data")));
+  check("admin screen renders", adminText.length > 0 && (adminText.includes("User stats") || adminText.includes("Couldn't load user data")));
   // non-owner: admin hidden
   const dom3 = new JSDOM(html, {
     runScripts: "dangerously",
@@ -260,8 +272,8 @@ function check(name, cond, extra) {
   });
   const doc3 = dom3.window.document;
   await new Promise((r) => setTimeout(r, 800));
-  const tabAdmin3 = doc3.getElementById("tabAdmin");
-  check("Admin tab hidden for non-owner", tabAdmin3 && tabAdmin3.style.display === "none");
+  const adminBtn3 = [...doc3.querySelectorAll("button")].find((b) => b.textContent === "Admin");
+  check("no Admin button for non-owner", !adminBtn3);
 
   // ---- first-run UX: no saved state -> land on Sets, empty-state CTA, tab order ----
   const dom4 = new JSDOM(html, {

@@ -420,7 +420,6 @@
     <button class="tab active" id="tabSongs" type="button"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span>Songs</span></button>
     <button class="tab" id="tabPacks" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v9"/></svg><span>Packs</span></button>
     <button class="tab" id="tabTools" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Tools</span></button>
-    <button class="tab" id="tabAdmin" type="button" style="display:none">Admin</button>
   </div>
 
   <main id="list"></main>
@@ -3287,58 +3286,54 @@
     document.getElementById("authStage").value = "";
     renderAuthBar();
   }
-  function updateAdminTab() {
-    var b = document.getElementById("tabAdmin");
-    if (!b) return;
-    b.style.display = (me && me.uid && SELLER_UID && me.uid === SELLER_UID) ? "" : "none";
-  }
   function renderAuthBar() {
-    updateAdminTab();
     var bar = document.getElementById("authBar");
     bar.innerHTML = "";
+    if (!me) return;
+    var top = document.createElement("div");
+    top.style.cssText = "display:flex;align-items:center;gap:8px;flex-wrap:wrap;";
     if (isPro()) {
       var chip = document.createElement("span");
       chip.className = "pro-chip";
-      chip.style.cssText = "font-size:12px;font-weight:700;color:#0f1a24;background:#f0c987;border-radius:8px;padding:4px 8px;margin-right:6px;";
+      chip.style.cssText = "font-size:12px;font-weight:700;color:#0f1a24;background:#f0c987;border-radius:8px;padding:4px 8px;";
       chip.textContent = "Pro \u2713";
-      bar.appendChild(chip);
+      top.appendChild(chip);
     }
-    if (!me) return;
     var span = document.createElement("span");
     span.className = "ab-name";
-    span.textContent = stageLabel() + (me.email ? " (" + me.email + ")" : "");
-    bar.appendChild(span);
-    var ren = document.createElement("button"); ren.type = "button"; ren.textContent = "Rename";
+    span.style.cssText = "font-weight:700;";
+    span.textContent = stageLabel() || "Account";
+    top.appendChild(span);
+    var em = document.createElement("span");
+    em.style.cssText = "color:#8a97a5;font-size:13px;";
+    em.textContent = me.email || "";
+    top.appendChild(em);
+    var ren = document.createElement("button"); ren.type = "button"; ren.className = "btn small"; ren.textContent = "Rename";
     ren.addEventListener("click", function () {
       var n = window.prompt("Stage name:", stageLabel());
       if (n && n.trim()) { me.stage = n.trim(); saveMe(); syncSongbook(); renderAuthBar(); }
     });
-    bar.appendChild(ren);
-    var inv = document.createElement("button"); inv.type = "button"; inv.textContent = "Invite musician";
-    inv.addEventListener("click", function () {
-      copyText(myInviteUrl());
-      flashNew("Invite link copied \u2014 send it to another musician.");
-    });
-    bar.appendChild(inv);
-    var pay = document.createElement("button"); pay.type = "button"; pay.textContent = "Payments";
-    pay.addEventListener("click", showPaymentsSheet);
-    bar.appendChild(pay);
-    var up = document.createElement("button"); up.type = "button"; up.textContent = "Save to cloud";
-    up.addEventListener("click", function () {
-      pushCloud().then(function (ok) {
-        flashNew(ok ? "Saved to cloud." : "Not signed in — sign in first.");
-      }).catch(function () { flashNew("Cloud save failed — try again.", "fit-low"); });
-    });
-    bar.appendChild(up);
-    var down = document.createElement("button"); down.type = "button"; down.textContent = "Get from cloud";
-    down.addEventListener("click", function () {
-      pullCloud().then(function () { render(); flashNew("Loaded from cloud."); })
-        .catch(function () { flashNew("Cloud load failed — try again.", "fit-low"); });
-    });
-    bar.appendChild(down);
-    var out = document.createElement("button"); out.type = "button"; out.textContent = "Sign out";
+    top.appendChild(ren);
+    var out = document.createElement("button"); out.type = "button"; out.className = "btn small"; out.textContent = "Sign out";
+    out.style.marginLeft = "auto";
     out.addEventListener("click", signOut);
-    bar.appendChild(out);
+    top.appendChild(out);
+    bar.appendChild(top);
+    var row = document.createElement("div");
+    row.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;";
+    [
+      { t: "Invite musician", fn: function () { copyText(myInviteUrl()); flashNew("Invite link copied \u2014 send it to another musician."); } },
+      { t: "Payments", fn: showPaymentsSheet },
+      { t: "Save to cloud", fn: function () { pushCloud().then(function (ok) { flashNew(ok ? "Saved to cloud." : "Not signed in \u2014 sign in first."); }).catch(function () { flashNew("Cloud save failed \u2014 try again.", "fit-low"); }); } },
+      { t: "Get from cloud", fn: function () { pullCloud().then(function () { render(); flashNew("Loaded from cloud."); }).catch(function () { flashNew("Cloud load failed \u2014 try again.", "fit-low"); }); } }
+    ].forEach(function (b2) {
+      var btn = document.createElement("button");
+      btn.type = "button"; btn.className = "btn small";
+      btn.textContent = b2.t;
+      btn.addEventListener("click", b2.fn);
+      row.appendChild(btn);
+    });
+    bar.appendChild(row);
   }
   function pushCloud() {
     if (!cloudOn()) return Promise.resolve(false);
@@ -3466,7 +3461,7 @@
   }
 
   function syncTabs() {
-    [["tabSongs", "songs"], ["tabSets", "sets"], ["tabRequests", "requests"], ["tabPacks", "packs"], ["tabTools", "tools"], ["tabAdmin", "admin"]].forEach(function (t) {
+    [["tabSongs", "songs"], ["tabSets", "sets"], ["tabRequests", "requests"], ["tabPacks", "packs"], ["tabTools", "tools"]].forEach(function (t) {
       var el = document.getElementById(t[0]);
       if (el) el.classList.toggle("active", t[1] === s.tab);
     });
@@ -4886,6 +4881,7 @@
     var engs = which === "A" ? SET_A_ENG : SET_B_ENG;
     var purps = which === "A" ? SET_A_PURP : SET_B_PURP;
     var pool = filledSongs();
+    var setNavList = []; // songs in slot order — enables swipe prev/next in the sheet
 
     var tb = document.createElement("div");
     tb.className = "toolbar";
@@ -4922,9 +4918,10 @@
           name.title = "tap for chords & lyrics";
           // the whole slot card opens the full-screen chords & lyrics sheet
           head.style.cursor = "pointer";
-          head.addEventListener("click", (function (sng) {
-            return function () { openSheet(sng, true); };
-          })(pool[assigned]));
+          setNavList.push(pool[assigned]);
+          head.addEventListener("click", (function (sng, idx) {
+            return function () { openSheet(sng, true, { list: setNavList, idx: idx }); };
+          })(pool[assigned], setNavList.length - 1));
         }
         var time = document.createElement("div");
         time.className = "time";
@@ -5050,13 +5047,33 @@
     return "https://www.ultimate-guitar.com/search.php?search_type=title&order=my&value=" + encodeURIComponent(q);
   }
 
-  function openSheet(song, autoFull) {
+  function openSheet(song, autoFull, navCtx) {
     if (!song) return;
     stopScroll();
     var bg = document.createElement("div");
     bg.className = "modal-bg";
     var sheet = document.createElement("div");
     sheet.className = "sheet";
+    // swipe left/right to move to the next/previous song in the set
+    if (navCtx && navCtx.list && navCtx.list.length > 1) {
+      var swX = null, swY = null;
+      bg.addEventListener("touchstart", function (e) {
+        var t = e.touches && e.touches[0];
+        if (t) { swX = t.clientX; swY = t.clientY; }
+      }, { passive: true });
+      bg.addEventListener("touchend", function (e) {
+        if (swX === null) return;
+        var t = e.changedTouches && e.changedTouches[0];
+        if (!t) return;
+        var dx = t.clientX - swX, dy = t.clientY - swY;
+        swX = null; swY = null;
+        if (Math.abs(dx) < 70 || Math.abs(dy) > Math.abs(dx) * 1.4) return;
+        var ni = navCtx.idx + (dx < 0 ? 1 : -1);
+        if (ni < 0 || ni >= navCtx.list.length) return;
+        closeSheet(bg);
+        openSheet(navCtx.list[ni], true, { list: navCtx.list, idx: ni });
+      }, { passive: true });
+    }
     var h = document.createElement("h3"); h.textContent = song.name || "";
     var sub = document.createElement("div"); sub.className = "sub";
     var plays = playsFor(song);
@@ -5326,6 +5343,37 @@
       toggleExpand(bg);
       var fbtns = bg.querySelectorAll(".float-btn");
       for (var fi = 0; fi < fbtns.length; fi++) if (fbtns[fi].textContent === "Full") fbtns[fi].textContent = "Exit";
+      // prev/next floats when the song is part of a set
+      if (navCtx && navCtx.list && navCtx.list.length > 1) {
+        var navRow = document.createElement("div");
+        navRow.className = "float-btn";
+        navRow.style.cssText = "left:50%;transform:translateX(-50%);display:flex;gap:4px;";
+        navRow.innerHTML = "";
+        var prevF = document.createElement("button");
+        prevF.type = "button";
+        prevF.className = "float-btn";
+        prevF.style.cssText = "position:static;";
+        prevF.textContent = "\u25c0 Prev";
+        prevF.addEventListener("click", function (e) {
+          e.stopPropagation();
+          if (navCtx.idx <= 0) return;
+          closeSheet(bg);
+          openSheet(navCtx.list[navCtx.idx - 1], true, { list: navCtx.list, idx: navCtx.idx - 1 });
+        });
+        var nextF = document.createElement("button");
+        nextF.type = "button";
+        nextF.className = "float-btn";
+        nextF.style.cssText = "position:static;";
+        nextF.textContent = "Next \u25b6";
+        nextF.addEventListener("click", function (e) {
+          e.stopPropagation();
+          if (navCtx.idx >= navCtx.list.length - 1) return;
+          closeSheet(bg);
+          openSheet(navCtx.list[navCtx.idx + 1], true, { list: navCtx.list, idx: navCtx.idx + 1 });
+        });
+        navRow.appendChild(prevF); navRow.appendChild(nextF);
+        bg.appendChild(navRow);
+      }
     }
   }
 
@@ -7402,6 +7450,9 @@
     tb.appendChild(mkBtn("Stop", stopTuner));
     tb.appendChild(mkBtn("Tutorial", openTutorial));
     tb.appendChild(mkBtn("SB Pro import", renderSBImport));
+    if (me && me.uid && SELLER_UID && me.uid === SELLER_UID) {
+      tb.appendChild(mkBtn("Admin", function () { s.tab = "admin"; save(); render(); }));
+    }
     listEl.appendChild(tb);
 
     // install-to-home-screen card
@@ -8985,7 +9036,7 @@
       if (name === "sets") { openSetsDrawer(); return; } // Sets icon opens the sidebar
       exitPlay();
       s.tab = name; save(); render();
-      [["tabSongs", "songs"], ["tabSets", "sets"], ["tabRequests", "requests"], ["tabPacks", "packs"], ["tabTools", "tools"], ["tabAdmin", "admin"]].forEach(function (t) {
+      [["tabSongs", "songs"], ["tabSets", "sets"], ["tabRequests", "requests"], ["tabPacks", "packs"], ["tabTools", "tools"]].forEach(function (t) {
         document.getElementById(t[0]).classList.toggle("active", t[1] === name);
       });
       if (name === "requests") {
@@ -8999,7 +9050,6 @@
   tab(document.getElementById("tabRequests"), "requests");
   tab(document.getElementById("tabPacks"), "packs");
   tab(document.getElementById("tabTools"), "tools");
-  tab(document.getElementById("tabAdmin"), "admin");
 
   function shareSetlistText() {
     var pool = filledSongs(), lines = [];
@@ -9185,9 +9235,8 @@
   });
   startReqPolling();
 
-  // Referral status + admin tab on boot (only when already signed in)
+  // Referral status on boot (only when already signed in)
   if (me && me.uid && me.uid !== "local") refreshReferralStatus();
-  updateAdminTab();
 
   // Install prompt: capture it so Tools can offer a one-tap "Install app" button
   // (Chrome/Android/Edge only \u2014 iPhone Safari falls back to manual steps).
