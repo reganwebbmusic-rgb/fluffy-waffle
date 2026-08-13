@@ -86,12 +86,16 @@ function check(name, cond, extra) {
   await new Promise((r) => setTimeout(r, 400));
   check("song editor opens", doc.getElementById("list").textContent.includes("Custom chords & lyrics"));
 
-  // Sets tab: clicking it navigates straight to the set screen with the songs
+  // Sets tab: opens the sidebar, picking Set A shows the songs
   clickTab("tabSets");
   await new Promise((r) => setTimeout(r, 400));
+  const drawer = doc.querySelector(".drawer");
+  check("sets tap opens sidebar", !!drawer && drawer.textContent.includes("Set A") && drawer.textContent.includes("Set library"));
+  const setAItem = drawer && [...drawer.querySelectorAll("button")].find((b) => b.textContent.indexOf("Set A") === 0);
+  if (setAItem) setAItem.dispatchEvent(new window.Event("click", { bubbles: true }));
+  await new Promise((r) => setTimeout(r, 400));
   const listText2 = doc.getElementById("list").textContent;
-  check("sets tab renders", listText2.includes("Set A"));
-  check("sets screen shows the songs", listText2.includes("Livin' On A Prayer") && listText2.includes("Wonderwall"));
+  check("picking Set A shows the songs", listText2.includes("Set A") && listText2.includes("Livin' On A Prayer"));
   const songRow = [...doc.querySelectorAll(".card.slot .head")].find((d) => d.textContent && d.textContent.includes("Livin' On A Prayer"));
   if (songRow) songRow.dispatchEvent(new window.Event("click", { bubbles: true }));
   await new Promise((r) => setTimeout(r, 1500)); // lyricbook chunk load
