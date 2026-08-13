@@ -110,7 +110,7 @@ function check(name, cond, extra) {
   const songRow = [...doc.querySelectorAll(".card.slot .head")].find((d) => d.textContent && d.textContent.includes("Livin' On A Prayer"));
   if (songRow) songRow.dispatchEvent(new window.Event("click", { bubbles: true }));
   await new Promise((r) => setTimeout(r, 1500)); // lyricbook chunk load
-  const modal = doc.querySelector(".modal-bg");
+  const modal = [...doc.querySelectorAll(".modal-bg")].filter((m) => m.style.display !== "none").pop();
   const sheetText = modal ? modal.textContent : "";
   check("song sheet opens from set slot", !!modal);
   check("sheet has lyrics", sheetText.includes("Tommy used to work on the docks"), "lyric text found");
