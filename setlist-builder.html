@@ -183,6 +183,8 @@
   .cs-lyric { color: #fdfaf7; white-space: pre; font-size: 17px; font-weight: 800; }
   .float-ctrls { display: none; position: fixed; right: 14px; bottom: 24px; flex-direction: column; gap: 10px; z-index: 70; }
   .modal-bg.max .float-ctrls { display: flex; }
+  .float-btn.fback { display: none; }
+  .modal-bg.max .float-btn.fback { display: flex; }
   .float-btn {
     width: 48px; height: 48px; border-radius: 50%; border: 1px solid rgba(255,255,255,.28);
     background: rgba(47,26,23,.82); color: #fff; font-size: 15px; font-weight: 600;
@@ -289,6 +291,16 @@
   /* song numbers inside a set */
   .slot-num { width: 26px; height: 26px; border-radius: 50%; background: #1c6fd6; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; margin-right: 10px; flex-shrink: 0; }
   body.dark .slot-num { background: #4da3ff; color: #0f1a24; }
+  /* SongBook-style set rows: number | title + artist | key on the right */
+  .card.slot { display: flex; align-items: center; padding: 10px 14px; border-radius: 10px; margin-bottom: 6px; border: 1px solid #26303c; }
+  .card.slot .head { display: flex; align-items: center; flex: 1; min-width: 0; }
+  .card.slot .song { flex: 1; min-width: 0; }
+  .card.slot .name { font-weight: 800; font-size: 15px; }
+  .card.slot .time { font-size: 12px; color: #8a97a5; margin-top: 1px; }
+  .card.slot .purpose { display: none; }
+  .card.slot .edots { display: none; }
+  .slot-key { color: #e6b98a; font-weight: 800; font-size: 16px; margin-left: auto; padding-left: 10px; flex-shrink: 0; }
+  .card.slot .slot-pick .btn { font-size: 12px; padding: 6px 10px; opacity: .85; }
   /* individual boxed song rows (set views, pack details) */
   .song-box { display: flex; align-items: center; gap: 12px; padding: 12px; margin-bottom: 8px; background: #16222f; border: 1px solid #233241; border-radius: 12px; cursor: pointer; }
   .song-box:hover { border-color: #3a5269; }
@@ -4935,6 +4947,11 @@
           numEl.className = "slot-num";
           numEl.textContent = bi * SET_SLOTS + i + 1;
           head.insertBefore(numEl, head.firstChild);
+          // key on the far right, SongBook-style
+          var keyEl = document.createElement("span");
+          keyEl.className = "slot-key";
+          keyEl.textContent = pool[assigned].key || "";
+          head.appendChild(keyEl);
         }
         var purpose = document.createElement("div");
         purpose.className = "purpose";
@@ -5243,6 +5260,14 @@
       sheet.appendChild(srcLine);
 
       // floating controls (visible in fullscreen)
+      // back-to-set button, top-left
+      var fBack = document.createElement("button");
+      fBack.type = "button";
+      fBack.className = "float-btn fback";
+      fBack.style.cssText = "position:fixed;left:14px;bottom:24px;";
+      fBack.textContent = "\u25c0 Set";
+      fBack.addEventListener("click", function () { closeSheet(bg); });
+      bg.appendChild(fBack);
       var floats = document.createElement("div");
       floats.className = "float-ctrls";
       var fMinus = document.createElement("button");
