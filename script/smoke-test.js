@@ -86,16 +86,12 @@ function check(name, cond, extra) {
   await new Promise((r) => setTimeout(r, 400));
   check("song editor opens", doc.getElementById("list").textContent.includes("Custom chords & lyrics"));
 
-  // Sets tab: tapping the icon opens the drawer, picking Set A navigates
+  // Sets tab: clicking it navigates straight to the set screen with the songs
   clickTab("tabSets");
   await new Promise((r) => setTimeout(r, 400));
-  const drawer = doc.querySelector(".drawer");
-  check("sets icon opens drawer", !!drawer && drawer.textContent.includes("Set A") && drawer.textContent.includes("Set library"));
-  const setAItem = drawer && [...drawer.querySelectorAll("button")].find((b) => b.textContent === "Set A");
-  if (setAItem) setAItem.dispatchEvent(new window.Event("click", { bubbles: true }));
-  await new Promise((r) => setTimeout(r, 400));
   const listText2 = doc.getElementById("list").textContent;
-  check("sets screen renders after picking", listText2.includes("Set A"));
+  check("sets tab renders", listText2.includes("Set A"));
+  check("sets screen shows the songs", listText2.includes("Livin' On A Prayer") && listText2.includes("Wonderwall"));
   const songRow = [...doc.querySelectorAll(".card.slot .head")].find((d) => d.textContent && d.textContent.includes("Livin' On A Prayer"));
   if (songRow) songRow.dispatchEvent(new window.Event("click", { bubbles: true }));
   await new Promise((r) => setTimeout(r, 1500)); // lyricbook chunk load
@@ -103,8 +99,15 @@ function check(name, cond, extra) {
   const sheetText = modal ? modal.textContent : "";
   check("song sheet opens from set slot", !!modal);
   check("sheet has lyrics", sheetText.includes("Tommy used to work on the docks"), "lyric text found");
-  // close
-  if (modal) { modal.style.display = "none"; }
+  // tapping a nav tab closes the open sheet and navigates
+  clickTab("tabRequests");
+  await new Promise((r) => setTimeout(r, 400));
+  const modalAfter = doc.querySelector(".modal-bg");
+  check("nav tap closes the open sheet", !modalAfter || modalAfter.style.display === "none");
+  check("nav tap navigates after closing", doc.getElementById("tabRequests").classList.contains("active"));
+  // back to Sets for the next tests
+  clickTab("tabSets");
+  await new Promise((r) => setTimeout(r, 400));
 
   // Set library: view imported set -> tap a song -> lyrics sheet
   const libBtn = [...doc.querySelectorAll("button")].find((b) => b.textContent === "Set library");
