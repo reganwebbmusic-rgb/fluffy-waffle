@@ -240,6 +240,27 @@ function check(name, cond, extra) {
   const tabAdmin3 = doc3.getElementById("tabAdmin");
   check("Admin tab hidden for non-owner", tabAdmin3 && tabAdmin3.style.display === "none");
 
+  // ---- first-run UX: no saved state -> land on Sets, empty-state CTA, tab order ----
+  const dom4 = new JSDOM(html, {
+    runScripts: "dangerously",
+    url: "https://reganwebbmusic-rgb.github.io/fluffy-waffle/setlist-builder.html",
+    beforeParse(w4) {
+      w4.localStorage.clear();
+      w4.XMLHttpRequest = class { open(m, u) { this.url = u; } send() { if (this.onload) this.onload(); } };
+      w4.fetch = () => Promise.reject(new Error("off"));
+    }
+  });
+  const doc4 = dom4.window.document;
+  await new Promise((r) => setTimeout(r, 800));
+  const tabs4 = [...doc4.querySelectorAll(".tabs .tab")].map((b) => b.id);
+  check("tab order: Sets and Requests first", tabs4[0] === "tabSets" && tabs4[1] === "tabRequests", tabs4.join(","));
+  check("first-run lands on Sets tab", doc4.getElementById("tabSets").classList.contains("active"));
+  const list4 = doc4.getElementById("list").textContent;
+  check("Sets empty-state CTA shows", list4.includes("Your setlist is empty") && list4.includes("Add songs"));
+  doc4.getElementById("tabRequests").dispatchEvent(new dom4.window.Event("click", { bubbles: true }));
+  await new Promise((r) => setTimeout(r, 400));
+  check("Requests empty-state has QR button", !![...doc4.querySelectorAll("button")].find((b) => b.textContent === "Show request QR"));
+
   console.log("\nerrors captured:", errors.length ? errors.join("\n  ") : "none");
   if (errors.length) process.exitCode = 1;
   console.log(process.exitCode ? "SMOKE TEST: FAILURES" : "SMOKE TEST: ALL PASSED");

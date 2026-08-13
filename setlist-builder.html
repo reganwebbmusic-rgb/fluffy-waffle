@@ -265,8 +265,8 @@
   body { background: linear-gradient(180deg, #f2f6fa 0%, #e9f0f6 100%); background-attachment: fixed; }
   header h1 { font-size: 30px; letter-spacing: 2.5px; font-weight: 800; }
   .tabs { background: #e3ebf3; border-radius: 16px; padding: 4px; gap: 4px; }
-  .tab { border: 0; background: transparent; border-radius: 12px; font-weight: 600; }
-  .tab.active { background: #4da3ff; color: #0f1a24; box-shadow: 0 2px 6px rgba(77,163,255,.35); }
+  .tab { border: 0; background: transparent; border-radius: 12px; font-weight: 700; font-size: 14px; padding: 10px 4px; color: #44566a; }
+  .tab.active { background: #1c6fd6; color: #fff; box-shadow: 0 3px 8px rgba(28,111,214,.4); }
   section.card { box-shadow: 0 4px 14px rgba(20,30,45,.08); }
   .btn, .tab { transition: transform .08s ease, box-shadow .15s ease; }
   .btn:active, .tab:active { transform: scale(.97); }
@@ -379,9 +379,9 @@
   </div>
 
   <div class="tabs">
-    <button class="tab active" id="tabSongs" type="button">Songs</button>
     <button class="tab" id="tabSets" type="button">Sets</button>
     <button class="tab" id="tabRequests" type="button">Requests<span id="reqCount" class="req-count" style="display:none"></span></button>
+    <button class="tab active" id="tabSongs" type="button">Songs</button>
     <button class="tab" id="tabPacks" type="button">Packs</button>
     <button class="tab" id="tabTools" type="button">Tools</button>
     <button class="tab" id="tabAdmin" type="button" style="display:none">Admin</button>
@@ -3033,6 +3033,7 @@
   s.sets.B = [emptyBlock(), emptyBlock()];
   try {
     var saved = JSON.parse(localStorage.getItem(KEY));
+    if (!saved) { s.tab = "sets"; } // first-run: land on the setlist, the heart of the app
     if (saved && saved.songs && saved.sets) {
       s = saved;
       if (!s.links) s.links = { tip: "", extra: "", review: "" };
@@ -3428,7 +3429,14 @@
     return wrap;
   }
 
+  function syncTabs() {
+    [["tabSongs", "songs"], ["tabSets", "sets"], ["tabRequests", "requests"], ["tabPacks", "packs"], ["tabTools", "tools"], ["tabAdmin", "admin"]].forEach(function (t) {
+      var el = document.getElementById(t[0]);
+      if (el) el.classList.toggle("active", t[1] === s.tab);
+    });
+  }
   function render() {
+    syncTabs();
     listEl.innerHTML = "";
     if (setClockTimer) { clearInterval(setClockTimer); setClockTimer = null; }
     if (bandTimer) { clearInterval(bandTimer); bandTimer = null; }
@@ -4371,6 +4379,25 @@
     ctb.appendChild(mkBtn("Community sets", renderCommunitySets));
     ctb.appendChild(mkBtn("Band sync", renderBandSync));
     listEl.appendChild(ctb);
+    // first-use clarity: when the pool is empty, point straight at where songs come from
+    if (!filledSongs().length) {
+      var hint = document.createElement("section");
+      hint.className = "card";
+      hint.style.cssText = "padding:16px;margin-bottom:10px;";
+      var hh = document.createElement("h3");
+      hh.textContent = "Your setlist is empty";
+      hint.appendChild(hh);
+      var hp = document.createElement("div");
+      hp.className = "purpose";
+      hp.textContent = "Add songs to your pool first \u2014 then Auto-fill builds this set for you, or load a ready-made Gig Pack.";
+      hint.appendChild(hp);
+      var hr = document.createElement("div");
+      hr.className = "req-actions";
+      hr.appendChild(mkBtn("Add songs", function () { s.tab = "songs"; save(); render(); }));
+      hr.appendChild(mkBtn("Browse Gig Packs", function () { s.tab = "packs"; save(); render(); }));
+      hint.appendChild(hr);
+      listEl.appendChild(hint);
+    }
     addSetClock(s.setView === "B" ? "B" : "A");
     renderSet(s.setView === "B" ? "B" : "A");
     // set time estimator — total song length vs the set's target
@@ -6477,8 +6504,11 @@
       var e = document.createElement("div");
       e.className = "s-empty";
       e.style.padding = "20px 4px";
-      e.textContent = "No requests yet — point the audience at your request page (QR button).";
+      e.textContent = "No requests yet — show the QR code below and the audience sends songs straight to this screen.";
       listEl.appendChild(e);
+      var qrBtn = mkBtn("Show request QR", showQR);
+      qrBtn.style.margin = "0 14px 14px";
+      listEl.appendChild(qrBtn);
       var dbg0 = document.createElement("div");
       dbg0.className = "rec-note";
       dbg0.style.cssText = "font-size:11px;color:#8a97a5;margin-top:14px;";
@@ -6913,7 +6943,7 @@
     return sec;
   }
   var TUT_SLIDES = [
-    { t: "TOOLGIG tour", d: "Five tabs: Songs (your pool), Sets (A & B), Requests (live from the audience), Packs (ready-made setlists) and Tools. Tap a song in your Sets, in Play mode or in a Gig Pack and the chords & lyrics sheet opens from the built-in offline lyric book \u2014 tap a song in Songs to edit it." },
+    { t: "TOOLGIG tour", d: "Two things matter at a gig: your Sets (setlists) and Requests (the audience's song requests) \u2014 they're the first tabs for a reason. Songs is your pool of 15, Packs are ready-made setlists, and Tools holds everything else. Tap a song in your Sets, in Play mode or in a Gig Pack and the chords & lyrics sheet opens from the built-in offline lyric book." },
     { t: "Install on your phone", d: "Make TOOLGIG a real app icon \u2014 no app store or fees needed: Android \u2014 Chrome \u22ee menu \u2192 \u201cAdd to Home screen\u201d; iPhone/iPad \u2014 Safari Share button \u2192 \u201cAdd to Home Screen\u201d; Desktop \u2014 install icon in the address bar. Full instructions live in Tools \u2192 Install this app." },
     { t: "Songs tab", d: "Search the 12,341-song catalog and add songs to your pool (15 free, 500 with Pro). Each song carries a key, BPM, capo, energy level and status \u2014 Learning, Ready or Retire. Tap-tempo the BPM by tapping along. Wishlist and Top 50 help you shortlist." },
     { t: "Recommend", d: "Add two songs and the app recommends the best next picks from the whole catalog. It scores every song: +15 if the lyrics are ready to open, +10 if it's an artist you already play, +8 if your pool is missing high-energy songs or calm ones. Top 6 picks, with the reasons shown." },
