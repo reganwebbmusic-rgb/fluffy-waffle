@@ -141,6 +141,8 @@
     background: #fff; width: 100%; max-width: 540px; border-radius: 18px 18px 0 0;
     padding: 20px 18px 26px; box-shadow: 0 -6px 24px rgba(20,30,45,.25);
   }
+  /* non-fullscreen sheets (set views, packs, unlock boxes) scroll when long */
+  .modal-bg:not(.max) .sheet { max-height: 88vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
   .sheet h3 { margin: 0 0 2px; font-size: 19px; color: #1c2733; }
   .sheet .sub { color: #5c6b7a; font-size: 14px; margin-bottom: 10px; }
   .sheet .notes { font-size: 14px; color: #41505e; line-height: 1.5; margin: 8px 0 14px; }
