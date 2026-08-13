@@ -297,6 +297,8 @@
   .drawer-title { font-size: 19px; font-weight: 800; padding: 4px 10px 14px; }
   .drawer-item { text-align: left; border: 0; background: transparent; color: #dbe6f2; font-size: 15px; font-weight: 600; padding: 13px 10px; border-radius: 10px; display: flex; align-items: center; gap: 10px; }
   .drawer-item:hover { background: #16222f; }
+  .drawer-sub { font-size: 11px; color: #7d8fa3; padding: 14px 10px 4px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+  .drawer-set { font-size: 14px; color: #c8d6e4; padding: 11px 10px; }
   .tab.active { background: #1c6fd6; color: #fff; box-shadow: 0 3px 8px rgba(28,111,214,.4); }
   section.card { box-shadow: 0 1px 3px rgba(20,30,45,.06); }
   .btn, .tab { transition: transform .08s ease, box-shadow .15s ease; }
@@ -8948,6 +8950,24 @@
       b.addEventListener("click", it.fn);
       panel.appendChild(b);
     });
+    // saved sets, viewable right in the sidebar
+    if (Array.isArray(s.setLib) && s.setLib.length) {
+      var dl = document.createElement("div");
+      dl.className = "drawer-sub";
+      dl.textContent = "Saved sets";
+      panel.appendChild(dl);
+      s.setLib.forEach(function (entry, i) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "drawer-item drawer-set";
+        b.textContent = entry.name + " (" + entry.songs.length + " songs)";
+        b.addEventListener("click", function () {
+          s.tab = "sets"; save(); closeDrawer(bg); render();
+          openSetLibView(i);
+        });
+        panel.appendChild(b);
+      });
+    }
     bg.appendChild(panel);
     bg.addEventListener("click", function (e) { if (e.target === bg) closeDrawer(bg); });
     document.body.appendChild(bg);

@@ -96,6 +96,17 @@ function check(name, cond, extra) {
   await new Promise((r) => setTimeout(r, 400));
   const listText2 = doc.getElementById("list").textContent;
   check("picking Set A shows the songs", listText2.includes("Set A") && listText2.includes("Livin' On A Prayer"));
+  // saved sets are viewable right in the sidebar
+  clickTab("tabSets");
+  await new Promise((r) => setTimeout(r, 400));
+  const drawer2 = doc.querySelector(".drawer");
+  check("saved sets listed in sidebar", !!drawer2 && drawer2.textContent.includes("Gig Set (2 songs)"));
+  const gsItem = drawer2 && [...drawer2.querySelectorAll("button")].find((b) => b.textContent.indexOf("Gig Set") === 0);
+  if (gsItem) gsItem.dispatchEvent(new window.Event("click", { bubbles: true }));
+  await new Promise((r) => setTimeout(r, 400));
+  const libModal2 = [...doc.querySelectorAll(".modal-bg")].filter((m) => m.style.display !== "none").pop();
+  check("sidebar set opens its songs", !!libModal2 && libModal2.textContent.includes("Livin' On A Prayer"));
+  doc.querySelectorAll(".modal-bg").forEach((m) => { m.style.display = "none"; });
   const songRow = [...doc.querySelectorAll(".card.slot .head")].find((d) => d.textContent && d.textContent.includes("Livin' On A Prayer"));
   if (songRow) songRow.dispatchEvent(new window.Event("click", { bubbles: true }));
   await new Promise((r) => setTimeout(r, 1500)); // lyricbook chunk load
