@@ -267,6 +267,15 @@
   header h1 { font-size: 26px; letter-spacing: 1.8px; font-weight: 800; }
   .tabs { background: #e3ebf3; border-radius: 16px; padding: 4px; gap: 4px; }
   .tab { border: 0; background: transparent; border-radius: 12px; font-weight: 700; font-size: 14px; padding: 10px 4px; color: #44566a; }
+  /* bottom navigation (SongBook-style) */
+  .tabs { position: fixed; bottom: 0; left: 0; right: 0; z-index: 60; margin: 0; padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); background: #eef3f8; border-top: 1px solid #dde6ee; border-radius: 0; gap: 4px; }
+  .tabs .tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 0; background: transparent; border-radius: 10px; font-weight: 600; font-size: 11px; padding: 6px 2px; color: #44566a; flex: 1; }
+  .tab svg { width: 21px; height: 21px; }
+  .tab.active { background: #1c6fd6; color: #fff; box-shadow: none; }
+  body { padding-bottom: 74px; }
+  body.dark .tabs { background: #111820; border-top-color: #1d2a37; }
+  body.dark .tab { color: #9fb0c0; }
+  body.dark .tab.active { background: #4da3ff; color: #0f1a24; }
   .tab.active { background: #1c6fd6; color: #fff; box-shadow: 0 3px 8px rgba(28,111,214,.4); }
   section.card { box-shadow: 0 1px 3px rgba(20,30,45,.06); }
   .btn, .tab { transition: transform .08s ease, box-shadow .15s ease; }
@@ -381,11 +390,11 @@
   </div>
 
   <div class="tabs">
-    <button class="tab" id="tabSets" type="button">Sets</button>
-    <button class="tab" id="tabRequests" type="button">Requests<span id="reqCount" class="req-count" style="display:none"></span></button>
-    <button class="tab active" id="tabSongs" type="button">Songs</button>
-    <button class="tab" id="tabPacks" type="button">Packs</button>
-    <button class="tab" id="tabTools" type="button">Tools</button>
+    <button class="tab" id="tabSets" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span>Sets</span></button>
+    <button class="tab" id="tabRequests" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>Requests</span><span id="reqCount" class="req-count" style="display:none"></span></button>
+    <button class="tab active" id="tabSongs" type="button"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span>Songs</span></button>
+    <button class="tab" id="tabPacks" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v9"/></svg><span>Packs</span></button>
+    <button class="tab" id="tabTools" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Tools</span></button>
     <button class="tab" id="tabAdmin" type="button" style="display:none">Admin</button>
   </div>
 
@@ -3025,7 +3034,7 @@
       songs: [], sets: { A: [], B: [] },
       tab: "songs", setView: "A", expanded: -1, songSort: "newest",
       wishlist: [], links: { tip: "", extra: "", review: "" },
-      upNext: [], gigCheck: { items: [] }, dark: false, setLib: []
+      upNext: [], gigCheck: { items: [] }, dark: true, setLib: []
     };
   };
   var s = DEF();
@@ -3044,7 +3053,7 @@
       if (!s.gigCheck || !Array.isArray(s.gigCheck.items)) s.gigCheck = { items: [] };
       if (!Array.isArray(s.setLib)) s.setLib = [];
       if (!s.songSort) s.songSort = "newest";
-      if (s.dark === undefined) s.dark = false;
+      if (s.dark === undefined) s.dark = true;
       while (s.songs.length < poolSize()) s.songs.push(emptySong()); // older saves may have fewer songs
       // re-tab migration: old tabs (pool / Set A / Set B) map onto Songs / Sets
       if (s.tab === "A" || s.tab === "B") { s.setView = s.tab; s.tab = "sets"; }
