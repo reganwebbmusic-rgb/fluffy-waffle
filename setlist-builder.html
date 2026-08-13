@@ -301,11 +301,14 @@
   .card.slot .edots { display: none; }
   .slot-key { color: #e6b98a; font-weight: 800; font-size: 16px; margin-left: auto; padding-left: 10px; flex-shrink: 0; }
   .card.slot .slot-pick .btn { font-size: 12px; padding: 6px 10px; opacity: .85; }
-  /* individual boxed song rows (set views, pack details) */
-  .song-box { display: flex; align-items: center; gap: 12px; padding: 12px; margin-bottom: 8px; background: #16222f; border: 1px solid #233241; border-radius: 12px; cursor: pointer; }
-  .song-box:hover { border-color: #3a5269; }
-  .song-box-title { font-weight: 700; font-size: 15px; color: #f2f6fb; }
-  .song-box-artist { font-size: 13px; color: #9fb0c0; margin-top: 2px; }
+  /* SongBook-style song list (set views, pack details): one box, divided rows, key right */
+  .sb-list { border: 1px solid #2a3644; border-radius: 14px; overflow: hidden; margin-bottom: 10px; background: #121a24; }
+  .sb-row { display: flex; align-items: center; gap: 12px; padding: 11px 14px; cursor: pointer; }
+  .sb-row + .sb-row { border-top: 1px solid #222d3a; }
+  .sb-num { width: 24px; color: #7d8fa3; font-weight: 700; font-size: 13px; flex-shrink: 0; }
+  .sb-title { font-weight: 700; font-size: 15px; color: #f2f6fb; }
+  .sb-artist { font-size: 13px; color: #9fb0c0; margin-top: 1px; }
+  .sb-key { margin-left: auto; color: #e6b98a; font-weight: 800; font-size: 15px; flex-shrink: 0; padding-left: 10px; }
   /* Sets sidebar (drawer) */
   .drawer-bg { position: fixed; inset: 0; background: rgba(10,16,24,.5); z-index: 90; }
   .drawer { position: absolute; top: 0; left: 0; bottom: 0; width: 270px; max-width: 82%; background: #0f1822; color: #eef4fb; padding: 18px 12px 30px; transform: translateX(-100%); transition: transform .22s ease; display: flex; flex-direction: column; gap: 4px; box-shadow: 4px 0 20px rgba(0,0,0,.35); overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
@@ -4275,26 +4278,32 @@
     cnt.className = "purpose";
     cnt.textContent = entry.songs.length + " song" + (entry.songs.length === 1 ? "" : "s") + " \u2014 tap any song for chords & lyrics.";
     sheet.appendChild(cnt);
+    var sbList = document.createElement("div");
+    sbList.className = "sb-list";
     entry.songs.forEach(function (nm, i) {
       var m = matchLibSong(nm);
       var row = document.createElement("div");
-      row.className = "song-box";
-      var num = document.createElement("div");
-      num.className = "slot-num";
+      row.className = "sb-row";
+      var num = document.createElement("span");
+      num.className = "sb-num";
       num.textContent = i + 1;
       var info = document.createElement("div");
       info.style.cssText = "flex:1;min-width:0;";
       var t = document.createElement("div");
-      t.className = "song-box-title";
+      t.className = "sb-title";
       t.textContent = nm;
       var a = document.createElement("div");
-      a.className = "song-box-artist";
+      a.className = "sb-artist";
       a.textContent = m.artist ? m.artist : "not in your pool or the catalog";
       info.appendChild(t); info.appendChild(a);
-      row.appendChild(num); row.appendChild(info);
+      var key = document.createElement("span");
+      key.className = "sb-key";
+      key.textContent = m.key || "";
+      row.appendChild(num); row.appendChild(info); row.appendChild(key);
       row.addEventListener("click", function () { openSheet(m, true); });
-      sheet.appendChild(row);
+      sbList.appendChild(row);
     });
+    sheet.appendChild(sbList);
     var acts = document.createElement("div");
     acts.className = "toolbar";
     acts.style.cssText = "margin-top:12px;";
@@ -5078,8 +5087,10 @@
     if (navCtx && navCtx.list && navCtx.list.length > 1) {
       var swX = null, swY = null;
       bg.addEventListener("touchstart", function (e) {
-        var t = e.touches && e.touches[0];
-        if (t) { swX = t.clientX; swY = t.clientY; }
+        if (e.touches && e.touches.length === 1) {
+          var t = e.touches[0];
+          swX = t.clientX; swY = t.clientY;
+        } else { swX = null; }
       }, { passive: true });
       bg.addEventListener("touchend", function (e) {
         if (swX === null) return;
@@ -5094,6 +5105,27 @@
         openSheet(navCtx.list[ni], true, { list: navCtx.list, idx: ni });
       }, { passive: true });
     }
+    // pinch to zoom the lyrics (10px–44px)
+    var pz = null;
+    bg.addEventListener("touchstart", function (e) {
+      if (e.touches && e.touches.length === 2) {
+        pz = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+      } else if (e.touches && e.touches.length < 2 && pz !== null) {
+        pz = null;
+      }
+    }, { passive: true });
+    bg.addEventListener("touchmove", function (e) {
+      if (!pz || !e.touches || e.touches.length < 2) return;
+      if (e.cancelable) e.preventDefault();
+      var d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+      var el = chords || lyrBox;
+      if (el) {
+        var cur = parseFloat(el.style.fontSize) || 17;
+        el.style.fontSize = Math.max(10, Math.min(44, cur * (d / pz))).toFixed(1) + "px";
+      }
+      pz = d;
+    }, { passive: false });
+    bg.addEventListener("touchend", function () { pz = null; }, { passive: true });
     var h = document.createElement("h3"); h.textContent = song.name || "";
     var sub = document.createElement("div"); sub.className = "sub";
     var plays = playsFor(song);
@@ -8804,33 +8836,40 @@
         });
         sec.appendChild(addAll);
       }
+      var sbList = document.createElement("div");
+      sbList.className = "sb-list";
       sx.songs.forEach(function (row, i) {
         var r = document.createElement("div");
-        r.className = "song-box";
-        var num = document.createElement("div");
-        num.className = "slot-num";
+        r.className = "sb-row";
+        var num = document.createElement("span");
+        num.className = "sb-num";
         num.textContent = i + 1;
         var info = document.createElement("div");
         info.style.cssText = "flex:1;min-width:0;";
         var tEl = document.createElement("div");
-        tEl.className = "song-box-title";
+        tEl.className = "sb-title";
         tEl.textContent = row[0];
         var aEl = document.createElement("div");
-        aEl.className = "song-box-artist";
+        aEl.className = "sb-artist";
         aEl.textContent = (row[1] || "") + (row[3] ? " \u00b7 " + row[3] + " bpm" : "");
         info.appendChild(tEl); info.appendChild(aEl);
-        r.appendChild(num); r.appendChild(info);
+        var key = document.createElement("span");
+        key.className = "sb-key";
+        key.textContent = row[2] || "";
+        r.appendChild(num); r.appendChild(info); r.appendChild(key);
         if (un) {
           var add = document.createElement("button");
           add.type = "button"; add.className = "btn save"; add.textContent = "+ Pool";
+          add.style.cssText = "padding:6px 10px;font-size:12px;";
           add.addEventListener("click", function (e) { e.stopPropagation(); addPackSongToPool(row[0], row[1], row[2], row[3]); });
           r.appendChild(add);
         }
         r.addEventListener("click", function () {
           openSheet({ name: row[0], artist: row[1] || "", key: row[2] || "", bpm: row[3] || "" }, true);
         });
-        sec.appendChild(r);
+        sbList.appendChild(r);
       });
+      sec.appendChild(sbList);
       listEl.appendChild(sec);
     });
   }

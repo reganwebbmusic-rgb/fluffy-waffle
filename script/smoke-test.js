@@ -147,7 +147,7 @@ function check(name, cond, extra) {
   const libModal = [...doc.querySelectorAll(".modal-bg")].filter((m) => m.style.display !== "none").pop();
   const libText = libModal ? libModal.textContent : "";
   check("set view opens with songs", libText.includes("Livin' On A Prayer") && libText.includes("Wonderwall"));
-  const songInLib = libModal && [...libModal.querySelectorAll(".song-box")].find((d) => d.textContent.includes("Livin' On A Prayer"));
+  const songInLib = libModal && [...libModal.querySelectorAll(".sb-row")].find((d) => d.textContent.includes("Livin' On A Prayer"));
   if (songInLib) songInLib.dispatchEvent(new window.Event("click", { bubbles: true }));
   await new Promise((r) => setTimeout(r, 1500));
   const sheet2 = [...doc.querySelectorAll(".modal-bg")].filter((m) => m.style.display !== "none").pop();
