@@ -4245,9 +4245,9 @@
       row.appendChild(num); row.appendChild(info);
       var lyr = document.createElement("button");
       lyr.type = "button"; lyr.className = "btn ug"; lyr.textContent = "Lyrics";
-      lyr.addEventListener("click", function (e) { e.stopPropagation(); openSheet(m, false); });
+      lyr.addEventListener("click", function (e) { e.stopPropagation(); openSheet(m, true); });
       row.appendChild(lyr);
-      row.addEventListener("click", function () { openSheet(m, false); });
+      row.addEventListener("click", function () { openSheet(m, true); });
       sheet.appendChild(row);
     });
     var acts = document.createElement("div");
@@ -4979,7 +4979,7 @@
       sec.className = "card song-row";
       var head = document.createElement("div");
       head.className = "head";
-      head.addEventListener("click", function () { openSheet(song); });
+      head.addEventListener("click", function () { openSheet(song, true); });
       var box = document.createElement("div");
       box.className = "song";
       var name = document.createElement("div");
@@ -8693,7 +8693,7 @@
           var lyr = document.createElement("button");
           lyr.type = "button"; lyr.className = "btn ug"; lyr.textContent = "Lyrics";
           lyr.addEventListener("click", function () {
-            openSheet({ name: row[0], artist: row[1] || "", key: row[2] || "", bpm: row[3] || "" }, false);
+            openSheet({ name: row[0], artist: row[1] || "", key: row[2] || "", bpm: row[3] || "" }, true);
           });
           r.appendChild(lyr);
           var add = document.createElement("button");
