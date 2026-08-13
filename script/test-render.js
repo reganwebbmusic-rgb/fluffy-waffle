@@ -40,3 +40,24 @@ for (const k of sample) {
   } catch (e) { crashes++; console.log("CRASH:", k, "|", e.message); }
 }
 console.log("tested", sample.length, "sheets | crashes:", crashes, "| empty roots:", empty, "| avg children:", Math.round(lyricLines / sample.length));
+
+// inline-chord splitting: "Another he[C]ad" -> chord row above lyric row, no brackets in lyric
+let splitPass = 0, splitFail = 0;
+const inlineText = "[Em] Another he[C]ad hangs lowly, ch[G]ild is slowly\n[Verse 1]\nIn your [Em]head, in your [C]head, zombi[G]e\n[x2] keep this tag in lyrics";
+const r2 = renderChordSheet(inlineText, { name: "Zombie", artist: "The Cranberries", key: "Bb" }, 0);
+const chordRows = [], lyricRows = [];
+(function walk(el) {
+  for (const c of el.children || []) {
+    if (c.className === "cs-chords") chordRows.push(c.textContent);
+    if (c.className === "cs-lyric") lyricRows.push(c.textContent);
+    walk(c);
+  }
+})(r2);
+const ch = chordRows.join("|");
+const ly = lyricRows.join("|");
+if (ch.includes("Em") && ch.includes("C") && ch.includes("G")) splitPass++; else { splitFail++; console.log("chord row missing chords:", JSON.stringify(ch)); }
+const lyClean = ly.replace(/ /g, "");
+if (!ly.includes("[Em]") && !ly.includes("[C]") && !ly.includes("[G]") && lyClean.includes("Anotherheadhangslowly,childisslowly")) splitPass++; else { splitFail++; console.log("lyric row bad:", JSON.stringify(ly)); }
+if (ly.includes("[x2]")) splitPass++; else { splitFail++; console.log("non-chord tag lost:", JSON.stringify(ly)); }
+console.log("inline-chord split:", splitPass + " passed, " + splitFail + " failed");
+process.exit(splitFail || crashes ? 1 : 0);

@@ -177,8 +177,8 @@
     letter-spacing: 1.4px; margin: 16px 0 8px;
   }
   .cs-pair { margin: 0 0 6px; }
-  .cs-chords { color: #7fb8ff; font-weight: 700; white-space: pre; }
-  .cs-lyric { color: #f2f6fb; white-space: pre; font-size: 16px; }
+  .cs-chords { color: #7fb8ff; font-weight: 700; white-space: pre; font-family: 'Courier New', Courier, monospace; }
+  .cs-lyric { color: #f2f6fb; white-space: pre; font-size: 16px; font-family: 'Courier New', Courier, monospace; }
   .float-ctrls { display: none; position: fixed; right: 14px; bottom: 24px; flex-direction: column; gap: 10px; z-index: 70; }
   .modal-bg.max .float-ctrls { display: flex; }
   .float-btn {
@@ -363,7 +363,7 @@
 </div>
 <div class="wrap">
   <header>
-    <img id="appLogo" src="./logo.png" alt="TOOLGIG" style="display:block;height:42px;margin:8px auto 4px;background:#000;border-radius:10px;padding:6px 18px;">
+    <img id="appLogo" src="./logo.png" alt="TOOLGIG" style="display:block;height:64px;margin:10px auto 4px;background:#000;border-radius:12px;padding:8px 22px;">
     <p id="catCount">15-song pool · 4 × 45-min set blocks · 12,341-song catalog</p>
     <div id="authBar"></div>
   </header>
@@ -5355,6 +5355,27 @@
       root.appendChild(pair);
       pending = [];
     }
+    // split lines like "Another he[C]ad hangs lowly" into an aligned chord row
+    // + a lyric row with the bracket tags removed (Ultimate Guitar style sheets)
+    function splitInlineChords(line) {
+      var chords = "", lyric = "";
+      function pad(n) { var s = ""; while (s.length < n) s += " "; return s; }
+      var re = /\[([^\]]+)\]/g, m, last = 0;
+      while ((m = re.exec(line)) !== null) {
+        var tok = m[1].trim();
+        if (!isChordToken(tok)) continue; // keep [x2] / [spoken] style tags in the lyric
+        var before = line.slice(last, m.index);
+        chords += pad(before.length);
+        lyric += before;
+        chords += tok;
+        lyric += pad(tok.length);
+        last = m.index + m[0].length;
+      }
+      var tail = line.slice(last);
+      chords += pad(tail.length);
+      lyric += tail;
+      return { chords: chords, lyric: lyric };
+    }
     for (var i = 0; i < lines.length; i++) {
       var raw = lines[i];
       var s2 = raw.trim();
@@ -5369,13 +5390,27 @@
       }
       if (isChordLine(s2)) { pending.push(raw); continue; }
       flush();
-      var pair2 = document.createElement("div");
-      pair2.className = "cs-pair";
-      var lEl = document.createElement("div");
-      lEl.className = "cs-lyric";
-      lEl.textContent = raw;
-      pair2.appendChild(lEl);
-      root.appendChild(pair2);
+      var split = splitInlineChords(s2);
+      if (split.chords.trim()) {
+        var pair3 = document.createElement("div");
+        pair3.className = "cs-pair";
+        var c3 = document.createElement("div");
+        c3.className = "cs-chords";
+        c3.textContent = transChordLine(split.chords, offset || 0);
+        var l3 = document.createElement("div");
+        l3.className = "cs-lyric";
+        l3.textContent = split.lyric;
+        pair3.appendChild(c3); pair3.appendChild(l3);
+        root.appendChild(pair3);
+      } else {
+        var pair2 = document.createElement("div");
+        pair2.className = "cs-pair";
+        var lEl = document.createElement("div");
+        lEl.className = "cs-lyric";
+        lEl.textContent = raw;
+        pair2.appendChild(lEl);
+        root.appendChild(pair2);
+      }
     }
     flush();
     return root;
