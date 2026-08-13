@@ -86,11 +86,16 @@ function check(name, cond, extra) {
   await new Promise((r) => setTimeout(r, 400));
   check("song editor opens", doc.getElementById("list").textContent.includes("Custom chords & lyrics"));
 
-  // Sets tab: pre-seeded slots -> tap a slot row -> lyrics sheet with lyricbook hit
+  // Sets tab: tapping the icon opens the drawer, picking Set A navigates
   clickTab("tabSets");
   await new Promise((r) => setTimeout(r, 400));
+  const drawer = doc.querySelector(".drawer");
+  check("sets icon opens drawer", !!drawer && drawer.textContent.includes("Set A") && drawer.textContent.includes("Set library"));
+  const setAItem = drawer && [...drawer.querySelectorAll("button")].find((b) => b.textContent === "Set A");
+  if (setAItem) setAItem.dispatchEvent(new window.Event("click", { bubbles: true }));
+  await new Promise((r) => setTimeout(r, 400));
   const listText2 = doc.getElementById("list").textContent;
-  check("sets tab renders", listText2.includes("Set A"));
+  check("sets screen renders after picking", listText2.includes("Set A"));
   const songRow = [...doc.querySelectorAll(".card.slot .head")].find((d) => d.textContent && d.textContent.includes("Livin' On A Prayer"));
   if (songRow) songRow.dispatchEvent(new window.Event("click", { bubbles: true }));
   await new Promise((r) => setTimeout(r, 1500)); // lyricbook chunk load
@@ -246,6 +251,7 @@ function check(name, cond, extra) {
     url: "https://reganwebbmusic-rgb.github.io/fluffy-waffle/setlist-builder.html",
     beforeParse(w4) {
       w4.localStorage.clear();
+      w4.localStorage.setItem("sb2tutDone", "1"); // skip the tour modal so nav taps work
       w4.XMLHttpRequest = class { open(m, u) { this.url = u; } send() { if (this.onload) this.onload(); } };
       w4.fetch = () => Promise.reject(new Error("off"));
     }

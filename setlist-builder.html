@@ -134,7 +134,7 @@
   .btn.small.primary { background: #1c2b3a; border-color: #1c2b3a; color: #fff; }
   .slot .song .name.tappable { color: #1f6feb; cursor: pointer; }
   .modal-bg {
-    position: fixed; inset: 0; background: rgba(20,30,45,.55); z-index: 40;
+    position: fixed; inset: 0; background: rgba(20,30,45,.55); z-index: 100;
     display: flex; align-items: flex-end; justify-content: center;
   }
   .sheet {
@@ -285,6 +285,13 @@
   /* song numbers inside a set */
   .slot-num { width: 26px; height: 26px; border-radius: 50%; background: #1c6fd6; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; margin-right: 10px; flex-shrink: 0; }
   body.dark .slot-num { background: #4da3ff; color: #0f1a24; }
+  /* Sets drawer (side bar) */
+  .drawer-bg { position: fixed; inset: 0; background: rgba(10,16,24,.5); z-index: 90; }
+  .drawer { position: absolute; top: 0; left: 0; bottom: 0; width: 270px; max-width: 82%; background: #0f1822; color: #eef4fb; padding: 18px 12px; transform: translateX(-100%); transition: transform .22s ease; display: flex; flex-direction: column; gap: 4px; box-shadow: 4px 0 20px rgba(0,0,0,.35); }
+  .drawer.open { transform: none; }
+  .drawer-title { font-size: 19px; font-weight: 800; padding: 4px 10px 14px; }
+  .drawer-item { text-align: left; border: 0; background: transparent; color: #dbe6f2; font-size: 15px; font-weight: 600; padding: 13px 10px; border-radius: 10px; display: flex; align-items: center; gap: 10px; }
+  .drawer-item:hover { background: #16222f; }
   .tab.active { background: #1c6fd6; color: #fff; box-shadow: 0 3px 8px rgba(28,111,214,.4); }
   section.card { box-shadow: 0 1px 3px rgba(20,30,45,.06); }
   .btn, .tab { transition: transform .08s ease, box-shadow .15s ease; }
@@ -8910,8 +8917,39 @@
     bg.style.display = "none";
   }
 
+  function openSetsDrawer() {
+    var bg = document.createElement("div");
+    bg.className = "drawer-bg";
+    var panel = document.createElement("div");
+    panel.className = "drawer";
+    var h = document.createElement("div");
+    h.className = "drawer-title";
+    h.textContent = "Sets";
+    panel.appendChild(h);
+    [
+      { t: "Set A", fn: function () { s.tab = "sets"; s.setView = "A"; save(); closeDrawer(bg); render(); } },
+      { t: "Set B", fn: function () { s.tab = "sets"; s.setView = "B"; save(); closeDrawer(bg); render(); } },
+      { t: "Set library", fn: function () { s.tab = "sets"; save(); closeDrawer(bg); renderSetLibrary(); } },
+      { t: "Community sets", fn: function () { s.tab = "sets"; save(); closeDrawer(bg); renderCommunitySets(); } }
+    ].forEach(function (it) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "drawer-item";
+      b.textContent = it.t;
+      b.addEventListener("click", it.fn);
+      panel.appendChild(b);
+    });
+    bg.appendChild(panel);
+    bg.addEventListener("click", function (e) { if (e.target === bg) closeDrawer(bg); });
+    document.body.appendChild(bg);
+    requestAnimationFrame(function () { panel.classList.add("open"); });
+  }
+  function closeDrawer(bg) { if (bg) bg.style.display = "none"; }
   function tab(btn, name) {
     btn.addEventListener("click", function () {
+      var m = document.querySelector(".modal-bg");
+      if (m && m.style.display !== "none") return; // a song sheet is open — ignore nav taps
+      if (name === "sets") { openSetsDrawer(); return; } // Sets icon opens the drawer
       exitPlay();
       s.tab = name; save(); render();
       [["tabSongs", "songs"], ["tabSets", "sets"], ["tabRequests", "requests"], ["tabPacks", "packs"], ["tabTools", "tools"], ["tabAdmin", "admin"]].forEach(function (t) {
