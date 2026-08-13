@@ -176,11 +176,11 @@
   .cs-key { order: 3; font-size: 13px; color: #e6c3ae; margin-top: 6px; }
   .cs-section {
     font-size: 19px; font-weight: 800; color: #ffffff; text-transform: none;
-    letter-spacing: 0.2px; margin: 20px 0 10px;
+    letter-spacing: 0.2px; margin: 12px 0 8px;
   }
-  .cs-pair { margin: 0 0 7px; }
+  .cs-pair { margin: 0 0 4px; }
   .cs-chords { color: #f3e6dd; font-style: italic; font-weight: 600; white-space: pre; font-size: 14px; }
-  .cs-lyric { color: #fdfaf7; white-space: pre; font-size: 17px; font-weight: 600; }
+  .cs-lyric { color: #fdfaf7; white-space: pre; font-size: 17px; font-weight: 800; }
   .float-ctrls { display: none; position: fixed; right: 14px; bottom: 24px; flex-direction: column; gap: 10px; z-index: 70; }
   .modal-bg.max .float-ctrls { display: flex; }
   .float-btn {
@@ -5349,13 +5349,11 @@
       // prev/next floats when the song is part of a set
       if (navCtx && navCtx.list && navCtx.list.length > 1) {
         var navRow = document.createElement("div");
-        navRow.className = "float-btn";
-        navRow.style.cssText = "left:50%;transform:translateX(-50%);display:flex;gap:4px;";
-        navRow.innerHTML = "";
+        navRow.style.cssText = "position:absolute;bottom:18px;left:50%;transform:translateX(-50%);display:flex;gap:10px;z-index:40;";
         var prevF = document.createElement("button");
         prevF.type = "button";
         prevF.className = "float-btn";
-        prevF.style.cssText = "position:static;";
+        prevF.style.cssText = "width:auto;height:42px;padding:0 16px;border-radius:22px;";
         prevF.textContent = "\u25c0 Prev";
         prevF.addEventListener("click", function (e) {
           e.stopPropagation();
@@ -5366,7 +5364,7 @@
         var nextF = document.createElement("button");
         nextF.type = "button";
         nextF.className = "float-btn";
-        nextF.style.cssText = "position:static;";
+        nextF.style.cssText = "width:auto;height:42px;padding:0 16px;border-radius:22px;";
         nextF.textContent = "Next \u25b6";
         nextF.addEventListener("click", function (e) {
           e.stopPropagation();
