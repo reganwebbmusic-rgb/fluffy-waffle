@@ -267,15 +267,24 @@
   header h1 { font-size: 26px; letter-spacing: 1.8px; font-weight: 800; }
   .tabs { background: #e3ebf3; border-radius: 16px; padding: 4px; gap: 4px; }
   .tab { border: 0; background: transparent; border-radius: 12px; font-weight: 700; font-size: 14px; padding: 10px 4px; color: #44566a; }
-  /* bottom navigation (SongBook-style) */
-  .tabs { position: fixed; bottom: 0; left: 0; right: 0; z-index: 60; margin: 0; padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); background: #eef3f8; border-top: 1px solid #dde6ee; border-radius: 0; gap: 4px; }
-  .tabs .tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 0; background: transparent; border-radius: 10px; font-weight: 600; font-size: 11px; padding: 6px 2px; color: #44566a; flex: 1; }
+  /* bottom navigation (SongBook-style) — scoped to the nav bar only */
+  .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 60; margin: 0; padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); background: #eef3f8; border-top: 1px solid #dde6ee; border-radius: 0; gap: 4px; }
+  .nav-bar .tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 0; background: transparent; border-radius: 10px; font-weight: 600; font-size: 11px; padding: 6px 2px; color: #44566a; flex: 1; }
   .tab svg { width: 21px; height: 21px; }
   .tab.active { background: #1c6fd6; color: #fff; box-shadow: none; }
   body { padding-bottom: 74px; }
-  body.dark .tabs { background: #111820; border-top-color: #1d2a37; }
+  body.dark .nav-bar { background: #111820; border-top-color: #1d2a37; }
   body.dark .tab { color: #9fb0c0; }
   body.dark .tab.active { background: #4da3ff; color: #0f1a24; }
+  /* Set A/B picker — stays at the top of the screen, selected side is obvious */
+  .set-pick { display: flex; gap: 8px; margin-bottom: 10px; }
+  .set-pick .tab { flex: 1; font-size: 14px; padding: 12px 4px; border-radius: 12px; border: 2px solid #cfd9e3; }
+  .set-pick .tab.active { background: #1c6fd6; border-color: #1c6fd6; color: #fff; box-shadow: 0 3px 8px rgba(28,111,214,.35); }
+  body.dark .set-pick .tab { border-color: #26384a; color: #9fb0c0; }
+  body.dark .set-pick .tab.active { background: #4da3ff; border-color: #4da3ff; color: #0f1a24; }
+  /* song numbers inside a set */
+  .slot-num { width: 26px; height: 26px; border-radius: 50%; background: #1c6fd6; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; margin-right: 10px; flex-shrink: 0; }
+  body.dark .slot-num { background: #4da3ff; color: #0f1a24; }
   .tab.active { background: #1c6fd6; color: #fff; box-shadow: 0 3px 8px rgba(28,111,214,.4); }
   section.card { box-shadow: 0 1px 3px rgba(20,30,45,.06); }
   .btn, .tab { transition: transform .08s ease, box-shadow .15s ease; }
@@ -381,7 +390,7 @@
     <div class="progress-row">
       <div class="label">Pool</div>
       <div class="bar"><div id="barFill"></div></div>
-      <div class="count"><span id="poolCount">0</span><small>/15</small></div>
+      <div class="count"><span id="poolCount">0</span><small id="poolCap">/15</small></div>
     </div>
     <div class="set-fills">
       <span>Set A: <b id="fillA">0</b>/24</span>
@@ -389,7 +398,7 @@
     </div>
   </div>
 
-  <div class="tabs">
+  <div class="tabs nav-bar">
     <button class="tab" id="tabSets" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span>Sets</span></button>
     <button class="tab" id="tabRequests" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>Requests</span><span id="reqCount" class="req-count" style="display:none"></span></button>
     <button class="tab active" id="tabSongs" type="button"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span>Songs</span></button>
@@ -3453,6 +3462,8 @@
     if (bandTimer) { clearInterval(bandTimer); bandTimer = null; }
     var filled = filledSongs();
     poolCountEl.textContent = filled.length;
+    var poolCapEl = document.getElementById("poolCap");
+    if (poolCapEl) poolCapEl.textContent = "/" + poolSize();
     barEl.style.width = (filled.length / poolSize() * 100) + "%";
 
     if (s.tab === "requests") { renderRequests(); return; }
@@ -3821,6 +3832,8 @@
   function updatePoolCount() {
     var filled = filledSongs();
     if (poolCountEl) poolCountEl.textContent = filled.length;
+    var poolCapEl2 = document.getElementById("poolCap");
+    if (poolCapEl2) poolCapEl2.textContent = "/" + poolSize();
     if (barEl) barEl.style.width = (filled.length / poolSize() * 100) + "%";
   }
 
@@ -4902,8 +4915,14 @@
         }
         var time = document.createElement("div");
         time.className = "time";
-        time.textContent = "Slot " + (i + 1) + " · " + fmt(startsArr[i]) + " · " + lens[i] + " min";
+        time.textContent = fmt(startsArr[i]) + " · " + lens[i] + " min";
         box.appendChild(name); box.appendChild(time);
+        if (assigned >= 0 && pool[assigned]) {
+          var numEl = document.createElement("div");
+          numEl.className = "slot-num";
+          numEl.textContent = bi * SET_SLOTS + i + 1;
+          head.insertBefore(numEl, head.firstChild);
+        }
         var purpose = document.createElement("div");
         purpose.className = "purpose";
         purpose.textContent = purps[i];
