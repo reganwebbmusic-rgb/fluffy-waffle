@@ -8942,7 +8942,8 @@
     bg.appendChild(panel);
     bg.addEventListener("click", function (e) { if (e.target === bg) closeDrawer(bg); });
     document.body.appendChild(bg);
-    requestAnimationFrame(function () { panel.classList.add("open"); });
+    if (window.requestAnimationFrame) requestAnimationFrame(function () { panel.classList.add("open"); });
+    else panel.classList.add("open");
   }
   function closeDrawer(bg) { if (bg) bg.style.display = "none"; }
   function tab(btn, name) {
