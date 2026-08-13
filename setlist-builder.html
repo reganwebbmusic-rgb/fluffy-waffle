@@ -5133,7 +5133,10 @@
       playBtn.type = "button";
       playBtn.className = "btn ug";
       playBtn.textContent = "Auto-scroll";
-      playBtn.addEventListener("click", function () { toggleScroll(chords, playBtn); });
+      playBtn.addEventListener("click", function () {
+        toggleScroll(chords, playBtn);
+        side.style.display = (playBtn.textContent === "Stop") ? "block" : "none";
+      });
       var spInit = parseFloat(song.scrollSpeed) || 28;
       var speed = document.createElement("input");
       speed.type = "range"; speed.min = "5"; speed.max = "60"; speed.step = "5"; speed.value = String(spInit);
@@ -5146,6 +5149,19 @@
         song.scrollSpeed = scrollSpeed;
         save();
       });
+      // side slider: appears on the right edge while auto-scroll is playing
+      var side = document.createElement("input");
+      side.type = "range"; side.min = "5"; side.max = "60"; side.step = "5"; side.value = String(spInit);
+      side.style.cssText = "position:absolute;right:2px;top:50%;width:150px;transform:translateY(-50%) rotate(90deg);z-index:45;opacity:.95;display:none;";
+      side.setAttribute("aria-label", "Scroll speed");
+      side.addEventListener("input", function () {
+        scrollSpeed = +side.value;
+        speed.value = String(scrollSpeed);
+        spLbl.textContent = scrollSpeed + "px/s";
+        song.scrollSpeed = scrollSpeed;
+        save();
+      });
+      bg.appendChild(side);
       var expand = document.createElement("button");
       expand.type = "button";
       expand.className = "btn ug";
