@@ -285,6 +285,11 @@
   /* song numbers inside a set */
   .slot-num { width: 26px; height: 26px; border-radius: 50%; background: #1c6fd6; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; margin-right: 10px; flex-shrink: 0; }
   body.dark .slot-num { background: #4da3ff; color: #0f1a24; }
+  /* individual boxed song rows (set views, pack details) */
+  .song-box { display: flex; align-items: center; gap: 12px; padding: 12px; margin-bottom: 8px; background: #16222f; border: 1px solid #233241; border-radius: 12px; cursor: pointer; }
+  .song-box:hover { border-color: #3a5269; }
+  .song-box-title { font-weight: 700; font-size: 15px; color: #f2f6fb; }
+  .song-box-artist { font-size: 13px; color: #9fb0c0; margin-top: 2px; }
   /* Sets drawer (side bar) */
   .drawer-bg { position: fixed; inset: 0; background: rgba(10,16,24,.5); z-index: 90; }
   .drawer { position: absolute; top: 0; left: 0; bottom: 0; width: 270px; max-width: 82%; background: #0f1822; color: #eef4fb; padding: 18px 12px; transform: translateX(-100%); transition: transform .22s ease; display: flex; flex-direction: column; gap: 4px; box-shadow: 4px 0 20px rgba(0,0,0,.35); }
@@ -4259,23 +4264,20 @@
     entry.songs.forEach(function (nm, i) {
       var m = matchLibSong(nm);
       var row = document.createElement("div");
-      row.className = "req-row";
-      row.style.cssText = "align-items:center;cursor:pointer;";
+      row.className = "song-box";
       var num = document.createElement("div");
-      num.style.cssText = "width:26px;color:#8a97a5;font-size:13px;";
-      num.textContent = (i + 1) + ".";
+      num.className = "slot-num";
+      num.textContent = i + 1;
       var info = document.createElement("div");
       info.style.cssText = "flex:1;min-width:0;";
-      var t = document.createElement("div"); t.textContent = nm;
+      var t = document.createElement("div");
+      t.className = "song-box-title";
+      t.textContent = nm;
       var a = document.createElement("div");
-      a.className = "notes"; a.style.cssText = "font-size:12px;color:#8a97a5;";
+      a.className = "song-box-artist";
       a.textContent = m.artist ? m.artist : "not in your pool or the catalog";
       info.appendChild(t); info.appendChild(a);
       row.appendChild(num); row.appendChild(info);
-      var lyr = document.createElement("button");
-      lyr.type = "button"; lyr.className = "btn ug"; lyr.textContent = "Lyrics";
-      lyr.addEventListener("click", function (e) { e.stopPropagation(); openSheet(m, true); });
-      row.appendChild(lyr);
       row.addEventListener("click", function () { openSheet(m, true); });
       sheet.appendChild(row);
     });
@@ -8713,29 +8715,31 @@
         });
         sec.appendChild(addAll);
       }
-      sx.songs.forEach(function (row) {
+      sx.songs.forEach(function (row, i) {
         var r = document.createElement("div");
-        r.className = "req-row";
-        r.style.cssText = "align-items:center;";
+        r.className = "song-box";
+        var num = document.createElement("div");
+        num.className = "slot-num";
+        num.textContent = i + 1;
         var info = document.createElement("div");
         info.style.cssText = "flex:1;min-width:0;";
-        var tEl = document.createElement("div"); tEl.textContent = row[0];
-        var aEl = document.createElement("div"); aEl.className = "notes"; aEl.style.cssText = "font-size:12px;color:#8a97a5;";
+        var tEl = document.createElement("div");
+        tEl.className = "song-box-title";
+        tEl.textContent = row[0];
+        var aEl = document.createElement("div");
+        aEl.className = "song-box-artist";
         aEl.textContent = (row[1] || "") + (row[3] ? " \u00b7 " + row[3] + " bpm" : "");
         info.appendChild(tEl); info.appendChild(aEl);
-        r.appendChild(info);
+        r.appendChild(num); r.appendChild(info);
         if (un) {
-          var lyr = document.createElement("button");
-          lyr.type = "button"; lyr.className = "btn ug"; lyr.textContent = "Lyrics";
-          lyr.addEventListener("click", function () {
-            openSheet({ name: row[0], artist: row[1] || "", key: row[2] || "", bpm: row[3] || "" }, true);
-          });
-          r.appendChild(lyr);
           var add = document.createElement("button");
           add.type = "button"; add.className = "btn save"; add.textContent = "+ Pool";
-          add.addEventListener("click", function () { addPackSongToPool(row[0], row[1], row[2], row[3]); });
+          add.addEventListener("click", function (e) { e.stopPropagation(); addPackSongToPool(row[0], row[1], row[2], row[3]); });
           r.appendChild(add);
         }
+        r.addEventListener("click", function () {
+          openSheet({ name: row[0], artist: row[1] || "", key: row[2] || "", bpm: row[3] || "" }, true);
+        });
         sec.appendChild(r);
       });
       listEl.appendChild(sec);
