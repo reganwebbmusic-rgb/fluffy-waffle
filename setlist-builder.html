@@ -3305,53 +3305,75 @@
     document.getElementById("authStage").value = "";
     renderAuthBar();
   }
+  function openAccountSheet() {
+    var bg = document.createElement("div");
+    bg.className = "modal-bg pop";
+    var box = document.createElement("div");
+    box.className = "sheet";
+    box.style.cssText = "padding:16px;max-width:480px;";
+    var h = document.createElement("h3");
+    h.textContent = "Account";
+    box.appendChild(h);
+    var info = document.createElement("div");
+    info.className = "purpose";
+    info.textContent = (stageLabel() || "Account") + (me && me.email ? " \u00b7 " + me.email : "") + (isPro() ? " \u00b7 Pro" : "");
+    box.appendChild(info);
+    function rowBtn(t, fn, cls) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "btn ug" + (cls ? " " + cls : "");
+      b.style.cssText = "display:block;width:100%;margin-top:8px;text-align:center;";
+      b.textContent = t;
+      b.addEventListener("click", fn);
+      box.appendChild(b);
+      return b;
+    }
+    rowBtn("Invite musician", function () { copyText(myInviteUrl()); flashNew("Invite link copied \u2014 send it to another musician."); });
+    rowBtn("Payments", showPaymentsSheet);
+    rowBtn("Save to cloud", function () { pushCloud().then(function (ok) { flashNew(ok ? "Saved to cloud." : "Not signed in \u2014 sign in first."); }).catch(function () { flashNew("Cloud save failed \u2014 try again.", "fit-low"); }); });
+    rowBtn("Get from cloud", function () { pullCloud().then(function () { render(); flashNew("Loaded from cloud."); }).catch(function () { flashNew("Cloud load failed \u2014 try again.", "fit-low"); }); });
+    rowBtn("Rename", function () {
+      var n = window.prompt("Stage name:", stageLabel());
+      if (n && n.trim()) { me.stage = n.trim(); saveMe(); syncSongbook(); renderAuthBar(); closeSheet(bg); }
+    });
+    rowBtn("Sign out", signOut, "del");
+    var cl = document.createElement("button");
+    cl.type = "button"; cl.className = "btn save"; cl.textContent = "Close";
+    cl.style.cssText = "display:block;width:100%;margin-top:10px;";
+    cl.addEventListener("click", function () { closeSheet(bg); });
+    box.appendChild(cl);
+    bg.appendChild(box);
+    bg.addEventListener("click", function (e) { if (e.target === bg) closeSheet(bg); });
+    document.body.appendChild(bg);
+  }
   function renderAuthBar() {
     var bar = document.getElementById("authBar");
     bar.innerHTML = "";
     if (!me) return;
-    var top = document.createElement("div");
-    top.style.cssText = "display:flex;align-items:center;gap:8px;flex-wrap:wrap;";
+    var row = document.createElement("div");
+    row.style.cssText = "display:flex;align-items:center;gap:8px;flex-wrap:wrap;";
     if (isPro()) {
       var chip = document.createElement("span");
       chip.className = "pro-chip";
       chip.style.cssText = "font-size:12px;font-weight:700;color:#0f1a24;background:#f0c987;border-radius:8px;padding:4px 8px;";
       chip.textContent = "Pro \u2713";
-      top.appendChild(chip);
+      row.appendChild(chip);
     }
     var span = document.createElement("span");
-    span.className = "ab-name";
     span.style.cssText = "font-weight:700;";
     span.textContent = stageLabel() || "Account";
-    top.appendChild(span);
+    row.appendChild(span);
     var em = document.createElement("span");
     em.style.cssText = "color:#8a97a5;font-size:13px;";
     em.textContent = me.email || "";
-    top.appendChild(em);
-    var ren = document.createElement("button"); ren.type = "button"; ren.className = "btn small"; ren.textContent = "Rename";
-    ren.addEventListener("click", function () {
-      var n = window.prompt("Stage name:", stageLabel());
-      if (n && n.trim()) { me.stage = n.trim(); saveMe(); syncSongbook(); renderAuthBar(); }
-    });
-    top.appendChild(ren);
-    var out = document.createElement("button"); out.type = "button"; out.className = "btn small"; out.textContent = "Sign out";
-    out.style.marginLeft = "auto";
-    out.addEventListener("click", signOut);
-    top.appendChild(out);
-    bar.appendChild(top);
-    var row = document.createElement("div");
-    row.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;";
-    [
-      { t: "Invite musician", fn: function () { copyText(myInviteUrl()); flashNew("Invite link copied \u2014 send it to another musician."); } },
-      { t: "Payments", fn: showPaymentsSheet },
-      { t: "Save to cloud", fn: function () { pushCloud().then(function (ok) { flashNew(ok ? "Saved to cloud." : "Not signed in \u2014 sign in first."); }).catch(function () { flashNew("Cloud save failed \u2014 try again.", "fit-low"); }); } },
-      { t: "Get from cloud", fn: function () { pullCloud().then(function () { render(); flashNew("Loaded from cloud."); }).catch(function () { flashNew("Cloud load failed \u2014 try again.", "fit-low"); }); } }
-    ].forEach(function (b2) {
-      var btn = document.createElement("button");
-      btn.type = "button"; btn.className = "btn small";
-      btn.textContent = b2.t;
-      btn.addEventListener("click", b2.fn);
-      row.appendChild(btn);
-    });
+    row.appendChild(em);
+    var acc = document.createElement("button");
+    acc.type = "button";
+    acc.className = "btn small";
+    acc.textContent = "Account \u25be";
+    acc.style.marginLeft = "auto";
+    acc.addEventListener("click", openAccountSheet);
+    row.appendChild(acc);
     bar.appendChild(row);
   }
   function pushCloud() {
