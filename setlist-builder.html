@@ -48,17 +48,15 @@
   }
   .tab.active { background: #1c2b3a; border-color: #1c2b3a; color: #fff; }
 
-  section.card { background: #fff; border-radius: 14px; margin: 12px 0; box-shadow: 0 1px 2px rgba(20,30,45,.05); overflow: hidden; }
-  .card .head { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; cursor: pointer; }
+  section.card { background: #fff; border-radius: 2px; margin: 8px 0; box-shadow: 0 1px 2px rgba(20,30,45,.05); overflow: hidden; }
+  .card .head { display: flex; gap: 10px; align-items: flex-start; padding: 8px 12px; cursor: pointer; }
   .card .head:active { background: #f6f9fc; }
   .card h2 { margin: 0; padding: 11px 14px 9px; font-size: 13px; letter-spacing: .3px; color: #5c6b7a; background: transparent; border-bottom: 1px solid #edf1f5; }
 
   .song { flex: 1; min-width: 0; }
-  .song .name { font-size: 16px; font-weight: 600; }
-  .song .name.empty { color: #93a1af; font-weight: 400; }
-  .song .artist { font-size: 12.5px; color: #5c6b7a; margin-top: 1px; }
-  .chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
-  .chip { font-size: 11.5px; background: #eef3f7; color: #41505e; border-radius: 99px; padding: 2px 8px; }
+  .song .name { font-size: 15px; font-weight: 700; color: #1c2733; }
+  .song .artist { font-size: 13px; color: #5c6b7a; margin-top: 2px; font-weight: 500; }
+  .chip { font-size: 11px; background: #eef3f7; color: #41505e; border-radius: 2px; padding: 2px 6px; font-weight: 600; }
   .chip.key { background: #e6eef7; color: #1f5fa8; }
   .chip.status-ready { background: #e4f2e6; color: #237a3b; }
   .chip.status-learning { background: #fdf3dd; color: #8a6a1c; }
@@ -371,7 +369,7 @@
   /* dark mode — stage-friendly low-light theme */
   body.dark { background: linear-gradient(180deg, #111820 0%, #0c1218 100%); background-attachment: fixed; color: #dbe4ec; }
   body.dark .progress-card { background: #18222e; }
-  body.dark section.card { background: #16202b; box-shadow: 0 4px 14px rgba(0,0,0,.4); }
+  body.dark section.card { background: #16202b; box-shadow: 0 4px 14px rgba(0,0,0,.4); border-radius: 2px; }
   body.dark .card h2 { background: transparent; color: #9fb0c0; border-bottom-color: #22303f; }
   body.dark .tabs { background: #1d2a37; }
   body.dark .tab { color: #9fb0c0; }
@@ -449,11 +447,10 @@
   </div>
 
   <div class="tabs nav-bar">
+    <button class="tab active" id="tabSongs" type="button"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span>Songs</span></button>
     <button class="tab" id="tabSets" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span>Sets</span></button>
     <button class="tab" id="tabRequests" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>Requests</span><span id="reqCount" class="req-count" style="display:none"></span></button>
-    <button class="tab active" id="tabSongs" type="button"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span>Songs</span></button>
-    <button class="tab" id="tabPacks" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v9"/></svg><span>Packs</span></button>
-    <button class="tab" id="tabTools" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Tools</span></button>
+    <button class="tab" id="tabMore" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg><span>More</span></button>
   </div>
 
   <main id="list"></main>
@@ -685,7 +682,7 @@
     return {
       songs: [], sets: { A: [], B: [] },
       tab: "songs", setView: "A", expanded: -1, songSort: "newest",
-      wishlist: [], links: { tip: "", extra: "", review: "" },
+      wishlist: [], links: { tip: "", extra: "", review: "", social: "", whatsapp: "" },
       upNext: [], gigCheck: { items: [] }, dark: true, setLib: []
     };
   };
@@ -1112,7 +1109,7 @@
   }
 
   function syncTabs() {
-    [["tabSongs", "songs"], ["tabSets", "sets"], ["tabRequests", "requests"], ["tabPacks", "packs"], ["tabTools", "tools"]].forEach(function (t) {
+    [["tabSongs", "songs"], ["tabSets", "sets"], ["tabRequests", "requests"], ["tabMore", "more"]].forEach(function (t) {
       var el = document.getElementById(t[0]);
       if (el) el.classList.toggle("active", t[1] === s.tab);
     });
@@ -1132,11 +1129,39 @@
     if (s.tab === "packs") { renderPacks(); return; }
     if (s.tab === "admin") { renderAdmin(); return; }
     if (s.tab === "tools") { renderTools(); return; }
+    if (s.tab === "more") { renderMore(); return; }
     if (s.tab === "sets") {
       if (play && play.active !== false) { renderPlay(); return; }
       renderSets(); return;
     }
     renderPool(filled); // Songs tab
+  }
+
+  function renderMore() {
+    var sec = document.createElement("section");
+    sec.className = "card";
+    var h = document.createElement("h2");
+    h.textContent = "More";
+    sec.appendChild(h);
+    
+    var grid = document.createElement("div");
+    grid.style.cssText = "display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:14px;";
+    
+    function moreBtn(t, icon, tab) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "btn ug";
+      b.style.cssText = "display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:20px 10px;height:120px;border-radius:14px;";
+      b.innerHTML = icon + "<span>" + t + "</span>";
+      b.addEventListener("click", function() { s.tab = tab; save(); render(); });
+      grid.appendChild(b);
+    }
+    
+    moreBtn("Tools", '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:32px;height:32px;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>', "tools");
+    moreBtn("Gig Packs", '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:32px;height:32px;"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v9"/></svg>', "packs");
+    
+    sec.appendChild(grid);
+    listEl.appendChild(sec);
   }
 
   function addToWishlist(name, artist) {
@@ -2655,61 +2680,573 @@
   }
 
   var songsQuery = "";
-  function renderSongs() {
-    var filled = filledSongs();
+  var toolsTab = "";
+  function renderTools() {
     listEl.innerHTML = "";
-    var search = document.createElement("input");
-    search.type = "search";
-    search.className = "songs-search";
-    search.placeholder = "Search songs or artists…";
-    search.value = songsQuery;
-    search.addEventListener("input", function () {
-      songsQuery = search.value;
-      renderSongs();
-    });
-    listEl.appendChild(search);
-
-    var q = songsQuery.trim().toLowerCase();
-    var results = filled.filter(function (song) {
-      if (!q) return true;
-      var t = (song.name || "").toLowerCase();
-      var a = (song.artist || "").toLowerCase();
-      return t.indexOf(q) >= 0 || a.indexOf(q) >= 0;
-    });
-
-    if (!results.length) {
-      var none = document.createElement("div");
-      none.className = "s-empty";
-      none.style.padding = "20px 4px";
-      none.textContent = filled.length ? "No songs match — try another search." : "No songs yet — add them in the Songs tab.";
-      listEl.appendChild(none);
+    if (toolsTab) {
+      var tb = document.createElement("div");
+      tb.className = "toolbar";
+      tb.appendChild(mkBtn("\u2039 Back to tools", function () { toolsTab = ""; render(); }));
+      listEl.appendChild(tb);
+      
+      if (toolsTab === "tuner") renderTuner();
+      if (toolsTab === "import") renderSBImport();
+      if (toolsTab === "timers") renderTimers();
+      if (toolsTab === "details") renderGigDetails();
+      if (toolsTab === "checklist") renderChecklist();
+      if (toolsTab === "streak") renderStreak();
+      if (toolsTab === "backup") renderBackup();
+      if (toolsTab === "export") renderExport();
+      if (toolsTab === "support") renderSupport();
+      if (toolsTab === "vocal") renderVocalRange();
+      if (toolsTab === "eq") renderEQGuide();
+      if (toolsTab === "cheatsheet") renderCheatSheet();
+      if (toolsTab === "pro") renderProSales();
       return;
     }
-    var count = document.createElement("div");
-    count.className = "songs-count";
-    count.textContent = results.length + (results.length === 1 ? " song" : " songs");
-    listEl.appendChild(count);
 
-    results.forEach(function (song) {
-      var sec = document.createElement("section");
-      sec.className = "card song-row";
-      var head = document.createElement("div");
-      head.className = "head";
-      head.addEventListener("click", function () { openSheet(song, true); });
-      var box = document.createElement("div");
-      box.className = "song";
-      var name = document.createElement("div");
-      name.className = "name";
-      name.textContent = song.name || "Untitled";
-      var artist = document.createElement("div");
-      artist.className = "artist";
-      artist.textContent = song.artist || "";
-      box.appendChild(name); box.appendChild(artist); box.appendChild(chipsFor(song));
-      head.appendChild(box);
-      sec.appendChild(head);
-      listEl.appendChild(sec);
-    });
+    var sec = document.createElement("section");
+    sec.className = "card";
+    var h = document.createElement("h2");
+    h.textContent = "Tools";
+    sec.appendChild(h);
+    
+    var grid = document.createElement("div");
+    grid.style.cssText = "display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:14px;";
+    
+    function toolBtn(t, icon, id) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "btn ug";
+      b.style.cssText = "display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:15px 10px;height:100px;border-radius:12px;font-size:13px;";
+      b.innerHTML = icon + "<span>" + t + "</span>";
+      b.addEventListener("click", function() { toolsTab = id; render(); });
+      grid.appendChild(b);
+    }
+    
+    var icons = {
+      tuner: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:24px;height:24px;"><path d="M12 2v3m0 14v3M4.93 4.93l2.12 2.12m9.9 9.9l2.12 2.12M2 12h3m14 0h3M4.93 19.07l2.12-2.12m9.9-9.9l2.12-2.12"/></svg>',
+      timers: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:24px;height:24px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+      import: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:24px;height:24px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
+      details: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:24px;height:24px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>',
+      checklist: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:24px;height:24px;"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
+      streak: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:24px;height:24px;"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>',
+      backup: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:24px;height:24px;"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><polyline points="21 3 21 8 16 8"/></svg>',
+      export: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:24px;height:24px;"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>',
+      support: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:24px;height:24px;"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>',
+      vocal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:24px;height:24px;"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>',
+      eq: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:24px;height:24px;"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="2" y1="14" x2="6" y2="14"/><line x1="10" y1="8" x2="14" y2="8"/><line x1="18" y1="16" x2="22" y2="16"/></svg>',
+      cheatsheet: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:24px;height:24px;"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>',
+      pro: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:24px;height:24px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'
+    };
+    
+    toolBtn("Tuner", icons.tuner, "tuner");
+    toolBtn("Timers", icons.timers, "timers");
+    toolBtn("Import", icons.import, "import");
+    toolBtn("Gig Details", icons.details, "details");
+    toolBtn("Checklist", icons.checklist, "checklist");
+    toolBtn("Streak", icons.streak, "streak");
+    toolBtn("Backup", icons.backup, "backup");
+    toolBtn("Export", icons.export, "export");
+    toolBtn("Support", icons.support, "support");
+    toolBtn("Vocal Range", icons.vocal, "vocal");
+    toolBtn("EQ Guide", icons.eq, "eq");
+    toolBtn("Cheat Sheet", icons.cheatsheet, "cheatsheet");
+    toolBtn("Setlist Pro", icons.pro, "pro");
+    
+    sec.appendChild(grid);
+    
+    var tut = document.createElement("button");
+    tut.type = "button"; tut.className = "btn ug"; tut.style.margin = "0 14px 14px"; tut.style.width = "calc(100% - 28px)";
+    tut.textContent = "Open Tutorial";
+    tut.addEventListener("click", openTutorial);
+    sec.appendChild(tut);
+    
+    listEl.appendChild(sec);
   }
+
+  function renderTuner() {
+    var tun = document.createElement("section");
+    tun.className = "card";
+    tun.style.padding = "16px";
+    var th = document.createElement("h3");
+    th.textContent = "Chromatic tuner";
+    th.style.background = "none"; th.style.padding = "0 0 6px"; th.style.border = "0";
+    
+    var tb = document.createElement("div");
+    tb.className = "req-actions";
+    tb.appendChild(mkBtn("Start Tuner", startTuner, true));
+    tb.appendChild(mkBtn("Stop", stopTuner));
+    tun.appendChild(th);
+    tun.appendChild(tb);
+
+    var tnote = document.createElement("div");
+    tnote.id = "tunerNote";
+    tnote.style.cssText = "font-size:60px;font-weight:700;text-align:center;color:#1c2733;font-family:ui-monospace,Menlo,Consolas,monospace;";
+    tnote.textContent = "\u2014";
+    var meter = document.createElement("div");
+    meter.style.cssText = "position:relative;height:14px;background:#e3eaf1;border-radius:99px;margin:12px 0 8px;";
+    var fill = document.createElement("div");
+    fill.id = "tunerFill";
+    fill.style.cssText = "position:absolute;top:0;left:50%;width:4px;height:100%;background:#1f6feb;";
+    meter.appendChild(fill);
+    var tfreq = document.createElement("div");
+    tfreq.id = "tunerFreq";
+    tfreq.style.cssText = "text-align:center;font-size:13px;color:#5c6b7a;";
+    tfreq.textContent = "Allow the microphone, then play a string.";
+    var tstatus = document.createElement("div");
+    tstatus.id = "tunerStatus";
+    tstatus.style.cssText = "text-align:center;font-size:12px;color:#8a97a5;margin-top:6px;";
+    var capoRow = document.createElement("div");
+    capoRow.style.cssText = "display:flex;gap:10px;align-items:center;justify-content:center;margin-top:10px;";
+    var capoLbl = document.createElement("span");
+    capoLbl.style.cssText = "font-size:13px;color:#5c6b7a;";
+    capoLbl.textContent = "Capo:";
+    var capoSel = document.createElement("select");
+    capoSel.id = "tunerCapo";
+    capoSel.style.cssText = "font-size:15px;padding:6px 10px;border:1px solid #c8d3dd;border-radius:9px;background:#fff;";
+    for (var ci = 0; ci <= 12; ci++) {
+      var o = document.createElement("option");
+      o.value = String(ci);
+      o.textContent = ci === 0 ? "none" : "fret " + ci;
+      capoSel.appendChild(o);
+    }
+    capoRow.appendChild(capoLbl); capoRow.appendChild(capoSel);
+    tun.appendChild(tnote); tun.appendChild(meter); tun.appendChild(tfreq); tun.appendChild(tstatus); tun.appendChild(capoRow);
+    listEl.appendChild(tun);
+    tunerRefs = { note: tnote, fill: fill, freq: tfreq, status: tstatus, capo: capoSel };
+  }
+
+  function renderTimers() {
+    var tm = document.createElement("section");
+    tm.className = "card"; tm.style.padding = "16px";
+    var tmh = document.createElement("h3");
+    tmh.textContent = "Gig timers";
+    tmh.style.cssText = "background:none;padding:0 0 6px;border:0;";
+    tm.appendChild(tmh);
+    var tmLbl = document.createElement("div");
+    tmLbl.className = "purpose";
+    tmLbl.textContent = "Pick a countdown \u2014 soundcheck, interval or set time.";
+    var tmRow = document.createElement("div");
+    tmRow.className = "req-actions";
+    function startTimer(min, label) {
+      if (timerInt) { clearInterval(timerInt); timerInt = null; }
+      var end = Date.now() + min * 60000;
+      function tick() {
+        var left = Math.max(0, Math.round((end - Date.now()) / 1000));
+        var m = Math.floor(left / 60), s2 = left % 60;
+        tmLbl.textContent = label + ": " + m + ":" + (s2 < 10 ? "0" : "") + s2 + " left";
+        if (left <= 0) { clearInterval(timerInt); timerInt = null; tmLbl.textContent = label + " \u2014 time's up!"; metBeep(); }
+      }
+      tick();
+      timerInt = setInterval(tick, 1000);
+    }
+    tmRow.appendChild(mkBtn("Soundcheck 30", function () { startTimer(30, "Soundcheck"); }));
+    tmRow.appendChild(mkBtn("Interval 15", function () { startTimer(15, "Interval"); }));
+    tmRow.appendChild(mkBtn("Set 45", function () { startTimer(45, "Set"); }));
+    tm.appendChild(tmLbl); tm.appendChild(tmRow);
+    listEl.appendChild(tm);
+
+    // gig clock
+    var gc = document.createElement("section");
+    gc.className = "card";
+    gc.style.padding = "16px";
+    var gh = document.createElement("h3");
+    gh.textContent = "Gig clock";
+    gh.style.background = "none"; gh.style.padding = "0 0 6px"; gh.style.border = "0";
+    var gsub = document.createElement("div");
+    gsub.className = "sub";
+    gsub.textContent = "Start it when you go on \u2014 it turns red when you\u2019re running over.";
+    var gRow = document.createElement("div");
+    gRow.style.cssText = "display:flex;gap:8px;align-items:center;flex-wrap:wrap;";
+    var lenSel = document.createElement("select");
+    lenSel.id = "clockLen";
+    [90, 120, 150, 180, 210, 240].forEach(function (m) {
+      var o = document.createElement("option");
+      o.value = String(m); o.textContent = m + " min";
+      lenSel.appendChild(o);
+    });
+    lenSel.value = String(gigClock.lengthMin);
+    var startB = document.createElement("button");
+    startB.type = "button"; startB.className = "btn save"; startB.style.cssText = "flex:0 0 auto;font-size:14px;padding:10px 16px;";
+    startB.textContent = "Start";
+    startB.addEventListener("click", function () { gigClock.lengthMin = parseInt(lenSel.value, 10) || 180; startGigClock(); });
+    var stopB = document.createElement("button");
+    stopB.type = "button"; stopB.className = "btn ug"; stopB.style.cssText = "flex:0 0 auto;font-size:14px;padding:10px 16px;";
+    stopB.textContent = "Stop";
+    stopB.addEventListener("click", stopGigClock);
+    var gOut = document.createElement("div");
+    gOut.id = "clockOut";
+    gOut.style.cssText = "font-size:14px;font-weight:600;margin-top:10px;color:#41505e;";
+    gRow.appendChild(lenSel); gRow.appendChild(startB); gRow.appendChild(stopB);
+    gc.appendChild(gh); gc.appendChild(gsub); gc.appendChild(gRow); gc.appendChild(gOut);
+    listEl.appendChild(gc);
+    gigClockRefs = { out: gOut };
+  }
+
+  function renderGigDetails() {
+    var gd = document.createElement("section");
+    gd.className = "card"; gd.style.padding = "16px";
+    var gdh = document.createElement("h3");
+    gdh.textContent = "Gig details";
+    gdh.style.cssText = "background:none;padding:0 0 6px;border:0;";
+    gd.appendChild(gdh);
+    if (!s.gig) s.gig = {};
+    function gigField(ph, key, type) {
+      var inp = document.createElement("input");
+      inp.type = type || "text";
+      inp.placeholder = ph;
+      inp.value = s.gig[key] || "";
+      inp.style.cssText = "width:100%;margin:5px 0;";
+      inp.addEventListener("input", function () { s.gig[key] = inp.value; save(); });
+      gd.appendChild(inp);
+      return inp;
+    }
+    gigField("Date (e.g. 2026-08-15)", "date", "date");
+    gigField("Venue", "venue");
+    gigField("Soundcheck time (e.g. 19:30)", "soundcheck");
+    gigField("Start time (e.g. 21:00) \u2014 drives the set clock", "start");
+    gigField("Notes", "notes");
+    listEl.appendChild(gd);
+  }
+
+  function renderChecklist() {
+    var chk = document.createElement("section");
+    chk.className = "card";
+    chk.style.padding = "16px";
+    var chh = document.createElement("h3");
+    chh.textContent = "Gig checklist";
+    chh.style.background = "none"; chh.style.padding = "0 0 6px"; chh.style.border = "0";
+    chk.appendChild(chh);
+    var chd = document.createElement("p");
+    chd.className = "purpose";
+    chd.textContent = "Add gear, then tick it off before you leave the house. Stays saved between gigs.";
+    chk.appendChild(chd);
+    var chList = document.createElement("div");
+    chk.appendChild(chList);
+    var chAddRow = document.createElement("div");
+    chAddRow.className = "req-actions";
+    var chInp = document.createElement("input");
+    chInp.type = "text";
+    chInp.placeholder = "e.g. spare strings, XLR cables\u2026";
+    chInp.style.cssText = "flex:1;font-size:15px;padding:10px 12px;border:1px solid #c8d3dd;border-radius:10px;font-family:inherit;";
+    var chAdd = mkBtn("Add", function () {
+      var t = chInp.value.trim();
+      if (!t) return;
+      if (!s.gigCheck || !Array.isArray(s.gigCheck.items)) s.gigCheck = { items: [] };
+      s.gigCheck.items.push({ t: t.slice(0, 80), done: false });
+      chInp.value = "";
+      save(); render();
+    });
+    chAddRow.appendChild(chInp); chAddRow.appendChild(chAdd);
+    chk.appendChild(chAddRow);
+    var chReset = mkBtn("Reset all", function () {
+      if (!window.confirm("Uncheck every item?")) return;
+      (s.gigCheck.items || []).forEach(function (it) { it.done = false; });
+      save(); render();
+    });
+    chk.appendChild(chReset);
+    function drawChk() {
+      chList.innerHTML = "";
+      var items = (s.gigCheck && s.gigCheck.items) || [];
+      if (!items.length) {
+        var emp = document.createElement("div");
+        emp.className = "rec-note";
+        emp.textContent = "Nothing on the list yet \u2014 add your first item above.";
+        chList.appendChild(emp);
+        return;
+      }
+      items.forEach(function (it, ii) {
+        var row = document.createElement("div");
+        row.style.cssText = "display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #edf1f5;";
+        var cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.checked = !!it.done;
+        cb.style.cssText = "width:20px;height:20px;flex-shrink:0;";
+        cb.addEventListener("change", function () { it.done = cb.checked; save(); });
+        var lb = document.createElement("span");
+        lb.style.cssText = "flex:1;font-size:15px;" + (it.done ? "text-decoration:line-through;color:#8a97a5;" : "");
+        lb.textContent = it.t;
+        var rm = document.createElement("button");
+        rm.type = "button"; rm.textContent = "\u2715";
+        rm.style.cssText = "border:0;background:none;font-size:15px;color:#a03027;padding:6px;";
+        rm.addEventListener("click", function () {
+          items.splice(ii, 1);
+          save(); render();
+        });
+        row.appendChild(cb); row.appendChild(lb); row.appendChild(rm);
+        chList.appendChild(row);
+      });
+    }
+    drawChk();
+    listEl.appendChild(chk);
+  }
+
+  function renderStreak() {
+    var ps = document.createElement("section");
+    ps.className = "card"; ps.style.padding = "16px";
+    var psh = document.createElement("h3");
+    psh.textContent = "Practice streak";
+    psh.style.cssText = "background:none;padding:0 0 6px;border:0;";
+    ps.appendChild(psh);
+    var streakData = { last: "", n: 0 };
+    try { streakData = JSON.parse(localStorage.getItem("sb2streak")) || streakData; } catch (e) {}
+    var todayKey = new Date().toDateString();
+    var streakLbl = document.createElement("div");
+    streakLbl.className = "purpose";
+    function showStreak() {
+      var ok = streakData.last === todayKey;
+      streakLbl.textContent = streakData.n + (streakData.n === 1 ? " day" : " days") + " streak" + (ok ? " \u2014 practiced today \u2713" : " \u2014 practice today to keep it alive");
+    }
+    showStreak();
+    var streakBtn = document.createElement("button");
+    streakBtn.type = "button"; streakBtn.className = "btn save";
+    streakBtn.textContent = "I practiced today";
+    streakBtn.addEventListener("click", function () {
+      if (streakData.last === todayKey) { flashNew("Already counted today \u2014 nice work!"); return; }
+      var y = new Date(Date.now() - 86400000).toDateString();
+      streakData.n = (streakData.last === y) ? (streakData.n + 1) : 1;
+      streakData.last = todayKey;
+      try { localStorage.setItem("sb2streak", JSON.stringify(streakData)); } catch (e) {}
+      showStreak();
+      flashNew("Streak: " + streakData.n + (streakData.n === 1 ? " day" : " days") + " \u2014 keep it going!");
+    });
+    ps.appendChild(streakLbl); ps.appendChild(streakBtn);
+    listEl.appendChild(ps);
+  }
+
+  function renderBackup() {
+    var bak = document.createElement("section");
+    bak.className = "card";
+    bak.style.padding = "16px";
+    var bh = document.createElement("h3");
+    bh.textContent = "Backup & reset";
+    bh.style.background = "none";
+    bh.style.padding = "0 0 6px";
+    bh.style.border = "0";
+    var bd = document.createElement("p");
+    bd.className = "purpose";
+    bd.textContent = "Export your songs and sets as a file, restore them from a backup, or start fresh.";
+    var brow = document.createElement("div");
+    brow.className = "req-actions";
+    var bExp = mkBtn("Export backup", doExport);
+    var bImp = mkBtn("Import backup", doImport);
+    var bRst = mkBtn("Start fresh", doReset);
+    brow.appendChild(bExp); brow.appendChild(bImp);
+    bak.appendChild(bh); bak.appendChild(bd); bak.appendChild(brow); bak.appendChild(bRst);
+    listEl.appendChild(bak);
+  }
+
+  function renderExport() {
+    var sh = document.createElement("section");
+    sh.className = "card"; sh.style.padding = "16px";
+    var shh = document.createElement("h3");
+    shh.textContent = "Share & export";
+    shh.style.cssText = "background:none;padding:0 0 6px;border:0;";
+    var srow = document.createElement("div");
+    srow.className = "req-actions";
+    srow.appendChild(mkBtn("Share setlist", shareSetlist));
+    srow.appendChild(mkBtn("Export gigs (.ics)", exportICS));
+    srow.appendChild(mkBtn("Export report (CSV)", exportCSV));
+    sh.appendChild(shh); sh.appendChild(srow);
+    listEl.appendChild(sh);
+
+    // gig archive
+    var ac = document.createElement("section");
+    ac.className = "card";
+    ac.style.padding = "4px 16px 14px";
+    var ah = document.createElement("h3");
+    ah.textContent = "Gig archive";
+    ah.style.background = "none"; ah.style.padding = "12px 0 6px"; ah.style.border = "0";
+    ac.appendChild(ah);
+    if (!isPro()) {
+      var pe = document.createElement("div");
+      pe.className = "s-empty";
+      pe.textContent = "Gig archive is a Pro feature \u2014 unlock Setlist Pro (\u00a3" + PRO_PRICE + " one-time).";
+      ac.appendChild(pe);
+    } else {
+      var ar = gigArchive();
+      if (!ar.length) {
+        var ae = document.createElement("div");
+        ae.className = "s-empty";
+        ae.textContent = "No gigs saved yet \u2014 every \u201cEnd gig\u201d saves one here.";
+        ac.appendChild(ae);
+      } else {
+        ar.forEach(function (g) {
+          var row = document.createElement("div");
+          row.className = "purpose";
+          row.style.marginTop = "7px";
+          if (g.photo) {
+            var im = document.createElement("img");
+            im.src = g.photo;
+            im.style.cssText = "width:56px;height:56px;object-fit:cover;border-radius:8px;margin:4px 8px 4px 0;vertical-align:middle;";
+            row.appendChild(im);
+          }
+          var tx = document.createElement("span");
+          tx.textContent = g.date + " \u00b7 " + g.total + " requests \u00b7 \u00a3" + (g.tips || 0) + " tips" + (g.extras ? " \u00b7 \u00a3" + g.extras + " extras" : "") + (g.fee ? " \u00b7 \u00a3" + g.fee + " fee" : "");
+          row.appendChild(tx);
+          ac.appendChild(row);
+        });
+      }
+    }
+    listEl.appendChild(ac);
+  }
+
+  function renderSupport() {
+    var sc = document.createElement("section");
+    sc.className = "card";
+    sc.style.padding = "16px";
+    var sh = document.createElement("h3");
+    sh.textContent = "Support & feedback";
+    sh.style.background = "none"; sh.style.padding = "0 0 6px"; sh.style.border = "0";
+    var sp = document.createElement("div");
+    sp.className = "purpose";
+    sp.textContent = "Found a problem with the app, or want a feature added? Message me on WhatsApp \u2014 I read every one. (WhatsApp: +" + SUPPORT_WHATSAPP + ")";
+    var wa = document.createElement("button");
+    wa.type = "button";
+    wa.className = "btn save";
+    wa.textContent = "Message on WhatsApp";
+    wa.addEventListener("click", function () {
+      var u = "https://wa.me/" + SUPPORT_WHATSAPP + "?text=" + encodeURIComponent("Hi! I have a question about the Setlist Builder app.");
+      if (window.open) window.open(u, "_blank"); else location.href = u;
+    });
+    sc.appendChild(sh); sc.appendChild(sp); sc.appendChild(wa);
+    listEl.appendChild(sc);
+  }
+
+  function renderVocalRange() {
+    var vc = document.createElement("section");
+    vc.className = "card";
+    vc.style.padding = "4px 16px 14px";
+    var vh = document.createElement("h3");
+    vh.textContent = "Vocal range \u2014 pick songs that fit";
+    vh.style.background = "none"; vh.style.padding = "12px 0 6px"; vh.style.border = "0";
+    vc.appendChild(vh);
+    var rangeRow = document.createElement("div");
+    rangeRow.style.cssText = "display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;";
+    function noteSelect(id, def) {
+      var sel = document.createElement("select");
+      sel.id = id;
+      sel.style.cssText = "font-size:15px;padding:8px 10px;border:1px solid #c8d3dd;border-radius:9px;background:#fff;";
+      for (var oct = 1; oct <= 6; oct++) {
+        for (var pc = 0; pc < 12; pc++) {
+          var o = document.createElement("option");
+          o.value = String(semitoneIndex(pc, oct));
+          o.textContent = NOTE_NAMES[pc] + oct;
+          if (semitoneIndex(pc, oct) === def) o.selected = true;
+          sel.appendChild(o);
+        }
+      }
+      return sel;
+    }
+    var rLo = noteSelect("rangeLo", 19);   // G2
+    var rHi = noteSelect("rangeHi", 40);   // E4
+    var rBtn = document.createElement("button");
+    rBtn.type = "button";
+    rBtn.className = "btn save";
+    rBtn.style.cssText = "flex:0 0 auto;font-size:14px;padding:10px 16px;";
+    rBtn.textContent = "Show my range";
+    rBtn.addEventListener("click", showRange);
+    var rOut = document.createElement("div");
+    rOut.id = "rangeResult";
+    rOut.style.cssText = "font-size:13px;color:#41505e;margin-top:10px;line-height:1.5;";
+    rangeRow.appendChild(rLo); rangeRow.appendChild(rHi); rangeRow.appendChild(rBtn);
+    vc.appendChild(rangeRow);
+    vc.appendChild(rOut);
+    ["Find your range: sing your lowest comfortable note, then your highest \u2014 without straining.",
+     "Pick songs whose chorus peak sits comfortably inside that range \u2014 the chorus is what you sing loudest.",
+     "Typical ranges: Soprano C4\u2013C6 \u00b7 Mezzo A3\u2013A5 \u00b7 Alto F3\u2013F5 \u00b7 Tenor C3\u2013C5 \u00b7 Baritone A2\u2013A4 \u00b7 Bass E2\u2013E4."
+    ].forEach(function (l) {
+      var row = document.createElement("div");
+      row.className = "purpose";
+      row.style.marginTop = "7px";
+      row.textContent = l;
+      vc.appendChild(row);
+    });
+    listEl.appendChild(vc);
+    rangeRefs = { lo: rLo, hi: rHi, out: rOut };
+  }
+
+  function renderEQGuide() {
+    listEl.appendChild(adviceCard("EQ quick guide \u2014 live guitar & voice", [
+      "High-pass (low cut): everything below 80\u2013100 Hz on guitar, ~120 Hz on vocals \u2014 kills rumble, boom and mud.",
+      "200\u2013300 Hz \u2014 \u201cboxy\u201d zone: cut 2\u20134 dB if the guitar sounds like it\u2019s in a box, or vocals sound honky.",
+      "400\u2013800 Hz \u2014 busy mix: a gentle cut clears congestion and keeps the vocal on top.",
+      "1\u20133 kHz \u2014 presence / cut-through: boost a little for solos; too much = harsh, too little = buried.",
+      "3\u20135 kHz \u2014 pick noise and string squeaks: cut if it sounds scratchy.",
+      "5\u20138 kHz \u2014 sibilance (\u201cs\u201d sounds): cut if vocals spit.",
+      "Rule of thumb: cut to fix, boost to feature \u2014 most fixes are cuts."
+    ]));
+    listEl.appendChild(adviceCard("Mid-gig feedback \u2014 fix it in this order", [
+      "1. Turn DOWN first \u2014 most feedback dies with gain, not EQ. Check channel, then monitor send.",
+      "2. Move a metre or two sideways \u2014 out of the mic\u2019s pickup path, most rings stop instantly.",
+      "3. Point away: don\u2019t aim the guitar soundhole or vocal mic at the monitor.",
+      "4. Notch the ringing frequency on the channel EQ \u2014 pull the howling band down 3\u20136 dB (guitar boxes usually 250\u2013500 Hz, mics 1\u20134 kHz).",
+      "8. Gate the vocal mic so it only opens when you sing."
+    ]));
+  }
+
+  function renderCheatSheet() {
+    var cc = document.createElement("section");
+    cc.className = "card";
+    cc.style.padding = "16px";
+    var cch = document.createElement("h3");
+    cch.textContent = "Chord cheat sheet";
+    cch.style.background = "none"; cch.style.padding = "0 0 6px"; cch.style.border = "0";
+    cc.appendChild(cch);
+    var ccd = document.createElement("p");
+    ccd.className = "purpose";
+    ccd.textContent = "Common open chords and barre shapes \u2014 e = high E, x = don't play.";
+    cc.appendChild(ccd);
+    [["A      Am     C      D      Dm\n" +
+      "e|-0-  e|-0-  e|-0-  e|-2-  e|-1-\n" +
+      "B|-2-  B|-1-  B|-1-  B|-3-  B|-3-\n" +
+      "G|-2-  G|-2-  G|-0-  G|-2-  G|-2-\n" +
+      "D|-2-  D|-2-  D|-2-  D|-0-  D|-0-\n" +
+      "A|-0-  A|-0-  A|-3-  A|-x-  A|-x-\n" +
+      "E|-x-  E|-x-  E|-x-  E|-x-  E|-x-",
+     "E      Em     G      F      B7\n" +
+      "e|-0-  e|-0-  e|-3-  e|-1-  e|-2-\n" +
+      "B|-0-  B|-0-  B|-0-  B|-1-  B|-0-\n" +
+      "G|-1-  G|-0-  G|-0-  G|-2-  G|-2-\n" +
+      "D|-2-  D|-2-  D|-0-  D|-3-  D|-1-\n" +
+      "A|-2-  A|-2-  A|-2-  A|-3-  A|-2-\n" +
+      "E|-0-  E|-0-  E|-3-  E|-1-  E|-x-"]
+    ].forEach(function (block) {
+      var pre = document.createElement("pre");
+      pre.className = "chords";
+      pre.style.cssText = "font-size:12px;line-height:1.5;padding:12px;margin:8px 0;white-space:pre;overflow-x:auto;";
+      pre.textContent = block;
+      cc.appendChild(pre);
+    });
+    listEl.appendChild(cc);
+  }
+
+  function renderProSales() {
+    var pro = document.createElement("section");
+    pro.className = "card";
+    pro.style.padding = "16px";
+    var proh = document.createElement("h3");
+    proh.textContent = "Setlist Pro";
+    proh.style.background = "none"; proh.style.padding = "0 0 6px"; proh.style.border = "0";
+    pro.appendChild(proh);
+    if (isPro() || isUnlimited()) {
+      var pr2 = proRecord(), ul2 = ulRecord();
+      var pOk = document.createElement("div");
+      pOk.className = "purpose";
+      pOk.textContent = pr2 ? ("Pro unlocked \u00b7 500 songs \u00b7 code " + pr2.code + (pr2.email ? " \u00b7 " + pr2.email : "")) : "Pro unlocked (owner account).";
+      if (ul2) pOk.textContent += " \u00b7 Unlimited songs active \u00b7 code " + ul2.code;
+      pro.appendChild(pOk);
+    } else {
+      var pp = document.createElement("div");
+      pp.className = "purpose";
+      pp.textContent = "Free: 30-song pool, 2 sets, requests & tips. Pro: 500-song pool, gig archive \u2014 \u00a3" + PRO_PRICE + " once. Unlimited: no song limit \u2014 \u00a3" + UNLIM_PRICE + " once.";
+      pro.appendChild(pp);
+    }
+    listEl.appendChild(pro);
+  }
+
+  var songsQuery = "";
 
   function mkBtn(text, fn, primary) {
     var b = document.createElement("button");
@@ -3908,15 +4445,30 @@
     var i3 = document.createElement("input"); i3.type = "text"; i3.id = "payReview"; i3.placeholder = "https://...";
     i3.style.cssText = "width:100%;font-size:15px;padding:10px;border:1px solid #c8d3dd;border-radius:9px;";
     i3.value = (s.links && s.links.review) || "";
+    
+    var l4 = document.createElement("label"); l4.style.cssText = "display:block;font-size:12px;color:#5c6b7a;margin:10px 0 4px;";
+    l4.textContent = "Social handle (e.g. @reganwebbmusic)";
+    var i4 = document.createElement("input"); i4.type = "text"; i4.id = "paySocial"; i4.placeholder = "@...";
+    i4.style.cssText = "width:100%;font-size:15px;padding:10px;border:1px solid #c8d3dd;border-radius:9px;";
+    i4.value = (s.links && s.links.social) || "";
+    
+    var l5 = document.createElement("label"); l5.style.cssText = "display:block;font-size:12px;color:#5c6b7a;margin:10px 0 4px;";
+    l5.textContent = "WhatsApp number (e.g. 447468651580)";
+    var i5 = document.createElement("input"); i5.type = "text"; i5.id = "payWA"; i5.placeholder = "Country code + number";
+    i5.style.cssText = "width:100%;font-size:15px;padding:10px;border:1px solid #c8d3dd;border-radius:9px;";
+    i5.value = (s.links && s.links.whatsapp) || "";
+
     var msg = document.createElement("div"); msg.className = "auth-msg"; msg.style.textAlign = "center";
     var btns = document.createElement("div"); btns.className = "btns";
     var saveBtn = document.createElement("button"); saveBtn.type = "button"; saveBtn.className = "btn save"; saveBtn.textContent = "Save links";
     saveBtn.addEventListener("click", function () {
-      if (!s.links) s.links = { tip: "", extra: "", review: "" };
+      if (!s.links) s.links = { tip: "", extra: "", review: "", social: "", whatsapp: "" };
       s.links.tip = i1.value.trim();
       s.links.extra = i2.value.trim();
       s.links.review = i3.value.trim();
-      msg.textContent = "Saved \u2014 your tip jar, payment buttons and review button now use these.";
+      s.links.social = i4.value.trim();
+      s.links.whatsapp = i5.value.trim();
+      msg.textContent = "Saved \u2014 your profile and links are updated.";
       save();
     });
     var close = document.createElement("button"); close.type = "button"; close.className = "btn ug"; close.textContent = "Done";
@@ -3926,6 +4478,8 @@
     sheet.appendChild(l1); sheet.appendChild(i1);
     sheet.appendChild(l2); sheet.appendChild(i2);
     sheet.appendChild(l3); sheet.appendChild(i3);
+    sheet.appendChild(l4); sheet.appendChild(i4);
+    sheet.appendChild(l5); sheet.appendChild(i5);
     sheet.appendChild(msg); sheet.appendChild(btns);
     bg.appendChild(sheet);
     document.body.appendChild(bg);
@@ -4148,7 +4702,7 @@
     accept.addEventListener("click", function () { handleRequest(r.id, "accepted"); });
     var decline = document.createElement("button");
     decline.type = "button"; decline.className = "btn del"; decline.textContent = "Decline";
-    decline.addEventListener("click", function () { handleRequest(r.id, "declined"); });
+    decline.addEventListener("click", function () { openDeclineSheet(r.id); });
     btns.appendChild(accept); btns.appendChild(decline);
     if (r.song) {
       var wish = document.createElement("button");
@@ -4221,7 +4775,42 @@
     activePopup = null;
   }
 
-  function handleRequest(id, status) {
+  function openDeclineSheet(id) {
+    var bg = document.createElement("div");
+    bg.className = "modal-bg pop";
+    var sheet = document.createElement("div");
+    sheet.className = "sheet";
+    var h = document.createElement("h3"); h.textContent = "Decline request";
+    var sub = document.createElement("div"); sub.className = "sub";
+    sub.textContent = "Choose a reason to show the user:";
+    
+    var reasons = [
+      "I Dont know that one at all",
+      "The songs terrible",
+      "i may give it a try later on"
+    ];
+    
+    var btns = document.createElement("div");
+    btns.style.cssText = "display:flex;flex-direction:column;gap:10px;margin-top:14px;";
+    reasons.forEach(function(r) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "btn ug"; b.textContent = r;
+      b.addEventListener("click", function() { handleRequest(id, "declined", r); closeSheet(bg); });
+      btns.appendChild(b);
+    });
+    
+    var cancel = document.createElement("button");
+    cancel.type = "button"; cancel.className = "btn save"; cancel.textContent = "Cancel";
+    cancel.style.marginTop = "10px";
+    cancel.addEventListener("click", function() { closeSheet(bg); });
+    
+    sheet.appendChild(h); sheet.appendChild(sub); sheet.appendChild(btns); sheet.appendChild(cancel);
+    bg.appendChild(sheet);
+    document.body.appendChild(bg);
+    bg.addEventListener("click", function (e) { if (e.target === bg) closeSheet(bg); });
+  }
+
+  function handleRequest(id, status, reason) {
     try {
     var r = null;
     requestsData.forEach(function (x) { if (x && x.id === id) r = x; });
@@ -4254,7 +4843,7 @@
         flashNew("\u201c" + r.song + "\u201d accepted \u2014 already in your pool or it's full.", "fit-low");
       }
     }
-    patchRequest(id, { status: status }); // reloads the list once the write lands
+    patchRequest(id, { status: status, reason: reason || "" }); // reloads the list once the write lands
     closePopup();
     // charged extra-time requests: accept first, then send the payment link
     if (r && r.charge && status === "accepted") {
@@ -4280,8 +4869,23 @@
         b.forEach(function (v) { if (v >= 0 && pool[v]) setNames.push(pool[v].name); });
       });
     });
-    var book = { stageName: stageLabel(), sets: setNames, pool: pool.map(function (x) { return x.name; }) };
-    if (s.links) book.links = { tip: s.links.tip || "", extra: s.links.extra || "", review: s.links.review || "" };
+    var book = {
+      stageName: stageLabel(),
+      sets: setNames,
+      pool: pool.map(function (x) { return { name: x.name, artist: x.artist || "" }; }),
+      fullSets: ["A", "B"].map(function(w) {
+        return s.sets[w].map(function(b) {
+          return b.filter(function(v) { return v >= 0; }).map(function(v) { return pool[v].name; });
+        }).reduce(function(a, b) { return a.concat(b); }, []);
+      }).reduce(function(a, b) { return a.concat(b); }, [])
+    };
+    if (s.links) book.links = {
+      tip: s.links.tip || "",
+      extra: s.links.extra || "",
+      review: s.links.review || "",
+      social: s.links.social || "",
+      whatsapp: s.links.whatsapp || ""
+    };
     var pubUrl = userPath() + "/public";
     authed(pubUrl).then(function (u) {
       return fetch(u, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(book) });
@@ -4487,7 +5091,7 @@
         acc.addEventListener("click", function () { handleRequest(r.id, "accepted"); });
         var dec = document.createElement("button");
         dec.type = "button"; dec.className = "btn del"; dec.textContent = "Decline";
-        dec.addEventListener("click", function () { handleRequest(r.id, "declined"); });
+        dec.addEventListener("click", function () { openDeclineSheet(r.id); });
         btnRow.appendChild(acc); btnRow.appendChild(dec);
       } else {
         var ok = document.createElement("div");
@@ -6764,7 +7368,7 @@
       if (name === "sets") { openSetsDrawer(); return; } // Sets icon opens the sidebar
       exitPlay();
       s.tab = name; save(); render();
-      [["tabSongs", "songs"], ["tabSets", "sets"], ["tabRequests", "requests"], ["tabPacks", "packs"], ["tabTools", "tools"]].forEach(function (t) {
+      [["tabSongs", "songs"], ["tabSets", "sets"], ["tabRequests", "requests"], ["tabMore", "more"]].forEach(function (t) {
         document.getElementById(t[0]).classList.toggle("active", t[1] === name);
       });
       if (name === "requests") {
@@ -6776,8 +7380,7 @@
   tab(document.getElementById("tabSongs"), "songs");
   tab(document.getElementById("tabSets"), "sets");
   tab(document.getElementById("tabRequests"), "requests");
-  tab(document.getElementById("tabPacks"), "packs");
-  tab(document.getElementById("tabTools"), "tools");
+  tab(document.getElementById("tabMore"), "more");
 
   function shareSetlistText() {
     var pool = filledSongs(), lines = [];
@@ -6940,7 +7543,7 @@
     s.tab = "songs";
     s.setView = "A";
     save(); render();
-    ["tabSongs", "tabSets", "tabRequests", "tabTools"].forEach(function (id) {
+    ["tabSongs", "tabSets", "tabRequests", "tabMore"].forEach(function (id) {
       document.getElementById(id).classList.toggle("active", id === "tabSongs");
     });
   }

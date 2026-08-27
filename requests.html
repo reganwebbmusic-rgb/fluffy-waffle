@@ -103,15 +103,42 @@
   // Payment links published by the musician (the app writes users/<uid>/public
   // when they sign in with links set). When available, paid/tip buttons open the
   // payment page immediately; otherwise we fall back to the "we'll send a link" flow.
-  var pubLinks = { tip: "", extra: "", review: "" };
+  var pubLinks = { tip: "", extra: "", review: "", social: "", whatsapp: "" };
   var stageName = "";
+  var musicianPool = [];
+  var musicianSets = [];
   if (MUSICIAN && FIREBASE_URL) {
     dbGet(FIREBASE_URL + "/users/" + encodeURIComponent(MUSICIAN) + "/public")
       .then(function (r) { return r.json(); })
       .then(function (d) {
-        if (d && d.links) pubLinks = { tip: String(d.links.tip || ""), extra: String(d.links.extra || ""), review: String(d.links.review || "") };
+        if (d && d.links) pubLinks = {
+          tip: String(d.links.tip || ""),
+          extra: String(d.links.extra || ""),
+          review: String(d.links.review || ""),
+          social: String(d.links.social || ""),
+          whatsapp: String(d.links.whatsapp || "")
+        };
         if (d && d.stageName) stageName = String(d.stageName);
+        if (d && d.pool) musicianPool = d.pool;
+        if (d && d.fullSets) musicianSets = d.fullSets;
+        renderMusicianInfo();
       }).catch(function () {});
+  }
+
+  function renderMusicianInfo() {
+    var h1 = document.querySelector("h1");
+    if (stageName) h1.textContent = stageName;
+    
+    var sub = document.querySelector("p.sub");
+    var links = [];
+    if (pubLinks.social) links.push('<a href="https://facebook.com/' + pubLinks.social.replace('@','') + '" target="_blank" style="color:#4da3ff;text-decoration:none;">' + pubLinks.social + '</a>');
+    if (pubLinks.whatsapp) links.push('<a href="https://wa.me/' + pubLinks.whatsapp + '" target="_blank" style="color:#4da3ff;text-decoration:none;">WhatsApp</a>');
+    if (links.length) {
+      var div = document.createElement("div");
+      div.style.cssText = "margin-bottom:12px;font-size:14px;color:#9fb0c0;";
+      div.innerHTML = "Follow me: " + links.join(" \u00b7 ");
+      sub.parentNode.insertBefore(div, sub.nextSibling);
+    }
   }
 
   // never let any cache (browser or service worker) serve stale database reads
@@ -133,9 +160,22 @@
   function bandOdds(song, artist) {
     var s = String(song || "").trim().toLowerCase();
     if (s.length < 2) return null;
+    
+    // Exact set match
+    if (musicianSets.some(function(n) { return String(n).toLowerCase() === s; })) {
+      return { pct: 99, dup: false };
+    }
+    
+    // Pool match
+    var inPool = musicianPool.some(function(x) { return String(x.name).toLowerCase() === s; });
+    var artistInPool = artist && musicianPool.some(function(x) { return String(x.artist).toLowerCase() === String(artist).toLowerCase(); });
+    
+    if (inPool) return { pct: 95, dup: false };
+    if (artistInPool) return { pct: 85, dup: false };
+
     var h = 0;
     for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-    var pct = 55 + (h % 31); // 55-85, stable per song
+    var pct = 45 + (h % 21); // 45-66, stable per song
     if (artist && String(artist).trim()) pct += 8;
     if (s.length < 14) pct += 5; // punchy titles are singalong gold
     var dup = queueSnapshot.some(function (q) { return q.song && q.song.toLowerCase() === s; });
@@ -214,6 +254,7 @@
             });
             if (hit && hit.status) {
               myReq.status = hit.status;
+              myReq.reason = hit.reason || "";
               try { localStorage.setItem("sb2myreq", JSON.stringify(myReq)); } catch (e) {}
               renderMyStatus();
             }
@@ -231,7 +272,11 @@
     if (!myReq) { myStatusEl.style.display = "none"; return; }
     myStatusEl.style.display = "block";
     if (myReq.status === "accepted") { myStatusEl.style.background = "#9fd8a8"; myStatusEl.style.color = "#1c2733"; myStatusEl.textContent = "\u2713 Accepted \u2014 you'll hear it soon!"; }
-    else if (myReq.status === "declined") { myStatusEl.style.background = "#c05a50"; myStatusEl.style.color = "#fff"; myStatusEl.textContent = "\u2717 Declined this time \u2014 try another!"; }
+    else if (myReq.status === "declined") {
+      myStatusEl.style.background = "#c05a50";
+      myStatusEl.style.color = "#fff";
+      myStatusEl.textContent = "\u2717 " + (myReq.reason || "Declined this time") + " \u2014 try another!";
+    }
     else { myStatusEl.style.background = "#f0c987"; myStatusEl.style.color = "#1c2733"; myStatusEl.textContent = "\u2022 Waiting for the band\u2026 stay on this screen and we'll update it here."; }
   }
   renderMyStatus();
@@ -286,7 +331,7 @@
       note: document.getElementById("note").value.trim().slice(0, 200),
       email: mail(),
       ts: Date.now()
-    }, dup ? "That's already in the queue — we'll get to it!" : "Got it — thanks! Stay on this screen and we'll update it when the band replies.");
+    }, dup ? "That's already in the queue — we'll get to it!" : "Wait to see if its Accepted. Whilst you wait follow me on Facebook @reganwebbmusic");
   });
 
   function paidButton(label, payload, doneMsg, cls) {
@@ -311,7 +356,7 @@
     optsEl.appendChild(b);
   }
 
-  paidButton("Tip the band", { type: "tip", tip: true }, "Tip sent — the band's on it!");
+  paidButton("Buy me a pint", { type: "tip", tip: true }, "Tip sent — the band's on it!");
   paidButton("£" + PRICE_1_EXTRA + " — 1 extra song", { type: "songs", songs: 1, charge: PRICE_1_EXTRA }, "Extra song requested — we'll send a payment link.", "primary");
   paidButton("£" + PRICE_2_EXTRA + " — 2 extra songs", { type: "songs", songs: 2, charge: PRICE_2_EXTRA }, "Extra songs requested — we'll send a payment link.");
   paidButton("£" + PRICE_STAY + " — stay longer", { type: "stay", charge: PRICE_STAY }, "More time requested — we'll send a payment link.");
