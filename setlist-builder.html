@@ -165,18 +165,30 @@
   .progress-track > div { height: 100%; background: #1f6feb; border-radius: 99px; transition: width .3s; }
 
   .sheet .chords {
-    font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Monaco, Consolas, "DejaVu Sans Mono", monospace;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
     font-size: 16px; line-height: 1.1; color: #f7f2ee;
     background: #2f1a17; border: 1px solid #4a2c28; border-radius: 12px;
     padding: 16px 16px 20px; margin: 8px 0 14px; max-height: 46vh; 
     overflow: auto; white-space: pre; -webkit-overflow-scrolling: touch;
+    letter-spacing: 0; font-variant-numeric: tabular-nums;
   }
-  .cs-pair { margin-bottom: 12px; display: flex; flex-direction: column; }
-  .cs-ch { color: #f3e6dd; font-style: italic; font-weight: 700; font-size: 1em; line-height: 1.2; min-height: 1.2em; }
-  .cs-ly { color: #fdfaf7; font-size: 1em; font-weight: 700; line-height: 1.2; min-height: 1.2em; }
+  .cs-pair { display: block; margin-bottom: 10px; white-space: pre; }
+  .cs-ch { color: #f3e6dd; font-style: italic; font-weight: 700; }
+  .cs-ly { color: #fdfaf7; font-weight: 700; }
   .cs-section {
     font-size: 17px; font-weight: 800; color: #ffffff; text-transform: uppercase;
     letter-spacing: 0.5px; margin: 18px 0 10px; border-bottom: 1px solid rgba(255,255,255,0.1);
+    white-space: normal;
+  }
+  .zoom-slider-wrap {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    background: rgba(47,26,23,.88); padding: 10px 4px; border-radius: 20px;
+    border: 1px solid rgba(255,255,255,.2);
+  }
+  .zoom-slider-wrap input {
+    writing-mode: bt-lr; /* IE */
+    -webkit-appearance: slider-vertical;
+    width: 8px; height: 100px; padding: 0 5px;
   }
   .float-ctrls {
     display: none; position: fixed; right: 6px; bottom: 20px; top: 20px;
@@ -2783,15 +2795,26 @@
       var el = document.getElementById("currentChords");
       if (!el) return;
       var root = el.firstChild;
-      var mc = parseInt(root && root.dataset ? root.dataset.maxChars : 0, 10);
+      var mc = parseInt(root && root.dataset ? root.dataset.mc : 0, 10);
       if (!mc) return;
       
-      // mathematical fit: (available width) / (chars in longest line) / (approx 0.6 multiplier for monospace aspect ratio)
-      var available = el.clientWidth - 5;
-      var best = Math.floor(available / (mc * 0.6));
+      // Precision math: measure character width at current size
+      var span = document.createElement("span");
+      span.style.visibility = "hidden";
+      span.style.position = "absolute";
+      span.style.font = window.getComputedStyle(el).font;
+      span.textContent = "W"; // standard measure character
+      document.body.appendChild(span);
+      var charW = span.getBoundingClientRect().width;
+      document.body.removeChild(span);
       
-      // clamp between 11.5px and 20px for ideal readability
-      el.style.fontSize = Math.max(11.5, Math.min(20, best)) + "px";
+      var available = el.clientWidth - 5;
+      var currentSize = parseFloat(window.getComputedStyle(el).fontSize);
+      // (available pixels) / (chars needed) / (px per char at this size) * currentSize
+      var best = Math.floor((available / mc) / (charW / currentSize));
+      
+      // professional performance range: 11.5px to 22px
+      el.style.fontSize = Math.max(11.5, Math.min(22, best)) + "px";
     }
     var notes = document.createElement("div"); notes.className = "notes";
     notes.textContent = song.note || "No notes yet for this song.";
@@ -3147,6 +3170,8 @@
     }
 
     var maxChars = 0;
+    function pad(n) { var s = ""; while (s.length < n) s += " "; return s; }
+    
     function processLine(raw) {
       var pair = document.createElement("div"); pair.className = "cs-pair";
       var chordLine = "", lyricLine = "";
@@ -3158,8 +3183,8 @@
         
         if (isChordToken(tok)) {
           lyricLine += before;
-          // align chord with the start of the word it was attached to
-          while (chordLine.length < lyricLine.length) chordLine += " ";
+          // mathematically align by padding with spaces
+          if (chordLine.length < lyricLine.length) chordLine += pad(lyricLine.length - chordLine.length);
           chordLine += transChord(tok, offset || 0);
         } else {
           lyricLine += before + "[" + tok + "]";
@@ -3168,12 +3193,16 @@
       }
       lyricLine += raw.slice(last);
       
-      maxChars = Math.max(maxChars, lyricLine.length, chordLine.length);
+      // ensure both strings have identical lengths for perfect grid alignment
+      var finalLen = Math.max(lyricLine.length, chordLine.length);
+      if (lyricLine.length < finalLen) lyricLine += pad(finalLen - lyricLine.length);
+      if (chordLine.length < finalLen) chordLine += pad(finalLen - chordLine.length);
+      maxChars = Math.max(maxChars, finalLen);
       
       var cEl = document.createElement("div"); cEl.className = "cs-ch";
-      cEl.textContent = chordLine || " ";
+      cEl.textContent = chordLine;
       var lEl = document.createElement("div"); lEl.className = "cs-ly";
-      lEl.textContent = lyricLine || " ";
+      lEl.textContent = lyricLine;
       
       pair.appendChild(cEl); pair.appendChild(lEl);
       return pair;
@@ -3194,8 +3223,7 @@
       root.appendChild(processLine(raw));
     }
     
-    // mathematical auto-fit: use character counts to decide font size
-    root.dataset.maxChars = maxChars;
+    root.dataset.mc = maxChars; // store for the precision fit logic
     return root;
   }
 
