@@ -168,8 +168,8 @@
     font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Monaco, Consolas, "DejaVu Sans Mono", monospace;
     font-size: 16px; line-height: 1.25; color: #f7f2ee;
     background: #2f1a17; border: 1px solid #4a2c28; border-radius: 12px;
-    padding: 16px 16px 20px; margin: 8px 0 14px; max-height: 46vh; overflow-y: auto;
-    overflow-x: auto; white-space: pre;
+    padding: 16px 16px 20px; margin: 8px 0 14px; max-height: 46vh; overflow: auto;
+    white-space: pre; -webkit-overflow-scrolling: touch;
   }
   .cs-pair { margin: 0 0 6px; }
   .cs-chords { color: #f3e6dd; font-style: italic; font-weight: 600; white-space: pre; font-size: 1em; }
@@ -198,7 +198,7 @@
   body.dark .modal-bg.max .sheet { background: #16202b; }
   .modal-bg.max .sheet.song-sheet { background: #2f1a17; }
   body.dark .modal-bg.max .sheet.song-sheet { background: #2f1a17; }
-  .modal-bg.max .chords { flex: 1; max-height: none; min-height: 0; overflow-y: auto; margin: 0 52px 0 0; border: none; border-radius: 0; touch-action: pan-x pan-y; }
+  .modal-bg.max .chords { flex: 1; max-height: none; min-height: 0; overflow: auto; margin: 0 52px 0 0; border: none; border-radius: 0; touch-action: auto; -webkit-overflow-scrolling: touch; }
   /* fullscreen = maroon lyric sheet edge-to-edge + floating controls only */
   .modal-bg.max .sheet.song-sheet > *:not(.chords) { display: none; }
   .req-row .fit-badge { flex-shrink: 0; font-size: 12px; font-weight: 600; border-radius: 99px; padding: 4px 10px; }
@@ -2779,11 +2779,11 @@
       var el = document.getElementById("currentChords");
       if (!el) return;
       var count = 0;
-      el.style.fontSize = "24px"; // start large and shrink down
-      // aggressively shrink until no horizontal scroll is needed
-      while (el.scrollWidth > el.clientWidth + 2 && count < 100) {
+      el.style.fontSize = "17px"; // sensible baseline
+      // shrink until it fits, but NEVER below readable size (11px)
+      while (el.scrollWidth > el.clientWidth + 3 && count < 60) {
         var cur = parseFloat(el.style.fontSize) || 16;
-        if (cur <= 4) break;
+        if (cur <= 11) break;
         el.style.fontSize = (cur - 0.2) + "px";
         count++;
       }
