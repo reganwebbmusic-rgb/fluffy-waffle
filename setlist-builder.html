@@ -166,14 +166,20 @@
 
   .sheet .chords {
     font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Monaco, Consolas, "DejaVu Sans Mono", monospace;
-    font-size: 16px; line-height: 1.25; color: #f7f2ee;
+    font-size: 16px; line-height: 1.4; color: #f7f2ee;
     background: #2f1a17; border: 1px solid #4a2c28; border-radius: 12px;
-    padding: 16px 16px 20px; margin: 8px 0 14px; max-height: 46vh; overflow: auto;
-    white-space: pre; -webkit-overflow-scrolling: touch;
+    padding: 16px 16px 20px; margin: 8px 0 14px; max-height: 46vh; overflow-y: auto;
+    overflow-x: hidden; white-space: normal;
   }
-  .cs-pair { margin: 0 0 6px; }
-  .cs-chords { color: #f3e6dd; font-style: italic; font-weight: 600; white-space: pre; font-size: 1em; }
-  .cs-lyric { color: #fdfaf7; white-space: pre; font-size: 1em; font-weight: 800; }
+  .cs-pair { margin: 0 0 8px; white-space: normal; line-height: 1.8; }
+  .cs-line { display: block; margin-bottom: 4px; }
+  .cs-unit { display: inline-flex; flex-direction: column; vertical-align: bottom; min-width: 0.5em; }
+  .cs-ch { color: #f3e6dd; font-style: italic; font-weight: 600; font-size: 0.9em; line-height: 1; height: 1.1em; white-space: pre; }
+  .cs-ly { color: #fdfaf7; font-size: 1em; font-weight: 800; line-height: 1.2; white-space: pre; }
+  .cs-section {
+    font-size: 18px; font-weight: 800; color: #ffffff; text-transform: uppercase;
+    letter-spacing: 0.5px; margin: 16px 0 8px; border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
   .float-ctrls {
     display: none; position: fixed; right: 6px; bottom: 20px; top: 20px;
     flex-direction: column; gap: 6px; z-index: 110;
@@ -2779,9 +2785,9 @@
       var el = document.getElementById("currentChords");
       if (!el) return;
       var count = 0;
-      el.style.fontSize = "17px"; // sensible baseline
-      // shrink until it fits, but NEVER below readable size (11px)
-      while (el.scrollWidth > el.clientWidth + 3 && count < 60) {
+      el.style.fontSize = "22px"; // start large
+      // shrink until it fits perfectly with NO horizontal scroll
+      while (el.scrollWidth > el.clientWidth && count < 60) {
         var cur = parseFloat(el.style.fontSize) || 16;
         if (cur <= 11) break;
         el.style.fontSize = (cur - 0.2) + "px";
@@ -3123,7 +3129,6 @@
   }
   function transChordLine(line, off) {
     if (!off) return line;
-    // split keeping spaces, transpose only the chord tokens (aligns like before)
     return String(line).split(/(\s+)/).map(function (t) { return /^\s+$/.test(t) ? t : transChord(t, off); }).join("");
   }
   function renderChordSheet(text, song, offset) {
@@ -3137,94 +3142,56 @@
     if (song && song.name) tEl.textContent = song.name;
     if (song && song.key) kEl.textContent = "Key: " + transNote(song.key, offset || 0) + (offset ? " (+" + offset + ")" : "");
     if (song && song.artist) aEl.textContent = song.artist;
-    if (!song || !song.key) {
-      for (var m = 0; m < lines.length; m++) {
-        var km = String(lines[m]).match(/^\s*key:?\s*([A-G](#|b)?)\b/i);
-        if (km) { kEl.textContent = "Key: " + transNote(km[1], offset || 0); break; }
-      }
-    }
     if (tEl.textContent || kEl.textContent || aEl.textContent) {
       head.appendChild(tEl); head.appendChild(kEl); head.appendChild(aEl);
       root.appendChild(head);
     }
-    var pending = [];
-    function flush() {
-      if (!pending.length) return;
-      var pair = document.createElement("div");
-      pair.className = "cs-pair";
-      var cEl = document.createElement("div");
-      cEl.className = "cs-chords";
-      cEl.textContent = pending.map(function (l) { return transChordLine(l, offset || 0); }).join("\n");
-      pair.appendChild(cEl);
-      root.appendChild(pair);
-      pending = [];
+
+    function createUnit(ch, ly) {
+      var u = document.createElement("span"); u.className = "cs-unit";
+      var c = document.createElement("span"); c.className = "cs-ch"; c.textContent = ch || "";
+      var l = document.createElement("span"); l.className = "cs-ly"; l.textContent = ly || "";
+      u.appendChild(c); u.appendChild(l);
+      return u;
     }
-    // split lines like "Another he[C]ad hangs lowly" into an aligned chord row
-    // + a lyric row without punching holes in the words
-    function splitInlineChords(line) {
-      var chords = "", lyric = "";
-      function pad(n) { var s = ""; while (s.length < n) s += " "; return s; }
+
+    function processLine(raw) {
+      var lineDiv = document.createElement("div"); lineDiv.className = "cs-line";
       var re = /\[([^\]]+)\]/g, m, last = 0;
-      while ((m = re.exec(line)) !== null) {
+      var hasChords = false;
+      while ((m = re.exec(raw)) !== null) {
         var tok = m[1].trim();
-        var before = line.slice(last, m.index);
-        if (!isChordToken(tok)) {
-          lyric += before + "[" + tok + "]";
-          chords += pad(before.length + tok.length + 2);
-        } else {
-          lyric += before;
-          var pos = lyric.length;
-          if (chords.length < pos) chords += pad(pos - chords.length);
-          chords += tok;
+        if (isChordToken(tok)) {
+          hasChords = true;
+          var before = raw.slice(last, m.index);
+          if (before) lineDiv.appendChild(createUnit("", before));
+          lineDiv.appendChild(createUnit(transChord(tok, offset || 0), ""));
+          last = m.index + m[0].length;
         }
-        last = m.index + m[0].length;
       }
-      lyric += line.slice(last);
-      return { chords: chords, lyric: lyric };
+      var tail = raw.slice(last);
+      if (tail) lineDiv.appendChild(createUnit("", tail));
+      if (!lineDiv.childNodes.length) lineDiv.innerHTML = "&nbsp;";
+      return lineDiv;
     }
+
+    var currentSection = null;
     for (var i = 0; i < lines.length; i++) {
       var raw = lines[i];
       var s2 = raw.trim();
       if (!s2) {
-        flush();
-        var br = document.createElement("div");
-        br.style.height = "1.2em";
+        var br = document.createElement("div"); br.style.height = "1.2em";
         root.appendChild(br);
         continue;
       }
       if (isSectionLabel(s2)) {
-        flush();
-        var sec = document.createElement("div");
-        sec.className = "cs-section";
+        var sec = document.createElement("div"); sec.className = "cs-section";
         sec.textContent = s2.replace(/^\[|\]$/g, "").replace(/:$/, "");
         root.appendChild(sec);
         continue;
       }
-      if (isChordLine(s2)) { pending.push(raw); continue; }
-      flush();
-      var split = splitInlineChords(raw);
-      if (split.chords.trim()) {
-        var pair3 = document.createElement("div");
-        pair3.className = "cs-pair";
-        var c3 = document.createElement("div");
-        c3.className = "cs-chords";
-        c3.textContent = transChordLine(split.chords, offset || 0);
-        var l3 = document.createElement("div");
-        l3.className = "cs-lyric";
-        l3.textContent = split.lyric;
-        pair3.appendChild(c3); pair3.appendChild(l3);
-        root.appendChild(pair3);
-      } else {
-        var pair2 = document.createElement("div");
-        pair2.className = "cs-pair";
-        var lEl = document.createElement("div");
-        lEl.className = "cs-lyric";
-        lEl.textContent = raw;
-        pair2.appendChild(lEl);
-        root.appendChild(pair2);
-      }
+      root.appendChild(processLine(raw));
     }
-    flush();
     return root;
   }
 
