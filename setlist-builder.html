@@ -166,22 +166,14 @@
 
   .sheet .chords {
     font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Monaco, Consolas, "DejaVu Sans Mono", monospace;
-    font-size: 16px; line-height: 1.6; color: #f7f2ee;
+    font-size: 16px; line-height: 1.25; color: #f7f2ee;
     background: #2f1a17; border: 1px solid #4a2c28; border-radius: 12px;
     padding: 16px 16px 20px; margin: 8px 0 14px; max-height: 46vh; overflow-y: auto;
     overflow-x: auto; white-space: pre;
   }
-  .cs-head { display: flex; flex-direction: column; border-bottom: 1px solid rgba(255,255,255,.14); padding-bottom: 10px; margin-bottom: 10px; }
-  .cs-title { order: 1; font-size: 25px; font-weight: 800; color: #ffd54a; letter-spacing: 0; }
-  .cs-artist { order: 2; font-size: 14px; color: #e6c3ae; margin-top: 3px; }
-  .cs-key { order: 3; font-size: 13px; color: #e6c3ae; margin-top: 6px; }
-  .cs-section {
-    font-size: 19px; font-weight: 800; color: #ffffff; text-transform: none;
-    letter-spacing: 0.2px; margin: 12px 0 8px;
-  }
-  .cs-pair { margin: 0 0 4px; }
-  .cs-chords { color: #f3e6dd; font-style: italic; font-weight: 600; white-space: pre; font-size: 0.88em; }
-  .cs-lyric { color: #fdfaf7; white-space: pre; font-size: 1.06em; font-weight: 800; }
+  .cs-pair { margin: 0 0 6px; }
+  .cs-chords { color: #f3e6dd; font-style: italic; font-weight: 600; white-space: pre; font-size: 1em; }
+  .cs-lyric { color: #fdfaf7; white-space: pre; font-size: 1em; font-weight: 800; }
   .float-ctrls {
     display: none; position: fixed; right: 6px; bottom: 20px; top: 20px;
     flex-direction: column; gap: 6px; z-index: 110;
@@ -2787,10 +2779,11 @@
       var el = document.getElementById("currentChords");
       if (!el) return;
       var count = 0;
+      el.style.fontSize = "24px"; // start large and shrink down
       // aggressively shrink until no horizontal scroll is needed
-      while (el.scrollWidth > el.clientWidth + 2 && count < 60) {
+      while (el.scrollWidth > el.clientWidth + 2 && count < 100) {
         var cur = parseFloat(el.style.fontSize) || 16;
-        if (cur <= 8) break;
+        if (cur <= 4) break;
         el.style.fontSize = (cur - 0.2) + "px";
         count++;
       }
@@ -3167,30 +3160,38 @@
       pending = [];
     }
     // split lines like "Another he[C]ad hangs lowly" into an aligned chord row
-    // + a lyric row with the bracket tags removed (Ultimate Guitar style sheets)
+    // + a lyric row without punching holes in the words
     function splitInlineChords(line) {
       var chords = "", lyric = "";
       function pad(n) { var s = ""; while (s.length < n) s += " "; return s; }
       var re = /\[([^\]]+)\]/g, m, last = 0;
       while ((m = re.exec(line)) !== null) {
         var tok = m[1].trim();
-        if (!isChordToken(tok)) continue; // keep [x2] / [spoken] style tags in the lyric
         var before = line.slice(last, m.index);
-        chords += pad(before.length);
-        lyric += before;
-        chords += tok;
-        lyric += pad(tok.length);
+        if (!isChordToken(tok)) {
+          lyric += before + "[" + tok + "]";
+          chords += pad(before.length + tok.length + 2);
+        } else {
+          lyric += before;
+          var pos = lyric.length;
+          if (chords.length < pos) chords += pad(pos - chords.length);
+          chords += tok;
+        }
         last = m.index + m[0].length;
       }
-      var tail = line.slice(last);
-      chords += pad(tail.length);
-      lyric += tail;
+      lyric += line.slice(last);
       return { chords: chords, lyric: lyric };
     }
     for (var i = 0; i < lines.length; i++) {
       var raw = lines[i];
       var s2 = raw.trim();
-      if (!s2) continue;
+      if (!s2) {
+        flush();
+        var br = document.createElement("div");
+        br.style.height = "1.2em";
+        root.appendChild(br);
+        continue;
+      }
       if (isSectionLabel(s2)) {
         flush();
         var sec = document.createElement("div");
@@ -3201,7 +3202,7 @@
       }
       if (isChordLine(s2)) { pending.push(raw); continue; }
       flush();
-      var split = splitInlineChords(s2);
+      var split = splitInlineChords(raw);
       if (split.chords.trim()) {
         var pair3 = document.createElement("div");
         pair3.className = "cs-pair";
