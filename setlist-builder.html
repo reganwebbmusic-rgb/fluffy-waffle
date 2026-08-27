@@ -165,11 +165,11 @@
   .progress-track > div { height: 100%; background: #1f6feb; border-radius: 99px; transition: width .3s; }
 
   .sheet .chords {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    font-size: 16px; line-height: 1.8; color: #f7f2ee;
+    font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Monaco, Consolas, "DejaVu Sans Mono", monospace;
+    font-size: 16px; line-height: 1.6; color: #f7f2ee;
     background: #2f1a17; border: 1px solid #4a2c28; border-radius: 12px;
     padding: 16px 16px 20px; margin: 8px 0 14px; max-height: 46vh; overflow-y: auto;
-    overflow-x: auto;
+    overflow-x: auto; white-space: pre;
   }
   .cs-head { display: flex; flex-direction: column; border-bottom: 1px solid rgba(255,255,255,.14); padding-bottom: 10px; margin-bottom: 10px; }
   .cs-title { order: 1; font-size: 25px; font-weight: 800; color: #ffd54a; letter-spacing: 0; }
@@ -180,8 +180,8 @@
     letter-spacing: 0.2px; margin: 12px 0 8px;
   }
   .cs-pair { margin: 0 0 4px; }
-  .cs-chords { color: #f3e6dd; font-style: italic; font-weight: 600; white-space: pre-wrap; font-size: 0.88em; }
-  .cs-lyric { color: #fdfaf7; white-space: pre-wrap; font-size: 1.06em; font-weight: 800; }
+  .cs-chords { color: #f3e6dd; font-style: italic; font-weight: 600; white-space: pre; font-size: 0.88em; }
+  .cs-lyric { color: #fdfaf7; white-space: pre; font-size: 1.06em; font-weight: 800; }
   .float-ctrls { display: none; position: fixed; right: 14px; bottom: 24px; flex-direction: column; gap: 10px; z-index: 110; }
   .modal-bg.max .float-ctrls { display: flex; }
   .float-btn.fback { display: none; }
@@ -2774,10 +2774,10 @@
     }
     sub.textContent = subText(0);
     function changeFontSize(delta) {
-      var el = bg.querySelector(".chords");
+      var el = document.getElementById("currentChords");
       if (!el) return;
       var cur = parseFloat(el.style.fontSize) || 16;
-      el.style.fontSize = Math.max(9, Math.min(48, cur + delta)) + "px";
+      el.style.fontSize = Math.max(9, Math.min(64, cur + delta)) + "px";
     }
     var notes = document.createElement("div"); notes.className = "notes";
     notes.textContent = song.note || "No notes yet for this song.";
@@ -2812,6 +2812,7 @@
     if (sheetText) {
       chords = document.createElement("div");
       chords.className = "chords";
+      chords.id = "currentChords";
       chords.appendChild(renderChordSheet(sheetText, song));
       // tap the sheet to enter/exit fullscreen
       chords.style.cursor = "pointer";
@@ -2934,6 +2935,7 @@
       // every song gets lyrics: offline lyric book first, then live sources
       var lyrBox = document.createElement("div");
       lyrBox.className = "chords";
+      lyrBox.id = "currentChords";
       lyrBox.style.cssText = "min-height:60px;";
       lyrBox.textContent = "Loading lyrics\u2026";
       sheet.appendChild(lyrBox);
@@ -3020,7 +3022,7 @@
     var fScroll = document.createElement("button");
     fScroll.type = "button"; fScroll.className = "float-btn"; fScroll.textContent = "\u25B6";
     fScroll.addEventListener("click", function () {
-      var el = bg.querySelector(".chords");
+      var el = document.getElementById("currentChords");
       if (el) {
         toggleScroll(el, { textContent: null });
         fScroll.textContent = scrollTimer ? "\u23F8" : "\u25B6";
