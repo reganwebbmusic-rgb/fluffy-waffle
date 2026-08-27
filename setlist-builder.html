@@ -166,19 +166,19 @@
 
   .sheet .chords {
     font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Monaco, Consolas, "DejaVu Sans Mono", monospace;
-    font-size: 16px; line-height: 1.4; color: #f7f2ee;
+    font-size: 16px; line-height: 1.1; color: #f7f2ee;
     background: #2f1a17; border: 1px solid #4a2c28; border-radius: 12px;
-    padding: 16px 16px 20px; margin: 8px 0 14px; max-height: 46vh; overflow-y: auto;
-    overflow-x: hidden; white-space: normal;
+    padding: 16px 16px 20px; margin: 8px 0 14px; max-height: 46vh; 
+    overflow: auto; white-space: nowrap; -webkit-overflow-scrolling: touch;
   }
-  .cs-pair { margin: 0 0 8px; white-space: normal; line-height: 1.8; }
-  .cs-line { display: block; margin-bottom: 4px; }
-  .cs-unit { display: inline-flex; flex-direction: column; vertical-align: bottom; min-width: 0.5em; }
-  .cs-ch { color: #f3e6dd; font-style: italic; font-weight: 600; font-size: 0.9em; line-height: 1; height: 1.1em; white-space: pre; }
-  .cs-ly { color: #fdfaf7; font-size: 1em; font-weight: 800; line-height: 1.2; white-space: pre; }
+  .cs-line { display: block; margin-bottom: 5px; height: 2.4em; }
+  .cs-unit { display: inline-flex; flex-direction: column; vertical-align: bottom; min-width: 1ch; }
+  .cs-ch { color: #f3e6dd; font-style: italic; font-weight: 700; font-size: 1em; line-height: 1.2; height: 1.2em; white-space: pre; }
+  .cs-ly { color: #fdfaf7; font-size: 1em; font-weight: 700; line-height: 1.2; height: 1.2em; white-space: pre; }
   .cs-section {
-    font-size: 18px; font-weight: 800; color: #ffffff; text-transform: uppercase;
-    letter-spacing: 0.5px; margin: 16px 0 8px; border-bottom: 1px solid rgba(255,255,255,0.1);
+    font-size: 17px; font-weight: 800; color: #ffffff; text-transform: uppercase;
+    letter-spacing: 0.5px; margin: 18px 0 10px; border-bottom: 1px solid rgba(255,255,255,0.1);
+    white-space: normal;
   }
   .float-ctrls {
     display: none; position: fixed; right: 6px; bottom: 20px; top: 20px;
@@ -2786,10 +2786,10 @@
       if (!el) return;
       var count = 0;
       el.style.fontSize = "22px"; // start large
-      // shrink until it fits perfectly with NO horizontal scroll
+      // shrink until no horizontal scroll is needed, min 11.5px
       while (el.scrollWidth > el.clientWidth && count < 60) {
         var cur = parseFloat(el.style.fontSize) || 16;
-        if (cur <= 11) break;
+        if (cur <= 11.5) break;
         el.style.fontSize = (cur - 0.2) + "px";
         count++;
       }
@@ -3157,38 +3157,44 @@
 
     function processLine(raw) {
       var lineDiv = document.createElement("div"); lineDiv.className = "cs-line";
+      var chordMap = {}; // text index -> chord string
+      var clean = "";
       var re = /\[([^\]]+)\]/g, m, last = 0;
-      var hasChords = false;
       while ((m = re.exec(raw)) !== null) {
         var tok = m[1].trim();
+        clean += raw.slice(last, m.index);
         if (isChordToken(tok)) {
-          hasChords = true;
-          var before = raw.slice(last, m.index);
-          if (before) lineDiv.appendChild(createUnit("", before));
-          lineDiv.appendChild(createUnit(transChord(tok, offset || 0), ""));
-          last = m.index + m[0].length;
+          chordMap[clean.length] = transChord(tok, offset || 0);
+        } else {
+          clean += "[" + tok + "]";
+        }
+        last = m.index + m[0].length;
+      }
+      clean += raw.slice(last);
+      if (!clean.trim() && !Object.keys(chordMap).length) {
+        lineDiv.innerHTML = "&nbsp;"; return lineDiv;
+      }
+      var max = clean.length;
+      for (var k in chordMap) { max = Math.max(max, parseInt(k, 10)); }
+      for (var j = 0; j <= max; j++) {
+        if (j < clean.length || chordMap[j]) {
+          lineDiv.appendChild(createUnit(chordMap[j] || "", clean[j] || ""));
         }
       }
-      var tail = raw.slice(last);
-      if (tail) lineDiv.appendChild(createUnit("", tail));
-      if (!lineDiv.childNodes.length) lineDiv.innerHTML = "&nbsp;";
       return lineDiv;
     }
 
-    var currentSection = null;
     for (var i = 0; i < lines.length; i++) {
       var raw = lines[i];
       var s2 = raw.trim();
-      if (!s2) {
+      if (!raw.trim()) {
         var br = document.createElement("div"); br.style.height = "1.2em";
-        root.appendChild(br);
-        continue;
+        root.appendChild(br); continue;
       }
       if (isSectionLabel(s2)) {
         var sec = document.createElement("div"); sec.className = "cs-section";
         sec.textContent = s2.replace(/^\[|\]$/g, "").replace(/:$/, "");
-        root.appendChild(sec);
-        continue;
+        root.appendChild(sec); continue;
       }
       root.appendChild(processLine(raw));
     }
