@@ -169,16 +169,14 @@
     font-size: 16px; line-height: 1.1; color: #f7f2ee;
     background: #2f1a17; border: 1px solid #4a2c28; border-radius: 12px;
     padding: 16px 16px 20px; margin: 8px 0 14px; max-height: 46vh; 
-    overflow: auto; white-space: nowrap; -webkit-overflow-scrolling: touch;
+    overflow: auto; white-space: pre; -webkit-overflow-scrolling: touch;
   }
-  .cs-line { display: block; margin-bottom: 5px; height: 2.4em; }
-  .cs-unit { display: inline-flex; flex-direction: column; vertical-align: bottom; min-width: 1ch; }
-  .cs-ch { color: #f3e6dd; font-style: italic; font-weight: 700; font-size: 1em; line-height: 1.2; height: 1.2em; white-space: pre; }
-  .cs-ly { color: #fdfaf7; font-size: 1em; font-weight: 700; line-height: 1.2; height: 1.2em; white-space: pre; }
+  .cs-pair { margin-bottom: 12px; display: flex; flex-direction: column; }
+  .cs-ch { color: #f3e6dd; font-style: italic; font-weight: 700; font-size: 1em; line-height: 1.2; min-height: 1.2em; }
+  .cs-ly { color: #fdfaf7; font-size: 1em; font-weight: 700; line-height: 1.2; min-height: 1.2em; }
   .cs-section {
     font-size: 17px; font-weight: 800; color: #ffffff; text-transform: uppercase;
     letter-spacing: 0.5px; margin: 18px 0 10px; border-bottom: 1px solid rgba(255,255,255,0.1);
-    white-space: normal;
   }
   .float-ctrls {
     display: none; position: fixed; right: 6px; bottom: 20px; top: 20px;
@@ -2784,15 +2782,16 @@
     function fitToWidth() {
       var el = document.getElementById("currentChords");
       if (!el) return;
-      var count = 0;
-      el.style.fontSize = "22px"; // start large
-      // shrink until no horizontal scroll is needed, min 11.5px
-      while (el.scrollWidth > el.clientWidth && count < 60) {
-        var cur = parseFloat(el.style.fontSize) || 16;
-        if (cur <= 11.5) break;
-        el.style.fontSize = (cur - 0.2) + "px";
-        count++;
-      }
+      var root = el.firstChild;
+      var mc = parseInt(root && root.dataset ? root.dataset.maxChars : 0, 10);
+      if (!mc) return;
+      
+      // mathematical fit: (available width) / (chars in longest line) / (approx 0.6 multiplier for monospace aspect ratio)
+      var available = el.clientWidth - 5;
+      var best = Math.floor(available / (mc * 0.6));
+      
+      // clamp between 11.5px and 20px for ideal readability
+      el.style.fontSize = Math.max(11.5, Math.min(20, best)) + "px";
     }
     var notes = document.createElement("div"); notes.className = "notes";
     notes.textContent = song.note || "No notes yet for this song.";
@@ -3147,41 +3146,37 @@
       root.appendChild(head);
     }
 
-    function createUnit(ch, ly) {
-      var u = document.createElement("span"); u.className = "cs-unit";
-      var c = document.createElement("span"); c.className = "cs-ch"; c.textContent = ch || "";
-      var l = document.createElement("span"); l.className = "cs-ly"; l.textContent = ly || "";
-      u.appendChild(c); u.appendChild(l);
-      return u;
-    }
-
+    var maxChars = 0;
     function processLine(raw) {
-      var lineDiv = document.createElement("div"); lineDiv.className = "cs-line";
-      var chordMap = {}; // text index -> chord string
-      var clean = "";
+      var pair = document.createElement("div"); pair.className = "cs-pair";
+      var chordLine = "", lyricLine = "";
       var re = /\[([^\]]+)\]/g, m, last = 0;
+      
       while ((m = re.exec(raw)) !== null) {
         var tok = m[1].trim();
-        clean += raw.slice(last, m.index);
+        var before = raw.slice(last, m.index);
+        
         if (isChordToken(tok)) {
-          chordMap[clean.length] = transChord(tok, offset || 0);
+          lyricLine += before;
+          // align chord with the start of the word it was attached to
+          while (chordLine.length < lyricLine.length) chordLine += " ";
+          chordLine += transChord(tok, offset || 0);
         } else {
-          clean += "[" + tok + "]";
+          lyricLine += before + "[" + tok + "]";
         }
         last = m.index + m[0].length;
       }
-      clean += raw.slice(last);
-      if (!clean.trim() && !Object.keys(chordMap).length) {
-        lineDiv.innerHTML = "&nbsp;"; return lineDiv;
-      }
-      var max = clean.length;
-      for (var k in chordMap) { max = Math.max(max, parseInt(k, 10)); }
-      for (var j = 0; j <= max; j++) {
-        if (j < clean.length || chordMap[j]) {
-          lineDiv.appendChild(createUnit(chordMap[j] || "", clean[j] || ""));
-        }
-      }
-      return lineDiv;
+      lyricLine += raw.slice(last);
+      
+      maxChars = Math.max(maxChars, lyricLine.length, chordLine.length);
+      
+      var cEl = document.createElement("div"); cEl.className = "cs-ch";
+      cEl.textContent = chordLine || " ";
+      var lEl = document.createElement("div"); lEl.className = "cs-ly";
+      lEl.textContent = lyricLine || " ";
+      
+      pair.appendChild(cEl); pair.appendChild(lEl);
+      return pair;
     }
 
     for (var i = 0; i < lines.length; i++) {
@@ -3198,6 +3193,9 @@
       }
       root.appendChild(processLine(raw));
     }
+    
+    // mathematical auto-fit: use character counts to decide font size
+    root.dataset.maxChars = maxChars;
     return root;
   }
 
