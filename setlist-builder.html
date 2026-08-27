@@ -180,8 +180,8 @@
     letter-spacing: 0.2px; margin: 12px 0 8px;
   }
   .cs-pair { margin: 0 0 4px; }
-  .cs-chords { color: #f3e6dd; font-style: italic; font-weight: 600; white-space: pre; font-size: 14px; }
-  .cs-lyric { color: #fdfaf7; white-space: pre; font-size: 17px; font-weight: 800; }
+  .cs-chords { color: #f3e6dd; font-style: italic; font-weight: 600; white-space: pre-wrap; font-size: 14px; }
+  .cs-lyric { color: #fdfaf7; white-space: pre-wrap; font-size: 17px; font-weight: 800; }
   .float-ctrls { display: none; position: fixed; right: 14px; bottom: 24px; flex-direction: column; gap: 10px; z-index: 70; }
   .modal-bg.max .float-ctrls { display: flex; }
   .float-btn.fback { display: none; }
@@ -2736,10 +2736,10 @@
       if (!pz || !e.touches || e.touches.length < 2) return;
       if (e.cancelable) e.preventDefault();
       var d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-      var el = chords || lyrBox;
+      var el = bg.querySelector(".chords");
       if (el) {
         var cur = parseFloat(el.style.fontSize) || 17;
-        el.style.fontSize = Math.max(10, Math.min(44, cur * (d / pz))).toFixed(1) + "px";
+        el.style.fontSize = Math.max(9, Math.min(48, cur * (d / pz))).toFixed(1) + "px";
       }
       pz = d;
     }, { passive: false });
@@ -2754,6 +2754,12 @@
         (song.name && plays ? " · played " + plays + (plays === 1 ? " time" : " times") : "");
     }
     sub.textContent = subText(0);
+    function changeFontSize(delta) {
+      var el = bg.querySelector(".chords");
+      if (!el) return;
+      var cur = parseFloat(el.style.fontSize) || 16;
+      el.style.fontSize = Math.max(9, Math.min(48, cur + delta)) + "px";
+    }
     var notes = document.createElement("div"); notes.className = "notes";
     notes.textContent = song.note || "No notes yet for this song.";
     var btns = document.createElement("div"); btns.className = "btns";
@@ -2839,10 +2845,11 @@
       tReset.type = "button"; tReset.className = "btn ug"; tReset.textContent = "0";
       var transOffset = 0;
       function rerenderSheet() {
-        var fs = chords.style.fontSize || "";
+        var el = bg.querySelector(".chords");
+        var fs = el ? el.style.fontSize : "";
         chords.innerHTML = "";
         chords.appendChild(renderChordSheet(sheetText, song, transOffset));
-        if (fs) chords.style.fontSize = fs;
+        if (fs && el) el.style.fontSize = fs;
         sub.textContent = subText(transOffset);
         tReset.textContent = transOffset > 0 ? "+" + transOffset : String(transOffset);
       }
@@ -2853,16 +2860,10 @@
       // zoom in/out of the sheet (always visible, not just fullscreen)
       var zMinus = document.createElement("button");
       zMinus.type = "button"; zMinus.className = "btn ug"; zMinus.textContent = "A\u2212";
-      zMinus.addEventListener("click", function () {
-        var f = parseFloat(chords.style.fontSize) || 16;
-        chords.style.fontSize = Math.max(9, f - 2) + "px";
-      });
+      zMinus.addEventListener("click", function () { changeFontSize(-2); });
       var zPlus = document.createElement("button");
       zPlus.type = "button"; zPlus.className = "btn ug"; zPlus.textContent = "A+";
-      zPlus.addEventListener("click", function () {
-        var f = parseFloat(chords.style.fontSize) || 16;
-        chords.style.fontSize = Math.min(32, f + 2) + "px";
-      });
+      zPlus.addEventListener("click", function () { changeFontSize(2); });
       ctrl.appendChild(zMinus); ctrl.appendChild(zPlus);
       // bluetooth page-turner pedal (best-effort: any BLE button scrolls the sheet)
       var pedalBtn = document.createElement("button");
@@ -2922,16 +2923,10 @@
       floats.className = "float-ctrls";
       var fMinus = document.createElement("button");
       fMinus.type = "button"; fMinus.className = "float-btn"; fMinus.textContent = "A\u2212";
-      fMinus.addEventListener("click", function () {
-        var f = parseFloat(chords.style.fontSize) || 16;
-        chords.style.fontSize = Math.max(9, f - 2) + "px";
-      });
+      fMinus.addEventListener("click", function () { changeFontSize(-2); });
       var fPlus = document.createElement("button");
       fPlus.type = "button"; fPlus.className = "float-btn"; fPlus.textContent = "A+";
-      fPlus.addEventListener("click", function () {
-        var f = parseFloat(chords.style.fontSize) || 16;
-        chords.style.fontSize = Math.min(26, f + 2) + "px";
-      });
+      fPlus.addEventListener("click", function () { changeFontSize(2); });
       var fScroll = document.createElement("button");
       fScroll.type = "button"; fScroll.className = "float-btn"; fScroll.textContent = "\u25B6";
       fScroll.addEventListener("click", function () {
