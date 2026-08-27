@@ -169,7 +169,7 @@
     font-size: 16px; line-height: 1.6; color: #f7f2ee;
     background: #2f1a17; border: 1px solid #4a2c28; border-radius: 12px;
     padding: 16px 16px 20px; margin: 8px 0 14px; max-height: 46vh; overflow-y: auto;
-    overflow-x: auto; white-space: pre-wrap; word-break: break-all;
+    overflow-x: auto; white-space: pre;
   }
   .cs-head { display: flex; flex-direction: column; border-bottom: 1px solid rgba(255,255,255,.14); padding-bottom: 10px; margin-bottom: 10px; }
   .cs-title { order: 1; font-size: 25px; font-weight: 800; color: #ffd54a; letter-spacing: 0; }
@@ -206,7 +206,7 @@
   body.dark .modal-bg.max .sheet { background: #16202b; }
   .modal-bg.max .sheet.song-sheet { background: #2f1a17; }
   body.dark .modal-bg.max .sheet.song-sheet { background: #2f1a17; }
-  .modal-bg.max .chords { flex: 1; max-height: none; min-height: 0; overflow-y: auto; margin: 0; border: none; border-radius: 0; touch-action: pan-x pan-y; }
+  .modal-bg.max .chords { flex: 1; max-height: none; min-height: 0; overflow-y: auto; margin: 0 52px 0 0; border: none; border-radius: 0; touch-action: pan-x pan-y; }
   /* fullscreen = maroon lyric sheet edge-to-edge + floating controls only */
   .modal-bg.max .sheet.song-sheet > *:not(.chords) { display: none; }
   .req-row .fit-badge { flex-shrink: 0; font-size: 12px; font-weight: 600; border-radius: 99px; padding: 4px 10px; }
@@ -2787,10 +2787,11 @@
       var el = document.getElementById("currentChords");
       if (!el) return;
       var count = 0;
-      while (el.scrollWidth > el.clientWidth + 5 && count < 30) {
+      // aggressively shrink until no horizontal scroll is needed
+      while (el.scrollWidth > el.clientWidth + 2 && count < 60) {
         var cur = parseFloat(el.style.fontSize) || 16;
-        if (cur <= 9) break;
-        el.style.fontSize = (cur - 0.5) + "px";
+        if (cur <= 8) break;
+        el.style.fontSize = (cur - 0.2) + "px";
         count++;
       }
     }
