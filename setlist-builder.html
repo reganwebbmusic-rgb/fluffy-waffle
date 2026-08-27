@@ -180,16 +180,16 @@
     letter-spacing: 0.2px; margin: 12px 0 8px;
   }
   .cs-pair { margin: 0 0 4px; }
-  .cs-chords { color: #f3e6dd; font-style: italic; font-weight: 600; white-space: pre-wrap; font-size: 14px; }
-  .cs-lyric { color: #fdfaf7; white-space: pre-wrap; font-size: 17px; font-weight: 800; }
-  .float-ctrls { display: none; position: fixed; right: 14px; bottom: 24px; flex-direction: column; gap: 10px; z-index: 70; }
+  .cs-chords { color: #f3e6dd; font-style: italic; font-weight: 600; white-space: pre-wrap; font-size: 0.88em; }
+  .cs-lyric { color: #fdfaf7; white-space: pre-wrap; font-size: 1.06em; font-weight: 800; }
+  .float-ctrls { display: none; position: fixed; right: 14px; bottom: 24px; flex-direction: column; gap: 10px; z-index: 110; }
   .modal-bg.max .float-ctrls { display: flex; }
   .float-btn.fback { display: none; }
-  .modal-bg.max .float-btn.fback { display: flex; }
+  .modal-bg.max .float-btn.fback { display: flex; z-index: 110; }
   .float-btn {
     width: 48px; height: 48px; border-radius: 50%; border: 1px solid rgba(255,255,255,.28);
-    background: rgba(47,26,23,.82); color: #fff; font-size: 15px; font-weight: 600;
-    display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 10px rgba(0,0,0,.35);
+    background: rgba(47,26,23,.88); color: #fff; font-size: 15px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,.4);
   }
   .float-btn:active { background: rgba(255,213,74,.4); }
 
@@ -200,11 +200,11 @@
   .modal-bg.max { align-items: stretch; }
   .modal-bg.max .sheet { max-width: none; border-radius: 0; height: 100%; display: flex; flex-direction: column; padding: 0; background: #fff; }
   body.dark .modal-bg.max .sheet { background: #16202b; }
-  .modal-bg.max .sheet:has(.chords) { background: #2f1a17; }
-  body.dark .modal-bg.max .sheet:has(.chords) { background: #2f1a17; }
+  .modal-bg.max .sheet.song-sheet { background: #2f1a17; }
+  body.dark .modal-bg.max .sheet.song-sheet { background: #2f1a17; }
   .modal-bg.max .chords { flex: 1; max-height: none; min-height: 0; overflow-y: auto; margin: 0; border: none; border-radius: 0; touch-action: pan-y; }
   /* fullscreen = maroon lyric sheet edge-to-edge + floating controls only */
-  .modal-bg.max .sheet:has(.chords) > *:not(.chords) { display: none; }
+  .modal-bg.max .sheet.song-sheet > *:not(.chords) { display: none; }
   .req-row .fit-badge { flex-shrink: 0; font-size: 12px; font-weight: 600; border-radius: 99px; padding: 4px 10px; }
   .fit-high { background: #e4f2e6; color: #237a3b; }
   .fit-med { background: #fdf3dd; color: #8a6a1c; }
@@ -1891,7 +1891,7 @@
     var bg = document.createElement("div");
     bg.className = "modal-bg";
     var sheet = document.createElement("div");
-    sheet.className = "sheet";
+    sheet.className = "sheet lib-sheet";
     sheet.style.cssText = "max-width:480px;";
     var h = document.createElement("h3"); h.textContent = entry.name;
     sheet.appendChild(h);
@@ -1966,6 +1966,8 @@
     bg.appendChild(sheet);
     bg.addEventListener("click", function (e) { if (e.target === bg) closeSheet(bg); });
     document.body.appendChild(bg);
+    toggleExpand(bg);
+    fExpand.textContent = "Exit";
   }
   function renderSetLibrary() {
     listEl.innerHTML = "";
@@ -2717,7 +2719,7 @@
     var bg = document.createElement("div");
     bg.className = "modal-bg";
     var sheet = document.createElement("div");
-    sheet.className = "sheet";
+    sheet.className = "sheet song-sheet";
     // swipe left/right to move to the next/previous song in the set
     if (navCtx && navCtx.list && navCtx.list.length > 1) {
       var swX = null, swY = null;
