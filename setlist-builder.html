@@ -1898,8 +1898,9 @@
     sheet.appendChild(cnt);
     var sbList = document.createElement("div");
     sbList.className = "sb-list";
+    var mappedSongs = entry.songs.map(matchLibSong);
     entry.songs.forEach(function (nm, i) {
-      var m = matchLibSong(nm);
+      var m = mappedSongs[i];
       var row = document.createElement("div");
       row.className = "sb-row";
       var num = document.createElement("span");
@@ -1918,7 +1919,7 @@
       key.className = "sb-key";
       key.textContent = m.key || "";
       row.appendChild(num); row.appendChild(info); row.appendChild(key);
-      row.addEventListener("click", function () { openSheet(m, true); });
+      row.addEventListener("click", function () { openSheet(m, true, { list: mappedSongs, idx: i }); });
       sbList.appendChild(row);
     });
     sheet.appendChild(sbList);
@@ -6682,10 +6683,10 @@
       return n;
     }
     [
-      { t: "Set A (" + countSet("A") + " songs)", fn: function () { s.tab = "sets"; s.setView = "A"; save(); closeDrawer(bg); render(); } },
-      { t: "Set B (" + countSet("B") + " songs)", fn: function () { s.tab = "sets"; s.setView = "B"; save(); closeDrawer(bg); render(); } },
-      { t: "Set library", fn: function () { s.tab = "sets"; save(); closeDrawer(bg); renderSetLibrary(); } },
-      { t: "Community sets", fn: function () { s.tab = "sets"; save(); closeDrawer(bg); renderCommunitySets(); } }
+      { t: "Set A (" + countSet("A") + " songs)", fn: function () { s.tab = "sets"; s.setView = "A"; save(); closeSheet(bg); render(); } },
+      { t: "Set B (" + countSet("B") + " songs)", fn: function () { s.tab = "sets"; s.setView = "B"; save(); closeSheet(bg); render(); } },
+      { t: "Set library", fn: function () { s.tab = "sets"; save(); closeSheet(bg); renderSetLibrary(); } },
+      { t: "Community sets", fn: function () { s.tab = "sets"; save(); closeSheet(bg); renderCommunitySets(); } }
     ].forEach(function (it) {
       var b = document.createElement("button");
       b.type = "button";
@@ -6706,19 +6707,19 @@
         b.className = "drawer-item drawer-set";
         b.textContent = entry.name + " (" + entry.songs.length + " songs)";
         b.addEventListener("click", function () {
-          s.tab = "sets"; save(); closeDrawer(bg); render();
+          s.tab = "sets"; save(); closeSheet(bg); render();
           openSetLibView(i);
         });
         panel.appendChild(b);
       });
     }
     bg.appendChild(panel);
-    bg.addEventListener("click", function (e) { if (e.target === bg) closeDrawer(bg); });
+    bg.addEventListener("click", function (e) { if (e.target === bg) closeSheet(bg); });
     document.body.appendChild(bg);
     if (window.requestAnimationFrame) requestAnimationFrame(function () { panel.classList.add("open"); });
     else panel.classList.add("open");
   }
-  function closeDrawer(bg) { if (bg) bg.style.display = "none"; }
+  function closeDrawer(bg) { closeSheet(bg); }
   function tab(btn, name) {
     btn.addEventListener("click", function () {
       // tapping a nav tab always works: close any open sheet, then go there
