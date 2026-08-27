@@ -198,10 +198,13 @@
   .lyr-ctrl input[type=range] { flex: 1; min-width: 90px; }
   .lyr-ctrl span { font-size: 12px; color: #5c6b7a; }
   .modal-bg.max { align-items: stretch; }
-  .modal-bg.max .sheet { max-width: none; border-radius: 0; height: 100%; display: flex; flex-direction: column; padding: 0; background: #2f1a17; }
+  .modal-bg.max .sheet { max-width: none; border-radius: 0; height: 100%; display: flex; flex-direction: column; padding: 0; background: #fff; }
+  body.dark .modal-bg.max .sheet { background: #16202b; }
+  .modal-bg.max .sheet:has(.chords) { background: #2f1a17; }
+  body.dark .modal-bg.max .sheet:has(.chords) { background: #2f1a17; }
   .modal-bg.max .chords { flex: 1; max-height: none; min-height: 0; overflow-y: auto; margin: 0; border: none; border-radius: 0; touch-action: pan-y; }
-  /* fullscreen = maroon lyric sheet edge-to-edge + floating controls only, like the reference */
-  .modal-bg.max .sheet > *:not(.chords) { display: none; }
+  /* fullscreen = maroon lyric sheet edge-to-edge + floating controls only */
+  .modal-bg.max .sheet:has(.chords) > *:not(.chords) { display: none; }
   .req-row .fit-badge { flex-shrink: 0; font-size: 12px; font-weight: 600; border-radius: 99px; padding: 4px 10px; }
   .fit-high { background: #e4f2e6; color: #237a3b; }
   .fit-med { background: #fdf3dd; color: #8a6a1c; }
@@ -1923,9 +1926,23 @@
       sbList.appendChild(row);
     });
     sheet.appendChild(sbList);
+    var floats = document.createElement("div");
+    floats.className = "float-ctrls";
+    var fExpand = document.createElement("button");
+    fExpand.type = "button"; fExpand.className = "float-btn"; fExpand.textContent = "Full";
+    fExpand.addEventListener("click", function () {
+      toggleExpand(bg);
+      fExpand.textContent = bg.className.indexOf("max") >= 0 ? "Exit" : "Full";
+    });
+    var fClose = document.createElement("button");
+    fClose.type = "button"; fClose.className = "float-btn"; fClose.textContent = "\u00D7";
+    fClose.addEventListener("click", function () { closeSheet(bg); });
+    floats.appendChild(fExpand); floats.appendChild(fClose);
+    bg.appendChild(floats);
     var acts = document.createElement("div");
     acts.className = "toolbar";
     acts.style.cssText = "margin-top:12px;";
+    sheet.appendChild(acts);
     var toA = mkBtn("\u2192 Set A", function () {
       var r = loadSetFromLib(idx, "A");
       flashNew("\u201c" + r.name + "\u201d loaded into Set A \u2014 " + r.placed + " placed" + (r.missing ? ", " + r.missing + " not in pool" : ""));
@@ -1941,7 +1958,6 @@
     });
     del.classList.add("del");
     acts.appendChild(toA); acts.appendChild(toB); acts.appendChild(del);
-    sheet.appendChild(acts);
     var cl = document.createElement("button");
     cl.type = "button"; cl.className = "btn save"; cl.textContent = "Close";
     cl.style.marginTop = "10px";
@@ -2911,41 +2927,6 @@
       srcLine.textContent = "Offline chord sheet for personal gig use · source: " + srcTxt;
       sheet.appendChild(srcLine);
 
-      // floating controls (visible in fullscreen)
-      // back-to-set button, top-left
-      var fBack = document.createElement("button");
-      fBack.type = "button";
-      fBack.className = "float-btn fback";
-      fBack.style.cssText = "position:fixed;left:14px;bottom:24px;";
-      fBack.textContent = "\u25c0 Set";
-      fBack.addEventListener("click", function () { closeSheet(bg); });
-      bg.appendChild(fBack);
-      var floats = document.createElement("div");
-      floats.className = "float-ctrls";
-      var fMinus = document.createElement("button");
-      fMinus.type = "button"; fMinus.className = "float-btn"; fMinus.textContent = "A\u2212";
-      fMinus.addEventListener("click", function () { changeFontSize(-2); });
-      var fPlus = document.createElement("button");
-      fPlus.type = "button"; fPlus.className = "float-btn"; fPlus.textContent = "A+";
-      fPlus.addEventListener("click", function () { changeFontSize(2); });
-      var fScroll = document.createElement("button");
-      fScroll.type = "button"; fScroll.className = "float-btn"; fScroll.textContent = "\u25B6";
-      fScroll.addEventListener("click", function () {
-        toggleScroll(chords, { textContent: null });
-        fScroll.textContent = scrollTimer ? "\u23F8" : "\u25B6";
-      });
-      var fExpand = document.createElement("button");
-      fExpand.type = "button"; fExpand.className = "float-btn"; fExpand.textContent = "Full";
-      fExpand.addEventListener("click", function () {
-        toggleExpand(bg);
-        fExpand.textContent = bg.className.indexOf("max") >= 0 ? "Exit" : "Full";
-      });
-      var fClose = document.createElement("button");
-      fClose.type = "button"; fClose.className = "float-btn"; fClose.textContent = "\u00D7";
-      fClose.addEventListener("click", function () { closeSheet(bg); });
-      floats.appendChild(fMinus); floats.appendChild(fPlus); floats.appendChild(fScroll);
-      floats.appendChild(fExpand); floats.appendChild(fClose);
-      bg.appendChild(floats);
     } else {
       sheet.appendChild(notes);
       // every song gets lyrics: offline lyric book first, then live sources
@@ -3018,6 +2999,43 @@
     }
     sheet.appendChild(btns);
     bg.appendChild(sheet);
+    // floating controls (visible in fullscreen)
+    var fBack = document.createElement("button");
+    fBack.type = "button";
+    fBack.className = "float-btn fback";
+    fBack.style.cssText = "position:fixed;left:14px;bottom:24px;";
+    fBack.textContent = "\u25c0 Set";
+    fBack.addEventListener("click", function () { closeSheet(bg); });
+    bg.appendChild(fBack);
+    var floats = document.createElement("div");
+    floats.className = "float-ctrls";
+    var fMinus = document.createElement("button");
+    fMinus.type = "button"; fMinus.className = "float-btn"; fMinus.textContent = "A\u2212";
+    fMinus.addEventListener("click", function () { changeFontSize(-2); });
+    var fPlus = document.createElement("button");
+    fPlus.type = "button"; fPlus.className = "float-btn"; fPlus.textContent = "A+";
+    fPlus.addEventListener("click", function () { changeFontSize(2); });
+    var fScroll = document.createElement("button");
+    fScroll.type = "button"; fScroll.className = "float-btn"; fScroll.textContent = "\u25B6";
+    fScroll.addEventListener("click", function () {
+      var el = bg.querySelector(".chords");
+      if (el) {
+        toggleScroll(el, { textContent: null });
+        fScroll.textContent = scrollTimer ? "\u23F8" : "\u25B6";
+      }
+    });
+    var fExpand = document.createElement("button");
+    fExpand.type = "button"; fExpand.className = "float-btn"; fExpand.textContent = "Full";
+    fExpand.addEventListener("click", function () {
+      toggleExpand(bg);
+      fExpand.textContent = bg.className.indexOf("max") >= 0 ? "Exit" : "Full";
+    });
+    var fClose = document.createElement("button");
+    fClose.type = "button"; fClose.className = "float-btn"; fClose.textContent = "\u00D7";
+    fClose.addEventListener("click", function () { closeSheet(bg); });
+    floats.appendChild(fMinus); floats.appendChild(fPlus); floats.appendChild(fScroll);
+    floats.appendChild(fExpand); floats.appendChild(fClose);
+    bg.appendChild(floats);
     bg.addEventListener("click", function (e) { if (e.target === bg) closeSheet(bg); });
     document.body.appendChild(bg);
     if (autoFull) {
@@ -6665,7 +6683,7 @@
 
   function closeSheet(bg) {
     stopScroll();
-    bg.style.display = "none";
+    if (bg && bg.parentNode) bg.parentNode.removeChild(bg);
   }
 
   function openSetsDrawer() {
