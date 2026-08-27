@@ -183,16 +183,16 @@
   .cs-chords { color: #f3e6dd; font-style: italic; font-weight: 600; white-space: pre; font-size: 0.88em; }
   .cs-lyric { color: #fdfaf7; white-space: pre; font-size: 1.06em; font-weight: 800; }
   .float-ctrls {
-    display: none; position: fixed; right: 10px; bottom: 20px; top: 20px;
-    flex-direction: column; gap: 8px; z-index: 110;
+    display: none; position: fixed; right: 6px; bottom: 20px; top: 20px;
+    flex-direction: column; gap: 6px; z-index: 110;
     justify-content: flex-end; align-items: center;
     pointer-events: none; /* allow tapping lyrics under the gaps */
   }
   .float-ctrls > * { pointer-events: auto; }
   .modal-bg.max .float-ctrls { display: flex; }
   .float-btn {
-    width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(255,255,255,.28);
-    background: rgba(47,26,23,.88); color: #fff; font-size: 13px; font-weight: 600;
+    width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(255,255,255,.28);
+    background: rgba(47,26,23,.88); color: #fff; font-size: 12px; font-weight: 600;
     display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,.4);
   }
   .float-btn:active { background: rgba(255,213,74,.4); }
@@ -3093,6 +3093,8 @@
       toggleExpand(bg);
       var fbtns = bg.querySelectorAll(".float-btn");
       for (var fi = 0; fi < fbtns.length; fi++) if (fbtns[fi].textContent === "Full") fbtns[fi].textContent = "Exit";
+      // ensure it fits perfectly automatically
+      setTimeout(fitToWidth, 100);
     }
   }
 
@@ -6694,12 +6696,6 @@
   function toggleExpand(bg) {
     var max = bg.className.indexOf("max") >= 0;
     bg.className = max ? "modal-bg" : "modal-bg max";
-    if (document.documentElement && document.documentElement.requestFullscreen) {
-      try {
-        if (!max && !document.fullscreenElement) document.documentElement.requestFullscreen();
-        else if (max && document.fullscreenElement) document.exitFullscreen();
-      } catch (e) {}
-    }
   }
 
   function closeSheet(bg) {
