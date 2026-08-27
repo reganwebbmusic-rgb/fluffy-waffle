@@ -552,6 +552,8 @@
   function poolSize() { return isUnlimited() ? POOL_UNLIMITED : (isPro() ? POOL_PRO : POOL_BASIC); }
   var BLOCKS_PER_SET = 2;
   var SLOTS_PER_BLOCK = 12; // slots per set block (SET_A_LEN / SET_B_LEN total 45 min each)
+  var SET_SLOTS = SLOTS_PER_BLOCK;
+  var POOL = POOL_BASIC;
   var SET_A_LEN = [4, 4, 3, 4, 3, 4, 4, 3, 4, 4, 4, 4];
   var SET_B_LEN = [4, 4, 4, 3, 4, 4, 3, 4, 4, 4, 3, 4];
   var SET_A_ENG = [5, 5, 4, 5, 3, 5, 3, 4, 5, 4, 5, 5];
