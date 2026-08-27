@@ -182,13 +182,17 @@
   .cs-pair { margin: 0 0 4px; }
   .cs-chords { color: #f3e6dd; font-style: italic; font-weight: 600; white-space: pre; font-size: 0.88em; }
   .cs-lyric { color: #fdfaf7; white-space: pre; font-size: 1.06em; font-weight: 800; }
-  .float-ctrls { display: none; position: fixed; right: 14px; bottom: 24px; flex-direction: column; gap: 10px; z-index: 110; }
+  .float-ctrls {
+    display: none; position: fixed; right: 10px; bottom: 20px; top: 20px;
+    flex-direction: column; gap: 8px; z-index: 110;
+    justify-content: flex-end; align-items: center;
+    pointer-events: none; /* allow tapping lyrics under the gaps */
+  }
+  .float-ctrls > * { pointer-events: auto; }
   .modal-bg.max .float-ctrls { display: flex; }
-  .float-btn.fback { display: none; }
-  .modal-bg.max .float-btn.fback { display: flex; z-index: 110; }
   .float-btn {
-    width: 48px; height: 48px; border-radius: 50%; border: 1px solid rgba(255,255,255,.28);
-    background: rgba(47,26,23,.88); color: #fff; font-size: 15px; font-weight: 600;
+    width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(255,255,255,.28);
+    background: rgba(47,26,23,.88); color: #fff; font-size: 13px; font-weight: 600;
     display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,.4);
   }
   .float-btn:active { background: rgba(255,213,74,.4); }
@@ -3018,26 +3022,28 @@
     sheet.appendChild(btns);
     bg.appendChild(sheet);
     // floating controls (visible in fullscreen)
-    var fBack = document.createElement("button");
-    fBack.type = "button";
-    fBack.className = "float-btn fback";
-    fBack.style.cssText = "position:fixed;left:14px;bottom:24px;";
-    fBack.textContent = "\u25c0 Set";
-    fBack.addEventListener("click", function () { closeSheet(bg); });
-    bg.appendChild(fBack);
     var floats = document.createElement("div");
     floats.className = "float-ctrls";
+
+    var fBack = document.createElement("button");
+    fBack.type = "button"; fBack.className = "float-btn"; fBack.textContent = "Set";
+    fBack.title = "Back to setlist";
+    fBack.addEventListener("click", function () { closeSheet(bg); });
+
     var fMinus = document.createElement("button");
     fMinus.type = "button"; fMinus.className = "float-btn"; fMinus.textContent = "A\u2212";
     fMinus.addEventListener("click", function () { changeFontSize(-2); });
+
     var fPlus = document.createElement("button");
     fPlus.type = "button"; fPlus.className = "float-btn"; fPlus.textContent = "A+";
     fPlus.addEventListener("click", function () { changeFontSize(2); });
-    var fScroll = document.createElement("button");
-    fScroll.type = "button"; fScroll.className = "float-btn"; fScroll.textContent = "\u25B6";
+
     var fFit = document.createElement("button");
     fFit.type = "button"; fFit.className = "float-btn"; fFit.textContent = "Fit";
     fFit.addEventListener("click", function () { fitToWidth(); });
+
+    var fScroll = document.createElement("button");
+    fScroll.type = "button"; fScroll.className = "float-btn"; fScroll.textContent = "\u25B6";
     fScroll.addEventListener("click", function () {
       var el = document.getElementById("currentChords");
       if (el) {
@@ -3045,15 +3051,38 @@
         fScroll.textContent = scrollTimer ? "\u23F8" : "\u25B6";
       }
     });
+
     var fExpand = document.createElement("button");
     fExpand.type = "button"; fExpand.className = "float-btn"; fExpand.textContent = "Full";
     fExpand.addEventListener("click", function () {
       toggleExpand(bg);
       fExpand.textContent = bg.className.indexOf("max") >= 0 ? "Exit" : "Full";
     });
+
     var fClose = document.createElement("button");
     fClose.type = "button"; fClose.className = "float-btn"; fClose.textContent = "\u00D7";
     fClose.addEventListener("click", function () { closeSheet(bg); });
+
+    floats.appendChild(fBack);
+    // prev/next floats when the song is part of a set
+    if (navCtx && navCtx.list && navCtx.list.length > 1) {
+      var fPrev = document.createElement("button");
+      fPrev.type = "button"; fPrev.className = "float-btn"; fPrev.textContent = "\u25c0";
+      if (navCtx.idx <= 0) fPrev.style.opacity = "0.3";
+      fPrev.addEventListener("click", function (e) {
+        e.stopPropagation(); if (navCtx.idx <= 0) return;
+        closeSheet(bg); openSheet(navCtx.list[navCtx.idx - 1], true, { list: navCtx.list, idx: navCtx.idx - 1 });
+      });
+      var fNext = document.createElement("button");
+      fNext.type = "button"; fNext.className = "float-btn"; fNext.textContent = "\u25b6";
+      if (navCtx.idx >= navCtx.list.length - 1) fNext.style.opacity = "0.3";
+      fNext.addEventListener("click", function (e) {
+        e.stopPropagation(); if (navCtx.idx >= navCtx.list.length - 1) return;
+        closeSheet(bg); openSheet(navCtx.list[navCtx.idx + 1], true, { list: navCtx.list, idx: navCtx.idx + 1 });
+      });
+      floats.appendChild(fPrev); floats.appendChild(fNext);
+    }
+
     floats.appendChild(fMinus); floats.appendChild(fPlus); floats.appendChild(fFit); floats.appendChild(fScroll);
     floats.appendChild(fExpand); floats.appendChild(fClose);
     bg.appendChild(floats);
@@ -3064,35 +3093,6 @@
       toggleExpand(bg);
       var fbtns = bg.querySelectorAll(".float-btn");
       for (var fi = 0; fi < fbtns.length; fi++) if (fbtns[fi].textContent === "Full") fbtns[fi].textContent = "Exit";
-      // prev/next floats when the song is part of a set
-      if (navCtx && navCtx.list && navCtx.list.length > 1) {
-        var navRow = document.createElement("div");
-        navRow.style.cssText = "position:absolute;bottom:18px;left:50%;transform:translateX(-50%);display:flex;gap:10px;z-index:40;";
-        var prevF = document.createElement("button");
-        prevF.type = "button";
-        prevF.className = "float-btn";
-        prevF.style.cssText = "width:auto;height:42px;padding:0 16px;border-radius:22px;";
-        prevF.textContent = "\u25c0 Prev";
-        prevF.addEventListener("click", function (e) {
-          e.stopPropagation();
-          if (navCtx.idx <= 0) return;
-          closeSheet(bg);
-          openSheet(navCtx.list[navCtx.idx - 1], true, { list: navCtx.list, idx: navCtx.idx - 1 });
-        });
-        var nextF = document.createElement("button");
-        nextF.type = "button";
-        nextF.className = "float-btn";
-        nextF.style.cssText = "width:auto;height:42px;padding:0 16px;border-radius:22px;";
-        nextF.textContent = "Next \u25b6";
-        nextF.addEventListener("click", function (e) {
-          e.stopPropagation();
-          if (navCtx.idx >= navCtx.list.length - 1) return;
-          closeSheet(bg);
-          openSheet(navCtx.list[navCtx.idx + 1], true, { list: navCtx.list, idx: navCtx.idx + 1 });
-        });
-        navRow.appendChild(prevF); navRow.appendChild(nextF);
-        bg.appendChild(navRow);
-      }
     }
   }
 
