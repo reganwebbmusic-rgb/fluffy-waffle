@@ -169,7 +169,7 @@
     font-size: 16px; line-height: 1.6; color: #f7f2ee;
     background: #2f1a17; border: 1px solid #4a2c28; border-radius: 12px;
     padding: 16px 16px 20px; margin: 8px 0 14px; max-height: 46vh; overflow-y: auto;
-    overflow-x: auto; white-space: pre;
+    overflow-x: auto; white-space: pre-wrap; word-break: break-all;
   }
   .cs-head { display: flex; flex-direction: column; border-bottom: 1px solid rgba(255,255,255,.14); padding-bottom: 10px; margin-bottom: 10px; }
   .cs-title { order: 1; font-size: 25px; font-weight: 800; color: #ffd54a; letter-spacing: 0; }
@@ -202,7 +202,7 @@
   body.dark .modal-bg.max .sheet { background: #16202b; }
   .modal-bg.max .sheet.song-sheet { background: #2f1a17; }
   body.dark .modal-bg.max .sheet.song-sheet { background: #2f1a17; }
-  .modal-bg.max .chords { flex: 1; max-height: none; min-height: 0; overflow-y: auto; margin: 0; border: none; border-radius: 0; touch-action: pan-y; }
+  .modal-bg.max .chords { flex: 1; max-height: none; min-height: 0; overflow-y: auto; margin: 0; border: none; border-radius: 0; touch-action: pan-x pan-y; }
   /* fullscreen = maroon lyric sheet edge-to-edge + floating controls only */
   .modal-bg.max .sheet.song-sheet > *:not(.chords) { display: none; }
   .req-row .fit-badge { flex-shrink: 0; font-size: 12px; font-weight: 600; border-radius: 99px; padding: 4px 10px; }
@@ -2779,6 +2779,17 @@
       var cur = parseFloat(el.style.fontSize) || 16;
       el.style.fontSize = Math.max(9, Math.min(64, cur + delta)) + "px";
     }
+    function fitToWidth() {
+      var el = document.getElementById("currentChords");
+      if (!el) return;
+      var count = 0;
+      while (el.scrollWidth > el.clientWidth + 5 && count < 30) {
+        var cur = parseFloat(el.style.fontSize) || 16;
+        if (cur <= 9) break;
+        el.style.fontSize = (cur - 0.5) + "px";
+        count++;
+      }
+    }
     var notes = document.createElement("div"); notes.className = "notes";
     notes.textContent = song.note || "No notes yet for this song.";
     var btns = document.createElement("div"); btns.className = "btns";
@@ -2884,7 +2895,10 @@
       var zPlus = document.createElement("button");
       zPlus.type = "button"; zPlus.className = "btn ug"; zPlus.textContent = "A+";
       zPlus.addEventListener("click", function () { changeFontSize(2); });
-      ctrl.appendChild(zMinus); ctrl.appendChild(zPlus);
+      var zFit = document.createElement("button");
+      zFit.type = "button"; zFit.className = "btn ug"; zFit.textContent = "Fit";
+      zFit.addEventListener("click", function () { fitToWidth(); });
+      ctrl.appendChild(zMinus); ctrl.appendChild(zPlus); ctrl.appendChild(zFit);
       // bluetooth page-turner pedal (best-effort: any BLE button scrolls the sheet)
       var pedalBtn = document.createElement("button");
       pedalBtn.type = "button"; pedalBtn.className = "btn ug"; pedalBtn.textContent = "Pedal";
@@ -3021,6 +3035,9 @@
     fPlus.addEventListener("click", function () { changeFontSize(2); });
     var fScroll = document.createElement("button");
     fScroll.type = "button"; fScroll.className = "float-btn"; fScroll.textContent = "\u25B6";
+    var fFit = document.createElement("button");
+    fFit.type = "button"; fFit.className = "float-btn"; fFit.textContent = "Fit";
+    fFit.addEventListener("click", function () { fitToWidth(); });
     fScroll.addEventListener("click", function () {
       var el = document.getElementById("currentChords");
       if (el) {
@@ -3037,7 +3054,7 @@
     var fClose = document.createElement("button");
     fClose.type = "button"; fClose.className = "float-btn"; fClose.textContent = "\u00D7";
     fClose.addEventListener("click", function () { closeSheet(bg); });
-    floats.appendChild(fMinus); floats.appendChild(fPlus); floats.appendChild(fScroll);
+    floats.appendChild(fMinus); floats.appendChild(fPlus); floats.appendChild(fFit); floats.appendChild(fScroll);
     floats.appendChild(fExpand); floats.appendChild(fClose);
     bg.appendChild(floats);
     bg.addEventListener("click", function (e) { if (e.target === bg) closeSheet(bg); });
